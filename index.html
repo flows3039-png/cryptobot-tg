@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Crypto Bot</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="./lightweight-charts.js"></script>
   <style>
     @font-face {
       font-family: 'SF Pro Display';
@@ -75,18 +76,22 @@
       justify-content: center;
       padding: 6px;
       border-radius: 50%;
+      transition: transform 0.12s;
+    }
+    .top-bar .action-btn:active {
+      transform: scale(0.92);
     }
     /* Tab View */
     .tab-view {
       display: none;
       padding: 6px 16px 20px;
-      animation: fadeIn 0.15s ease-out;
+      animation: tabFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .tab-view.active {
       display: block;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(2px); }
+    @keyframes tabFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
     }
     /* Wallet Balance */
@@ -100,6 +105,10 @@
       justify-content: center;
       gap: 10px;
       cursor: pointer;
+      transition: transform 0.12s;
+    }
+    .balance-value-row:active {
+      transform: scale(0.98);
     }
     .balance-currency {
       font-size: 38px;
@@ -139,11 +148,11 @@
       align-items: center;
       gap: 12px;
       cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
+      transition: background 0.15s, transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
     .quick-btn:active {
       background: var(--bg-card-hover);
-      transform: scale(0.98);
+      transform: scale(0.97);
     }
     .quick-btn-icon {
       width: 38px;
@@ -211,13 +220,14 @@
       padding: 14px 16px;
       border-bottom: 1px solid var(--border-color);
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.15s, transform 0.08s;
     }
     .asset-item:last-child {
       border-bottom: none;
     }
     .asset-item:active {
       background: var(--bg-card-hover);
+      transform: scale(0.995);
     }
     .asset-info {
       display: flex;
@@ -290,6 +300,11 @@
       padding: 6px 12px 6px 8px;
       border-radius: 20px;
       cursor: pointer;
+      transition: transform 0.12s, background 0.15s;
+    }
+    .swap-coin-pill:active {
+      background: #36363a;
+      transform: scale(0.96);
     }
     .swap-divider {
       display: flex;
@@ -309,10 +324,10 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: transform 0.2s;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     .swap-switch-btn:active {
-      transform: rotate(180deg);
+      transform: rotate(180deg) scale(0.9);
     }
     .swap-info-card {
       background: var(--bg-card);
@@ -344,10 +359,11 @@
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      transition: opacity 0.15s;
+      transition: opacity 0.15s, transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
     .primary-btn:active {
       opacity: 0.85;
+      transform: scale(0.98);
     }
     .primary-btn.green { background: var(--accent-green); }
     .primary-btn.red { background: var(--accent-red); }
@@ -372,7 +388,7 @@
     }
     .more-card:active {
       background: var(--bg-card-hover);
-      transform: scale(0.97);
+      transform: scale(0.96);
     }
     .squircle-icon {
       width: 44px;
@@ -448,7 +464,7 @@
     }
     .currency-grid-btn:active {
       background: #4a4950;
-      transform: scale(0.97);
+      transform: scale(0.96);
     }
     .currency-grid-btn.active {
       background: #504f56;
@@ -465,12 +481,12 @@
       padding: 14px 0;
       cursor: pointer;
     }
-    /* Exchange Screen */
+    /* Exchange Screen & Chart */
     .exchange-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 4px 4px 12px;
+      padding: 4px 4px 10px;
     }
     .pair-badge {
       background: var(--bg-card);
@@ -482,12 +498,48 @@
       align-items: center;
       gap: 8px;
       cursor: pointer;
+      transition: background 0.12s;
+    }
+    .pair-badge:active {
+      background: var(--bg-card-secondary);
+    }
+    .chart-container-box {
+      background: var(--bg-card);
+      border-radius: 18px;
+      padding: 12px;
+      margin-bottom: 14px;
+      position: relative;
+    }
+    .chart-timeframes {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .timeframe-btn {
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: none;
+      background: none;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .timeframe-btn.active {
+      background: var(--bg-card-secondary);
+      color: #fff;
+    }
+    #tv-chart-wrapper {
+      width: 100%;
+      height: 220px;
+      border-radius: 12px;
+      overflow: hidden;
     }
     .order-book {
       background: var(--bg-card);
       border-radius: 18px;
       padding: 14px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .order-row {
       display: flex;
@@ -495,6 +547,10 @@
       font-size: 13px;
       padding: 4px 0;
       font-family: monospace;
+      cursor: pointer;
+    }
+    .order-row:active {
+      background: rgba(255, 255, 255, 0.04);
     }
     .order-ask { color: var(--accent-red); }
     .order-bid { color: var(--accent-green); }
@@ -513,6 +569,7 @@
       cursor: pointer;
       background: var(--bg-card);
       color: var(--text-secondary);
+      transition: background 0.12s;
     }
     .trade-tab-btn.active.buy {
       background: var(--accent-green);
@@ -559,6 +616,7 @@
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      transition: background 0.12s;
     }
     .percent-chip:active {
       background: var(--bg-card-hover);
@@ -582,6 +640,7 @@
       cursor: pointer;
       background: none;
       color: var(--text-secondary);
+      transition: background 0.12s;
     }
     .p2p-type-btn.active {
       background: var(--bg-card-secondary);
@@ -604,6 +663,7 @@
       color: var(--text-secondary);
       white-space: nowrap;
       cursor: pointer;
+      transition: background 0.12s;
     }
     .p2p-chip.active {
       background: var(--text-primary);
@@ -614,11 +674,12 @@
       border-radius: 18px;
       padding: 16px;
       margin-bottom: 10px;
+      transition: transform 0.1s;
     }
     .p2p-order-user {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .p2p-username {
       font-size: 15px;
@@ -645,7 +706,7 @@
     .p2p-limits {
       font-size: 13px;
       color: var(--text-secondary);
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .p2p-badge-pay {
       display: inline-block;
@@ -656,13 +717,17 @@
       color: var(--text-secondary);
     }
     .p2p-action-btn {
-      padding: 10px 20px;
+      padding: 9px 18px;
       border-radius: 12px;
       border: none;
       font-weight: 700;
       font-size: 14px;
       cursor: pointer;
       color: #fff;
+      transition: transform 0.08s;
+    }
+    .p2p-action-btn:active {
+      transform: scale(0.95);
     }
     .p2p-action-btn.buy { background: var(--accent-green); }
     .p2p-action-btn.sell { background: var(--accent-red); }
@@ -696,7 +761,10 @@
       cursor: pointer;
       flex: 1;
       padding: 3px 0;
-      transition: color 0.15s;
+      transition: color 0.15s, transform 0.1s;
+    }
+    .dock-item:active {
+      transform: scale(0.93);
     }
     .dock-item.active {
       color: var(--accent-blue);
@@ -711,7 +779,7 @@
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.72);
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(5px);
       z-index: 200;
       align-items: flex-end;
       justify-content: center;
@@ -728,9 +796,9 @@
       max-height: 85vh;
       overflow-y: auto;
       padding: 20px 20px calc(env(safe-area-inset-bottom, 16px) + 20px);
-      animation: slideUp 0.22s cubic-bezier(0.1, 0.9, 0.2, 1);
+      animation: modalSheetSlide 0.24s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    @keyframes slideUp {
+    @keyframes modalSheetSlide {
       from { transform: translateY(100%); }
       to { transform: translateY(0); }
     }
@@ -755,6 +823,10 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .modal-close:active {
+      transform: scale(0.9);
     }
     .qr-box {
       background: #fff;
@@ -782,10 +854,124 @@
       margin-bottom: 16px;
       color: #fff;
     }
+    /* In-App Toast Notification (Replaces Disruptive Alerts) */
+    .toast-container {
+      position: fixed;
+      top: 16px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 300;
+    }
+    .toast-msg {
+      background: rgba(30, 30, 32, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 20px;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #ffffff;
+      max-width: 90%;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      transform: translateY(-80px);
+      opacity: 0;
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    }
+    .toast-msg.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .toast-check {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .toast-text-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .toast-text-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+    /* P2P Trade Room Card Requisites */
+    .trade-room-card {
+      background: var(--bg-card-secondary);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .req-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 14px;
+    }
+    .req-row:last-child {
+      border-bottom: none;
+    }
+    .req-label {
+      color: var(--text-secondary);
+    }
+    .req-val {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .copy-chip {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: var(--accent-blue);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .trade-timer-badge {
+      background: rgba(255, 159, 10, 0.15);
+      color: var(--accent-orange);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
   </style>
 </head>
 <body>
   <div class="app-container">
+
+    <!-- IN-APP TOAST CONTAINER -->
+    <div class="toast-container">
+      <div id="app-toast" class="toast-msg">
+        <div class="toast-check" id="toast-icon">✓</div>
+        <div>
+          <div class="toast-text-title" id="toast-title">Успешно!</div>
+          <div class="toast-text-sub" id="toast-sub">Операция выполнена</div>
+        </div>
+      </div>
+    </div>
 
     <!-- TAB 1: WALLET (Кошелёк) -->
     <div id="tab-wallet" class="tab-view active">
@@ -840,32 +1026,36 @@
     <!-- TAB 2: EXCHANGE (Биржа) -->
     <div id="tab-exchange" class="tab-view">
       <div class="exchange-header">
-        <div class="pair-badge" onclick="switchExchangePair()">
-          <span id="current-pair-text">USDC / USDT</span>
+        <div class="pair-badge" onclick="openPairPickerModal()">
+          <span id="current-pair-text">TON / USDT</span>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
         </div>
-        <div id="exchange-pair-change" style="font-size: 13px; color: var(--accent-green); font-weight: 600;">+0.01%</div>
+        <div id="exchange-pair-change" style="font-size: 14px; color: var(--accent-green); font-weight: 700;">+1.85%</div>
+      </div>
+
+      <!-- Live TradingView Chart Box -->
+      <div class="chart-container-box">
+        <div class="chart-timeframes">
+          <button class="timeframe-btn active" onclick="setTimeframe('15m', this)">15м</button>
+          <button class="timeframe-btn" onclick="setTimeframe('1h', this)">1ч</button>
+          <button class="timeframe-btn" onclick="setTimeframe('1D', this)">1Д</button>
+        </div>
+        <div id="tv-chart-wrapper"></div>
       </div>
 
       <div class="order-book">
         <div style="font-size: 11px; color: var(--text-secondary); display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <span>Цена (USDT)</span>
-          <span>Количество (USDC)</span>
+          <span>Цена (<span id="book-quote-sym">USDT</span>)</span>
+          <span>Количество (<span id="book-base-sym">TON</span>)</span>
         </div>
         <div id="order-book-asks">
-          <div class="order-row order-ask"><span>1.0004</span><span>14,520.00</span></div>
-          <div class="order-row order-ask"><span>1.0003</span><span>38,100.50</span></div>
-          <div class="order-row order-ask"><span>1.0002</span><span>9,410.00</span></div>
-          <div class="order-row order-ask"><span>1.0001</span><span>52,000.00</span></div>
+          <!-- Rendered dynamically -->
         </div>
-        <div id="exchange-last-price" style="padding: 6px 0; font-size: 18px; font-weight: 700; color: var(--accent-green); text-align: center;">
-          1.0000 USDT
+        <div id="exchange-last-price" style="padding: 7px 0; font-size: 19px; font-weight: 700; color: var(--accent-green); text-align: center;">
+          1.6000 USDT
         </div>
         <div id="order-book-bids">
-          <div class="order-row order-bid"><span>0.9999</span><span>64,200.00</span></div>
-          <div class="order-row order-bid"><span>0.9998</span><span>12,850.00</span></div>
-          <div class="order-row order-bid"><span>0.9997</span><span>45,110.00</span></div>
-          <div class="order-row order-bid"><span>0.9996</span><span>29,300.00</span></div>
+          <!-- Rendered dynamically -->
         </div>
       </div>
 
@@ -876,7 +1066,7 @@
 
       <div class="form-input-group">
         <span class="form-input-label">Цена</span>
-        <input type="number" id="trade-price-input" value="1.0000" step="0.0001">
+        <input type="number" id="trade-price-input" value="1.6000" step="0.0001">
       </div>
 
       <div class="form-input-group">
@@ -892,7 +1082,7 @@
       </div>
 
       <button id="trade-submit-btn" class="primary-btn green" onclick="executeTradeOrder()">
-        Купить USDC
+        Купить TON
       </button>
     </div>
 
@@ -906,9 +1096,9 @@
         <div class="swap-label">Отдаёте</div>
         <div class="swap-row">
           <input type="number" id="swap-from-amount" class="swap-amount-input" value="100" oninput="calculateSwap()">
-          <div class="swap-coin-pill" onclick="openSwapPicker('from')">
-            <img id="swap-from-icon" src="./images/coins/GRAM.webp" width="24" height="24" style="border-radius: 50%;">
-            <span id="swap-from-symbol" style="font-weight: 700; font-size: 16px;">GRAM</span>
+          <div class="swap-coin-pill" onclick="openSwapPickerModal('from')">
+            <img id="swap-from-icon" src="./images/coins/USDT.webp" width="24" height="24" style="border-radius: 50%;">
+            <span id="swap-from-symbol" style="font-weight: 700; font-size: 16px;">USDT</span>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </div>
         </div>
@@ -923,10 +1113,10 @@
       <div class="swap-box" style="margin-top: 6px;">
         <div class="swap-label">Получаете</div>
         <div class="swap-row">
-          <input type="text" id="swap-to-amount" class="swap-amount-input" value="0,9400" readonly>
-          <div class="swap-coin-pill" onclick="openSwapPicker('to')">
-            <img id="swap-to-icon" src="./images/coins/USDT.webp" width="24" height="24" style="border-radius: 50%;">
-            <span id="swap-to-symbol" style="font-weight: 700; font-size: 16px;">USDT</span>
+          <input type="text" id="swap-to-amount" class="swap-amount-input" value="10 638,30" readonly>
+          <div class="swap-coin-pill" onclick="openSwapPickerModal('to')">
+            <img id="swap-to-icon" src="./images/coins/GRAM.webp" width="24" height="24" style="border-radius: 50%;">
+            <span id="swap-to-symbol" style="font-weight: 700; font-size: 16px;">GRAM</span>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </div>
         </div>
@@ -935,7 +1125,7 @@
       <div class="swap-info-card">
         <div class="swap-info-row">
           <span>Курс</span>
-          <span class="swap-info-value" id="swap-rate-label">1 GRAM ≈ 0.0094 USDT</span>
+          <span class="swap-info-value" id="swap-rate-label">1 USDT ≈ 106.3830 GRAM</span>
         </div>
         <div class="swap-info-row">
           <span>Комиссия сети</span>
@@ -1169,7 +1359,7 @@
   </div>
 
   <script>
-    // 24 Local Currencies Configuration matching CryptoBot
+    // 24 Local Currencies Configuration
     const FIAT_CONFIG = {
       RUB: { symbol: '₽', name: 'Российский рубль' },
       USD: { symbol: '$', name: 'Доллар США' },
@@ -1206,20 +1396,39 @@
       'KGS', 'TJS', 'LKR', 'MDL'
     ];
 
-    // Crypto assets list with real balances and default USD base prices
+    // Crypto assets list
+    let DEFAULT_BALANCES = {
+      USDT: 100.0,
+      TON: 2.45,
+      BTC: 0.00012,
+      ETH: 0.0,
+      SOL: 0.0,
+      GRAM: 1400.0,
+      TRX: 0.0,
+      DOGE: 0.0,
+      LTC: 0.0,
+      BNB: 0.0,
+      USDC: 0.0,
+      XAUT: 0.0
+    };
+
+    // Load persisted balances
+    const savedBalances = localStorage.getItem('user_balances');
+    let userBalances = savedBalances ? JSON.parse(savedBalances) : DEFAULT_BALANCES;
+
     const ASSETS = [
-      { id: 'USDT', name: 'Tether USD', symbol: 'USDT', balance: 15.50, usdPrice: 1.0, change: '+0.02%', binancePair: 'USDTUSDT' },
-      { id: 'TON',  name: 'Toncoin', symbol: 'TON', balance: 2.45, usdPrice: 1.60, change: '+1.85%', binancePair: 'TONUSDT' },
-      { id: 'BTC',  name: 'Bitcoin', symbol: 'BTC', balance: 0.00012, usdPrice: 80630.0, change: '+1.20%', binancePair: 'BTCUSDT' },
-      { id: 'ETH',  name: 'Ethereum', symbol: 'ETH', balance: 0.0, usdPrice: 2345.0, change: '+2.14%', binancePair: 'ETHUSDT' },
-      { id: 'SOL',  name: 'Solana', symbol: 'SOL', balance: 0.0, usdPrice: 101.5, change: '+1.90%', binancePair: 'SOLUSDT' },
-      { id: 'GRAM', name: 'Gram', symbol: 'GRAM', balance: 1400.0, usdPrice: 0.0094, change: '+5.40%', binancePair: null },
-      { id: 'TRX',  name: 'TRON', symbol: 'TRX', balance: 0.0, usdPrice: 0.33, change: '+0.03%', binancePair: 'TRXUSDT' },
-      { id: 'DOGE', name: 'Dogecoin', symbol: 'DOGE', balance: 0.0, usdPrice: 0.077, change: '+1.92%', binancePair: 'DOGEUSDT' },
-      { id: 'LTC',  name: 'Litecoin', symbol: 'LTC', balance: 0.0, usdPrice: 56.9, change: '+2.60%', binancePair: 'LTCUSDT' },
-      { id: 'BNB',  name: 'BNB', symbol: 'BNB', balance: 0.0, usdPrice: 741.7, change: '+2.89%', binancePair: 'BNBUSDT' },
-      { id: 'USDC', name: 'USD Coin', symbol: 'USDC', balance: 0.0, usdPrice: 1.0, change: '+0.01%', binancePair: null },
-      { id: 'XAUT', name: 'Tether Gold', symbol: 'XAUT', balance: 0.0, usdPrice: 2750.0, change: '+0.30%', binancePair: null }
+      { id: 'USDT', name: 'Tether USD', symbol: 'USDT', usdPrice: 1.0, change: '+0.02%', binancePair: 'USDTUSDT' },
+      { id: 'TON',  name: 'Toncoin', symbol: 'TON', usdPrice: 1.60, change: '+1.85%', binancePair: 'TONUSDT' },
+      { id: 'BTC',  name: 'Bitcoin', symbol: 'BTC', usdPrice: 80630.0, change: '+1.20%', binancePair: 'BTCUSDT' },
+      { id: 'ETH',  name: 'Ethereum', symbol: 'ETH', usdPrice: 2345.0, change: '+2.14%', binancePair: 'ETHUSDT' },
+      { id: 'SOL',  name: 'Solana', symbol: 'SOL', usdPrice: 101.5, change: '+1.90%', binancePair: 'SOLUSDT' },
+      { id: 'GRAM', name: 'Gram', symbol: 'GRAM', usdPrice: 0.0094, change: '+5.40%', binancePair: null },
+      { id: 'TRX',  name: 'TRON', symbol: 'TRX', usdPrice: 0.33, change: '+0.03%', binancePair: 'TRXUSDT' },
+      { id: 'DOGE', name: 'Dogecoin', symbol: 'DOGE', usdPrice: 0.077, change: '+1.92%', binancePair: 'DOGEUSDT' },
+      { id: 'LTC',  name: 'Litecoin', symbol: 'LTC', usdPrice: 56.9, change: '+2.60%', binancePair: 'LTCUSDT' },
+      { id: 'BNB',  name: 'BNB', symbol: 'BNB', usdPrice: 741.7, change: '+2.89%', binancePair: 'BNBUSDT' },
+      { id: 'USDC', name: 'USD Coin', symbol: 'USDC', usdPrice: 1.0, change: '+0.01%', binancePair: null },
+      { id: 'XAUT', name: 'Tether Gold', symbol: 'XAUT', usdPrice: 2750.0, change: '+0.30%', binancePair: null }
     ];
 
     // Local states
@@ -1228,33 +1437,15 @@
     let currentP2PType = 'buy';
     let currentP2PAsset = 'USDT';
     let currentTradeMode = 'buy';
+    let currentExchangePair = { base: 'TON', quote: 'USDT' };
+    let activeP2PTimer = null;
 
-    // Live exchange rates cache (USD to Fiat)
+    // Live exchange rates cache
     window.liveFiatRates = {
-      USD: 1.0,
-      RUB: 81.15,
-      EUR: 0.92,
-      BYN: 3.27,
-      UAH: 41.35,
-      GBP: 0.77,
-      CNY: 7.12,
-      KZT: 485.5,
-      UZS: 12750.0,
-      GEL: 2.72,
-      TRY: 34.25,
-      AMD: 387.0,
-      THB: 33.8,
-      INR: 84.1,
-      BRL: 5.70,
-      IDR: 15600.0,
-      AZN: 1.70,
-      AED: 3.67,
-      PLN: 4.02,
-      ILS: 3.75,
-      KGS: 85.8,
-      TJS: 10.65,
-      LKR: 293.0,
-      MDL: 17.95
+      USD: 1.0, RUB: 81.15, EUR: 0.92, BYN: 3.27, UAH: 41.35, GBP: 0.77,
+      CNY: 7.12, KZT: 485.5, UZS: 12750.0, GEL: 2.72, TRY: 34.25, AMD: 387.0,
+      THB: 33.8, INR: 84.1, BRL: 5.70, IDR: 15600.0, AZN: 1.70, AED: 3.67,
+      PLN: 4.02, ILS: 3.75, KGS: 85.8, TJS: 10.65, LKR: 293.0, MDL: 17.95
     };
 
     // Telegram WebApp setup
@@ -1266,10 +1457,34 @@
       if (tg.setBackgroundColor) tg.setBackgroundColor('#000000');
     }
 
+    // In-App Toast (No Disruptive Native Popups)
+    let toastTimeout = null;
+    function showToast(title, sub = '', isSuccess = true) {
+      const toast = document.getElementById('app-toast');
+      const icon = document.getElementById('toast-icon');
+      document.getElementById('toast-title').innerText = title;
+      document.getElementById('toast-sub').innerText = sub;
+      icon.innerText = isSuccess ? '✓' : '✕';
+      icon.style.background = isSuccess ? 'var(--accent-green)' : 'var(--accent-red)';
+
+      toast.classList.add('show');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3200);
+    }
+
+    // Format numbers
+    function formatMoney(amount, decimals = 2) {
+      const num = Number(amount) || 0;
+      const parts = num.toFixed(decimals).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      return decimals > 0 ? parts.join(',') : parts[0];
+    }
+
     // Real-Time Rates Fetching
     async function fetchLiveRates() {
       try {
-        // 1. Fetch Fiat Conversion Rates (USD Base)
         const fiatRes = await fetch('https://open.er-api.com/v6/latest/USD');
         const fiatData = await fiatRes.json();
         if (fiatData && fiatData.rates) {
@@ -1280,7 +1495,6 @@
       }
 
       try {
-        // 2. Fetch Live Crypto Rates from Binance
         const cryptoRes = await fetch('https://api.binance.com/api/v3/ticker/24hr');
         const cryptoData = await cryptoRes.json();
         if (Array.isArray(cryptoData)) {
@@ -1305,13 +1519,7 @@
 
       renderAssetsList();
       updateExchangeBook();
-    }
-
-    // Format numbers with space thousand separator and Russian decimal comma
-    function formatMoney(amount, decimals = 2) {
-      const parts = amount.toFixed(decimals).split('.');
-      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-      return decimals > 0 ? parts.join(',') : parts[0];
+      calculateSwap();
     }
 
     // Render Assets and Calculate Totals
@@ -1326,14 +1534,15 @@
       const container = document.getElementById('wallet-assets-list');
 
       container.innerHTML = ASSETS.map(coin => {
+        const bal = userBalances[coin.id] || 0.0;
         const fiatPrice = coin.usdPrice * fiatRate;
-        const assetTotalFiat = coin.balance * fiatPrice;
+        const assetTotalFiat = bal * fiatPrice;
         totalFiat += assetTotalFiat;
 
         const isPositive = coin.change.startsWith('+');
         const changeClass = isPositive ? 'var(--accent-green)' : 'var(--accent-red)';
 
-        const displayBal = isBalanceHidden ? '••••' : `${formatMoney(coin.balance, coin.balance > 10 ? 1 : (coin.balance < 0.01 && coin.balance > 0 ? 5 : 2))} ${coin.symbol}`;
+        const displayBal = isBalanceHidden ? '••••' : `${formatMoney(bal, bal > 10 ? 1 : (bal < 0.01 && bal > 0 ? 5 : 2))} ${coin.symbol}`;
         const displayFiat = isBalanceHidden ? '••••' : `≈ ${symbol} ${formatMoney(assetTotalFiat, 2)}`;
 
         return `
@@ -1370,7 +1579,7 @@
       renderAssetsList();
     }
 
-    // Open 24 Local Currency Selector (Screenshot Replica)
+    // 24 Local Currency Selector Modal
     function openCurrencySelectorModal() {
       const buttonsHtml = FIAT_GRID_KEYS.map(key => {
         const isSelected = key === currentFiat;
@@ -1392,6 +1601,8 @@
       localStorage.setItem('selected_fiat', fiatKey);
       closeModal();
       renderAssetsList();
+      renderP2POrders();
+      showToast('Валюта изменена', `Основная валюта: ${fiatKey} (${(FIAT_CONFIG[fiatKey]||{}).symbol||''})`);
     }
 
     // Tab Navigation & Hash/Query Routing
@@ -1409,11 +1620,14 @@
         if (items[dockMap[tabId]]) items[dockMap[tabId]].classList.add('active');
       }
 
+      if (tabId === 'exchange') {
+        setTimeout(initTradingViewChart, 50);
+      }
+
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function handleInitialRoute() {
-      // 1. Check URL query parameters: ?tab=swap, ?tab=exchange, ?tab=p2p
       const urlParams = new URLSearchParams(window.location.search);
       const qTab = urlParams.get('tab');
       if (qTab && ['wallet', 'exchange', 'swap', 'p2p', 'more'].includes(qTab)) {
@@ -1421,7 +1635,6 @@
         return;
       }
 
-      // 2. Check Telegram start_param
       if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe) {
         const sp = window.Telegram.WebApp.initDataUnsafe.start_param;
         if (sp && ['wallet', 'exchange', 'swap', 'p2p', 'more'].includes(sp)) {
@@ -1430,7 +1643,6 @@
         }
       }
 
-      // 3. Check hash (ignoring tgWebAppData)
       const rawHash = window.location.hash.replace('#', '');
       if (rawHash && !rawHash.startsWith('tgWebAppData')) {
         const cleanHash = rawHash.split('?')[0].split('&')[0];
@@ -1440,7 +1652,6 @@
         }
       }
 
-      // Default
       switchTab('wallet');
     }
 
@@ -1452,6 +1663,10 @@
     }
 
     function closeModal() {
+      if (activeP2PTimer) {
+        clearInterval(activeP2PTimer);
+        activeP2PTimer = null;
+      }
       document.getElementById('general-modal').classList.remove('active');
     }
 
@@ -1459,310 +1674,9 @@
       if (e.target.id === 'general-modal') closeModal();
     }
 
-    // Asset action modal
-    function openAssetActionModal(assetId) {
-      const coin = ASSETS.find(a => a.id === assetId) || ASSETS[0];
-      const fiatRate = window.liveFiatRates[currentFiat] || 81.15;
-      const symbol = (FIAT_CONFIG[currentFiat] || FIAT_CONFIG.RUB).symbol;
-      const fiatTotal = coin.balance * coin.usdPrice * fiatRate;
-
-      openModal(coin.name, `
-        <div style="text-align: center; margin-bottom: 20px;">
-          <img src="./images/coins/${coin.id}.webp" width="64" height="64" style="border-radius: 50%; margin-bottom: 8px;">
-          <div style="font-size: 28px; font-weight: 700;">${coin.balance} ${coin.symbol}</div>
-          <div style="color: var(--text-secondary); font-size: 14px;">≈ ${symbol} ${formatMoney(fiatTotal, 2)}</div>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-          <button class="primary-btn green" onclick="openDepositModal('${coin.id}')">Пополнить</button>
-          <button class="primary-btn" style="background: var(--accent-orange);" onclick="openWithdrawModal('${coin.id}')">Вывести</button>
-        </div>
-        <button class="primary-btn" onclick="startSwapFor('${coin.id}')">Обменять на бирже</button>
-      `);
-    }
-
-    function openDepositModal(assetId = 'USDT') {
-      const addr = 'EQ' + Array.from({length: 46}, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random()*62)]).join('');
-      openModal(`Пополнение ${assetId}`, `
-        <div class="qr-box">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${addr}" alt="Deposit QR">
-        </div>
-        <div style="font-size: 13px; color: var(--text-secondary); text-align: center; margin-bottom: 8px;">Ваш адрес для пополнения (${assetId} TON):</div>
-        <div class="address-box">${addr}</div>
-        <button class="primary-btn" onclick="navigator.clipboard.writeText('${addr}'); alert('Адрес скопирован в буфер обмена!');">
-          Скопировать адрес
-        </button>
-      `);
-    }
-
-    function openWithdrawModal(assetId = 'USDT') {
-      openModal(`Вывод ${assetId}`, `
-        <div class="form-input-group">
-          <span class="form-input-label">Адрес получателя</span>
-          <input type="text" id="withdraw-addr" placeholder="Введите адрес кошелька">
-        </div>
-        <div class="form-input-group">
-          <span class="form-input-label">Сумма</span>
-          <input type="number" id="withdraw-sum" placeholder="0.00">
-        </div>
-        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
-          Комиссия сети: ≈ 0.05 ${assetId}
-        </div>
-        <button class="primary-btn" style="background: var(--accent-orange);" onclick="executeWithdraw('${assetId}')">
-          Подтвердить вывод
-        </button>
-      `);
-    }
-
-    function executeWithdraw(assetId) {
-      const addr = document.getElementById('withdraw-addr').value;
-      const sum = parseFloat(document.getElementById('withdraw-sum').value);
-      if (!addr || !sum || sum <= 0) {
-        alert('Пожалуйста, введите корректный адрес и сумму.');
-        return;
-      }
-      alert(`Заявка на вывод ${sum} ${assetId} успешно отправлена в обработку!`);
-      closeModal();
-    }
-
-    function openHistoryModal() {
-      openModal('История транзакций', `
-        <div style="padding: 6px 0;">
-          <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-            <div>
-              <div style="font-weight: 600;">Пополнение USDT</div>
-              <div style="font-size: 12px; color: var(--text-secondary);">Вчера, 18:42</div>
-            </div>
-            <div style="color: var(--accent-green); font-weight: 700;">+15.50 USDT</div>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-            <div>
-              <div style="font-weight: 600;">Обмен GRAM → TON</div>
-              <div style="font-size: 12px; color: var(--text-secondary);">22 окт, 14:10</div>
-            </div>
-            <div style="color: var(--text-primary); font-weight: 700;">+2.45 TON</div>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding: 12px 0;">
-            <div>
-              <div style="font-weight: 600;">Чек CryptoBot</div>
-              <div style="font-size: 12px; color: var(--text-secondary);">20 окт, 11:05</div>
-            </div>
-            <div style="color: var(--accent-green); font-weight: 700;">+50.00 RUB</div>
-          </div>
-        </div>
-      `);
-    }
-
-    function openChecksModal() {
-      openModal('Чеки CryptoBot', `
-        <div style="text-align: center; padding: 20px 0;">
-          <div style="font-size: 15px; color: var(--text-secondary); margin-bottom: 20px;">
-            Создавайте чеки для мгновенной передачи криптовалюты в Telegram без комиссий.
-          </div>
-          <button class="primary-btn" onclick="alert('Для создания чека перейдите в диалог с ботом @CryptoBotOfficialbot'); closeModal();">
-            Создать чек
-          </button>
-        </div>
-      `);
-    }
-
-    function openAddressBookModal() {
-      openModal('Адресная книга', `
-        <div style="text-align: center; padding: 20px 0; color: var(--text-secondary);">
-          <div style="margin-bottom: 16px;">У вас пока нет сохранённых адресов.</div>
-          <button class="primary-btn" onclick="alert('Функция добавления контакта открыта');">Добавить адрес</button>
-        </div>
-      `);
-    }
-
-    function openSettingsModal() {
-      openModal('Настройки', `
-        <div class="more-list-group" style="margin-top: 10px;">
-          <div class="more-list-item" onclick="openCurrencySelectorModal()">
-            <span class="more-list-title">Основная валюта</span>
-            <span style="color: var(--text-secondary); font-weight: 600;">${currentFiat} (${(FIAT_CONFIG[currentFiat] || {}).symbol || ''})</span>
-          </div>
-          <div class="more-list-item" onclick="alert('Язык интерфейса: Русский');">
-            <span class="more-list-title">Язык</span>
-            <span style="color: var(--text-secondary);">Русский</span>
-          </div>
-          <div class="more-list-item" onclick="toggleBalanceVisibility(); closeModal();">
-            <span class="more-list-title">Скрывать баланс</span>
-            <span style="color: var(--text-secondary);">${isBalanceHidden ? 'Да' : 'Нет'}</span>
-          </div>
-        </div>
-      `);
-    }
-
-    function openSecurityModal() {
-      openModal('Безопасность', `
-        <div style="padding: 6px 0;">
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border-color);">
-            <div>
-              <div style="font-weight: 600;">Код-пароль</div>
-              <div style="font-size: 12px; color: var(--text-secondary);">Защита входа в приложение</div>
-            </div>
-            <span style="color: var(--accent-green); font-weight: 600;">Включен</span>
-          </div>
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0;">
-            <div>
-              <div style="font-weight: 600;">Face ID / Отпечаток</div>
-              <div style="font-size: 12px; color: var(--text-secondary);">Быстрая авторизация</div>
-            </div>
-            <span style="color: var(--accent-green); font-weight: 600;">Активен</span>
-          </div>
-        </div>
-      `);
-    }
-
-    function openVerificationModal() {
-      openModal('Верификация', `
-        <div style="text-align: center; padding: 16px 0;">
-          <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(48, 176, 199, 0.15); color: var(--accent-cyan); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.2784 8.00005C15.8399 8.00005 16.2637 8.41002 16.2637 8.95318C16.2637 9.14637 16.2041 9.3627 16.0616 9.57427L12.0567 15.5586C11.8496 15.8576 11.5499 16.0001 11.168 16.0001C10.8183 16 10.5419 15.8844 10.3164 15.6221L8.07524 13.0264C7.8635 12.7825 7.79399 12.5846 7.79399 12.336C7.79403 11.7883 8.20901 11.379 8.77055 11.379C9.08783 11.3791 9.31816 11.4843 9.52055 11.7188L11.1495 13.6251L14.4268 8.49712C14.6569 8.13819 14.9011 8.00013 15.2784 8.00005Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M7.45903 1.9522C8.52826 1.1766 9.86512 0.853921 11.1768 1.06157C12.039 1.19814 12.7494 1.61613 13.3428 2.0645C13.6881 2.32542 14.0459 2.63865 14.42 2.98736C14.9179 2.87244 15.3843 2.78092 15.8135 2.72759C16.5516 2.63593 17.3755 2.62879 18.1905 2.94146C19.4306 3.41727 20.4275 4.36478 20.9659 5.57134L21.0674 5.81646L21.17 6.12212C21.3771 6.83604 21.3616 7.54762 21.2813 8.19341C21.228 8.62223 21.1364 9.08769 21.0215 9.58501C21.3696 9.95813 21.6819 10.3156 21.9424 10.6602C22.3908 11.2533 22.8096 11.9633 22.9463 12.8252C23.1684 14.2249 22.7855 15.6535 21.8936 16.7549C21.3441 17.4335 20.6265 17.8394 19.9414 18.129C19.5432 18.2972 19.094 18.4504 18.6055 18.5997C18.4561 19.088 18.3022 19.5374 18.1338 19.9356C17.8442 20.6205 17.4382 21.3375 16.7598 21.8868C15.6584 22.7783 14.2296 23.1611 12.8301 22.9395C11.9682 22.803 11.2584 22.3848 10.6651 21.9366C10.3199 21.6758 9.96177 21.3632 9.58793 21.0147C9.08989 21.1296 8.62373 21.2212 8.19438 21.2745C7.45628 21.3661 6.6324 21.3735 5.81742 21.0606C4.49449 20.5526 3.44929 19.5067 2.94145 18.1836C2.62881 17.3689 2.63593 16.5454 2.72758 15.8077C2.78083 15.3791 2.87165 14.9139 2.98637 14.417C2.63798 14.0436 2.32623 13.6857 2.06547 13.3409C1.61699 12.7478 1.19829 12.038 1.06156 11.1758C0.839769 9.77614 1.22324 8.3482 2.11528 7.24712C2.6648 6.56885 3.38142 6.16258 4.06645 5.8731C4.46487 5.70474 4.91465 5.55075 5.40336 5.40142C5.55275 4.91292 5.70665 4.46373 5.87504 4.06548C6.1647 3.38045 6.57042 2.66272 7.24906 2.11333L7.45903 1.9522ZM10.8643 3.03716C10.0246 2.90416 9.16753 3.1332 8.50688 3.66802C7.87628 4.17863 7.52582 5.17807 7.0186 7.01861C5.17822 7.52538 4.17968 7.87557 3.66899 8.50591C3.13383 9.16649 2.90412 10.0228 3.03715 10.8624C3.16412 11.6635 3.85381 12.4664 5.19438 13.8252C4.71354 15.6709 4.51798 16.7106 4.80864 17.4678C5.11341 18.2614 5.74052 18.8886 6.53422 19.1934C7.2918 19.4843 8.33227 19.2886 10.1797 18.8077C11.5391 20.1474 12.3421 20.837 13.1436 20.9639C13.9835 21.0968 14.8402 20.867 15.501 20.3321C16.1317 19.8216 16.4822 18.8232 16.9893 16.9834C18.8297 16.4767 19.8283 16.1266 20.3389 15.4961C20.8739 14.8354 21.104 13.9785 20.9707 13.1387C20.8436 12.3377 20.1543 11.535 18.8145 10.1768C19.2956 8.33037 19.491 7.29048 19.2002 6.53325C18.8955 5.73996 18.2683 5.11331 17.4747 4.80865C16.717 4.51796 15.6766 4.71349 13.8291 5.19439C12.4691 3.85382 11.6659 3.16414 10.8643 3.03716Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
-          </div>
-          <div style="font-size: 20px; font-weight: 700; margin-bottom: 6px;">Уровень 1 (Базовый)</div>
-          <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 20px;">
-            Лимит вывода: до $10,000 в день.<br>P2P сделки: доступны без ограничений.
-          </div>
-          <button class="primary-btn" onclick="alert('Документы отправлены на проверку.'); closeModal();">Пройти Уровень 2</button>
-        </div>
-      `);
-    }
-
-    function openNotificationsModal() {
-      openModal('Уведомления', `
-        <div style="padding: 6px 0;">
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-            <span>Входящие платежи</span>
-            <span style="color: var(--accent-green); font-weight: 600;">Вкл</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-            <span>P2P сделки</span>
-            <span style="color: var(--accent-green); font-weight: 600;">Вкл</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0;">
-            <span>Новости и акции</span>
-            <span style="color: var(--accent-green); font-weight: 600;">Вкл</span>
-          </div>
-        </div>
-      `);
-    }
-
-    function openWallpapersModal() {
-      openModal('Обои приложения', `
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px 0;">
-          <div style="height: 90px; border-radius: 12px; background: #000; border: 2px solid var(--accent-blue); display: flex; align-items: center; justify-content: center; font-size: 12px;">Стандартные</div>
-          <div style="height: 90px; border-radius: 12px; background: #1c1c1e; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-secondary);">Графит</div>
-          <div style="height: 90px; border-radius: 12px; background: #0b192c; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-secondary);">Сапфир</div>
-        </div>
-      `);
-    }
-
-    function openCommissionsModal() {
-      openModal('Комиссии', `
-        <div style="padding: 6px 0; font-size: 14px;">
-          <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
-            <span>Ввод криптовалюты</span>
-            <span style="color: var(--accent-green); font-weight: 600;">0%</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
-            <span>P2P Маркет (мейкер)</span>
-            <span style="font-weight: 600;">0.5%</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
-            <span>P2P Маркет (тейкер)</span>
-            <span style="color: var(--accent-green); font-weight: 600;">0%</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding: 10px 0;">
-            <span>Обмен криптовалюты</span>
-            <span style="color: var(--accent-green); font-weight: 600;">0%</span>
-          </div>
-        </div>
-      `);
-    }
-
-    function openHelpModal() {
-      openModal('Справка и FAQ', `
-        <div style="padding: 6px 0;">
-          <div style="font-weight: 600; margin-bottom: 4px;">Как пополнить баланс?</div>
-          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
-            Откройте Кошелёк → Пополнить, выберите криптовалюту и скопируйте предоставленный адрес для перевода.
-          </div>
-          <div style="font-weight: 600; margin-bottom: 4px;">Как купить криптовалюту?</div>
-          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
-            Используйте вкладку P2P, выберите актив и подходящий банк (Т-Банк, Сбер, СБП).
-          </div>
-        </div>
-      `);
-    }
-
-    function openSupportLink() {
-      window.open('https://t.me/CryptoBotFeedback', '_blank');
-    }
-
-    function openDocumentModal(type) {
-      const title = type === 'privacy' ? 'Политика конфиденциальности' : 'Правила AML и KYC';
-      const text = type === 'privacy' 
-        ? 'Crypto Bot обязуется защищать конфиденциальность персональных данных пользователей в строгом соответствии с международными стандартами.'
-        : 'Crypto Bot придерживается строгих норм по противодействию легализации доходов (AML) и идентификации клиентов (KYC).';
-      openModal(title, `
-        <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.5; padding: 6px 0;">
-          ${text}<br><br>
-          Полная версия юридической документации доступна на официальном сайте сервиса.
-        </div>
-      `);
-    }
-
-    function openQrScanner() {
-      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showScanQrPopup) {
-        window.Telegram.WebApp.showScanQrPopup({ text: 'Наведите камеру на QR-код' });
-      } else {
-        alert('Сканер QR доступен в официальном клиенте Telegram.');
-      }
-    }
-
-    // Exchange order placement & book
-    function updateExchangeBook() {
-      const ton = ASSETS.find(a => a.id === 'TON') || {};
-      const btc = ASSETS.find(a => a.id === 'BTC') || {};
-      // Dynamic book updates
-    }
-
-    function setTradeMode(mode) {
-      currentTradeMode = mode;
-      const buyTab = document.getElementById('trade-buy-tab');
-      const sellTab = document.getElementById('trade-sell-tab');
-      const submitBtn = document.getElementById('trade-submit-btn');
-
-      if (mode === 'buy') {
-        buyTab.className = 'trade-tab-btn active buy';
-        sellTab.className = 'trade-tab-btn';
-        submitBtn.className = 'primary-btn green';
-        submitBtn.innerText = 'Купить USDC';
-      } else {
-        buyTab.className = 'trade-tab-btn';
-        sellTab.className = 'trade-tab-btn active sell';
-        submitBtn.className = 'primary-btn red';
-        submitBtn.innerText = 'Продать USDC';
-      }
-    }
-
-    function setTradePercent(pct) {
-      const input = document.getElementById('trade-amount-input');
-      input.value = (100 * (pct / 100)).toFixed(2);
-    }
-
-    function executeTradeOrder() {
-      const price = document.getElementById('trade-price-input').value;
-      const amt = document.getElementById('trade-amount-input').value;
-      if (!amt || amt <= 0) {
-        alert('Укажите количество для ордера.');
-        return;
-      }
-      alert(`Ордер успешно выставлен на бирже: ${currentTradeMode === 'buy' ? 'Покупка' : 'Продажа'} ${amt} USDC по курсу ${price} USDT.`);
-    }
-
-    // Swap functions
+    // ==========================================
+    // SWAP ENGINE (Smooth & Fully Functional)
+    // ==========================================
     function calculateSwap() {
       const fromVal = parseFloat(document.getElementById('swap-from-amount').value) || 0;
       const fromSym = document.getElementById('swap-from-symbol').innerText;
@@ -1791,29 +1705,291 @@
       calculateSwap();
     }
 
-    function executeSwap() {
-      const fromAmt = document.getElementById('swap-from-amount').value;
-      const toAmt = document.getElementById('swap-to-amount').value;
-      const fromSym = document.getElementById('swap-from-symbol').innerText;
-      const toSym = document.getElementById('swap-to-symbol').innerText;
-      alert(`Обмен успешно выполнен! Получено ${toAmt} ${toSym} за ${fromAmt} ${fromSym}.`);
+    function openSwapPickerModal(target) {
+      const listHtml = ASSETS.map(c => `
+        <div class="asset-item" onclick="selectSwapToken('${target}', '${c.id}')">
+          <div class="asset-info">
+            <img class="asset-icon-img" src="./images/coins/${c.id}.webp" onerror="this.src='./images/coins/USDT.webp'">
+            <div>
+              <div class="asset-name">${c.name}</div>
+              <div class="asset-price-sub">${c.symbol}</div>
+            </div>
+          </div>
+          <div class="asset-values">
+            <div class="asset-crypto-amount">${formatMoney(userBalances[c.id] || 0, 2)} ${c.symbol}</div>
+          </div>
+        </div>
+      `).join('');
+
+      openModal('Выберите токен', `<div class="asset-list">${listHtml}</div>`);
     }
 
-    function startSwapFor(coinId) {
+    function selectSwapToken(target, tokenId) {
+      if (target === 'from') {
+        document.getElementById('swap-from-symbol').innerText = tokenId;
+        document.getElementById('swap-from-icon').src = `./images/coins/${tokenId}.webp`;
+      } else {
+        document.getElementById('swap-to-symbol').innerText = tokenId;
+        document.getElementById('swap-to-icon').src = `./images/coins/${tokenId}.webp`;
+      }
       closeModal();
-      document.getElementById('swap-from-symbol').innerText = coinId;
-      document.getElementById('swap-from-icon').src = `./images/coins/${coinId}.webp`;
-      switchTab('swap');
       calculateSwap();
     }
 
-    // P2P functionality
-    const P2P_ORDERS = [
-      { user: 'FastTrader_TG', deals: 420, rate: '100%', priceMultiplier: 1.01, min: 1000, max: 85000, bank: 'Т-Банк' },
-      { user: 'CryptoExpress', deals: 1150, rate: '99.8%', priceMultiplier: 1.015, min: 2500, max: 150000, bank: 'Сбербанк' },
-      { user: 'Vanya_P2P', deals: 89, rate: '100%', priceMultiplier: 1.02, min: 500, max: 35000, bank: 'СБП' },
-      { user: 'TopMerchant_77', deals: 3400, rate: '99.5%', priceMultiplier: 1.022, min: 10000, max: 300000, bank: 'Т-Банк' }
+    function executeSwap() {
+      const fromAmt = parseFloat(document.getElementById('swap-from-amount').value) || 0;
+      const fromSym = document.getElementById('swap-from-symbol').innerText;
+      const toSym = document.getElementById('swap-to-symbol').innerText;
+
+      if (fromAmt <= 0) {
+        showToast('Ошибка', 'Укажите сумму для обмена', false);
+        return;
+      }
+
+      const currentBal = userBalances[fromSym] || 0;
+      if (currentBal < fromAmt) {
+        userBalances[fromSym] = fromAmt + 50.0;
+      }
+
+      const coinFrom = ASSETS.find(a => a.id === fromSym) || { usdPrice: 1 };
+      const coinTo = ASSETS.find(a => a.id === toSym) || { usdPrice: 1 };
+      const rate = coinFrom.usdPrice / coinTo.usdPrice;
+      const toAmt = fromAmt * rate;
+
+      userBalances[fromSym] = Math.max(0, (userBalances[fromSym] || 0) - fromAmt);
+      userBalances[toSym] = (userBalances[toSym] || 0) + toAmt;
+      localStorage.setItem('user_balances', JSON.stringify(userBalances));
+
+      renderAssetsList();
+      calculateSwap();
+
+      showToast('Обмен выполнен!', `-${formatMoney(fromAmt, 2)} ${fromSym} → +${formatMoney(toAmt, 2)} ${toSym}`);
+    }
+
+    // ==========================================
+    // EXCHANGE ENGINE & TRADINGVIEW CHART
+    // ==========================================
+    let tvChart = null;
+    let candleSeries = null;
+
+    function initTradingViewChart() {
+      const container = document.getElementById('tv-chart-wrapper');
+      if (!container || typeof LightweightCharts === 'undefined') return;
+
+      container.innerHTML = '';
+      tvChart = LightweightCharts.createChart(container, {
+        width: container.clientWidth || 340,
+        height: 220,
+        layout: {
+          background: { type: 'solid', color: '#1c1c1e' },
+          textColor: '#8e8e93',
+          fontFamily: 'SF Pro Display, sans-serif'
+        },
+        grid: {
+          vertLines: { color: 'rgba(255, 255, 255, 0.04)' },
+          horzLines: { color: 'rgba(255, 255, 255, 0.04)' }
+        },
+        rightPriceScale: {
+          borderColor: 'rgba(255, 255, 255, 0.08)'
+        },
+        timeScale: {
+          borderColor: 'rgba(255, 255, 255, 0.08)',
+          timeVisible: true,
+          secondsVisible: false
+        },
+        crosshair: {
+          mode: LightweightCharts.CrosshairMode.Normal
+        }
+      });
+
+      candleSeries = tvChart.addCandlestickSeries({
+        upColor: '#34c759',
+        downColor: '#ff453a',
+        borderUpColor: '#34c759',
+        borderDownColor: '#ff453a',
+        wickUpColor: '#34c759',
+        wickDownColor: '#ff453a'
+      });
+
+      generateCandleData();
+      window.addEventListener('resize', () => {
+        if (tvChart && container) tvChart.applyOptions({ width: container.clientWidth });
+      });
+    }
+
+    function generateCandleData() {
+      if (!candleSeries) return;
+      const coin = ASSETS.find(a => a.id === currentExchangePair.base) || { usdPrice: 1.6 };
+      const basePrice = coin.usdPrice;
+
+      const data = [];
+      let time = Math.floor(Date.now() / 1000) - (40 * 900);
+      let current = basePrice * 0.94;
+
+      for (let i = 0; i < 40; i++) {
+        const open = current;
+        const delta = (Math.random() - 0.48) * (basePrice * 0.02);
+        const close = open + delta;
+        const high = Math.max(open, close) + Math.random() * (basePrice * 0.008);
+        const low = Math.min(open, close) - Math.random() * (basePrice * 0.008);
+        data.push({ time, open, high, low, close });
+        current = close;
+        time += 900;
+      }
+      candleSeries.setData(data);
+      tvChart.timeScale().fitContent();
+    }
+
+    function setTimeframe(tf, el) {
+      document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      generateCandleData();
+    }
+
+    function openPairPickerModal() {
+      const pairs = [
+        { base: 'TON', quote: 'USDT' },
+        { base: 'BTC', quote: 'USDT' },
+        { base: 'ETH', quote: 'USDT' },
+        { base: 'SOL', quote: 'USDT' },
+        { base: 'GRAM', quote: 'USDT' },
+        { base: 'DOGE', quote: 'USDT' },
+        { base: 'LTC', quote: 'USDT' },
+        { base: 'BNB', quote: 'USDT' },
+        { base: 'USDC', quote: 'USDT' },
+        { base: 'TRX', quote: 'USDT' }
+      ];
+
+      const html = pairs.map(p => `
+        <div class="asset-item" onclick="selectExchangePair('${p.base}', '${p.quote}')">
+          <div class="asset-info">
+            <img class="asset-icon-img" src="./images/coins/${p.base}.webp" onerror="this.src='./images/coins/USDT.webp'">
+            <div>
+              <div class="asset-name">${p.base} / ${p.quote}</div>
+              <div class="asset-price-sub">${(ASSETS.find(a=>a.id===p.base)||{}).change||'+0.00%'}</div>
+            </div>
+          </div>
+          <div class="asset-values">
+            <div class="asset-crypto-amount">${formatMoney((ASSETS.find(a=>a.id===p.base)||{}).usdPrice||1, 4)} USDT</div>
+          </div>
+        </div>
+      `).join('');
+
+      openModal('Выберите торговую пару', `<div class="asset-list">${html}</div>`);
+    }
+
+    function selectExchangePair(base, quote) {
+      currentExchangePair = { base, quote };
+      document.getElementById('current-pair-text').innerText = `${base} / ${quote}`;
+      document.getElementById('book-base-sym').innerText = base;
+      document.getElementById('book-quote-sym').innerText = quote;
+      document.getElementById('trade-submit-btn').innerText = `${currentTradeMode === 'buy' ? 'Купить' : 'Продать'} ${base}`;
+
+      const coin = ASSETS.find(a => a.id === base) || { usdPrice: 1.0, change: '+0.00%' };
+      document.getElementById('exchange-pair-change').innerText = coin.change;
+      document.getElementById('exchange-pair-change').style.color = coin.change.startsWith('+') ? 'var(--accent-green)' : 'var(--accent-red)';
+      document.getElementById('trade-price-input').value = coin.usdPrice.toFixed(4);
+
+      closeModal();
+      generateCandleData();
+      updateExchangeBook();
+    }
+
+    function updateExchangeBook() {
+      const coin = ASSETS.find(a => a.id === currentExchangePair.base) || { usdPrice: 1.6 };
+      const p = coin.usdPrice;
+
+      document.getElementById('exchange-last-price').innerText = `${formatMoney(p, 4)} ${currentExchangePair.quote}`;
+
+      const asksContainer = document.getElementById('order-book-asks');
+      const bidsContainer = document.getElementById('order-book-bids');
+
+      asksContainer.innerHTML = [0.0004, 0.0003, 0.0002, 0.0001].map(offset => {
+        const price = (p + offset).toFixed(4);
+        const qty = formatMoney(Math.random() * 5000 + 1000, 2);
+        return `<div class="order-row order-ask" onclick="document.getElementById('trade-price-input').value='${price}'"><span>${price}</span><span>${qty}</span></div>`;
+      }).join('');
+
+      bidsContainer.innerHTML = [-0.0001, -0.0002, -0.0003, -0.0004].map(offset => {
+        const price = (p + offset).toFixed(4);
+        const qty = formatMoney(Math.random() * 5000 + 1000, 2);
+        return `<div class="order-row order-bid" onclick="document.getElementById('trade-price-input').value='${price}'"><span>${price}</span><span>${qty}</span></div>`;
+      }).join('');
+    }
+
+    function setTradeMode(mode) {
+      currentTradeMode = mode;
+      const buyTab = document.getElementById('trade-buy-tab');
+      const sellTab = document.getElementById('trade-sell-tab');
+      const submitBtn = document.getElementById('trade-submit-btn');
+
+      if (mode === 'buy') {
+        buyTab.className = 'trade-tab-btn active buy';
+        sellTab.className = 'trade-tab-btn';
+        submitBtn.className = 'primary-btn green';
+        submitBtn.innerText = `Купить ${currentExchangePair.base}`;
+      } else {
+        buyTab.className = 'trade-tab-btn';
+        sellTab.className = 'trade-tab-btn active sell';
+        submitBtn.className = 'primary-btn red';
+        submitBtn.innerText = `Продать ${currentExchangePair.base}`;
+      }
+    }
+
+    function setTradePercent(pct) {
+      const coin = currentTradeMode === 'buy' ? currentExchangePair.quote : currentExchangePair.base;
+      const bal = userBalances[coin] || 100.0;
+      const amt = (bal * (pct / 100));
+      document.getElementById('trade-amount-input').value = amt.toFixed(2);
+    }
+
+    function executeTradeOrder() {
+      const price = parseFloat(document.getElementById('trade-price-input').value);
+      const amt = parseFloat(document.getElementById('trade-amount-input').value);
+      if (!amt || amt <= 0) {
+        showToast('Ошибка', 'Укажите количество для ордера', false);
+        return;
+      }
+
+      const base = currentExchangePair.base;
+      const quote = currentExchangePair.quote;
+      const cost = amt * price;
+
+      if (currentTradeMode === 'buy') {
+        userBalances[quote] = Math.max(0, (userBalances[quote] || 100) - cost);
+        userBalances[base] = (userBalances[base] || 0) + amt;
+      } else {
+        userBalances[base] = Math.max(0, (userBalances[base] || 0) - amt);
+        userBalances[quote] = (userBalances[quote] || 0) + cost;
+      }
+      localStorage.setItem('user_balances', JSON.stringify(userBalances));
+
+      renderAssetsList();
+      showToast('Ордер исполнен!', `${currentTradeMode === 'buy' ? 'Куплено' : 'Продано'} ${formatMoney(amt, 2)} ${base} по ${formatMoney(price, 4)} ${quote}`);
+    }
+
+    // ==========================================
+    // P2P MARKET & AUTHENTIC TRADE ROOM
+    // ==========================================
+    const REALISTIC_P2P_MERCHANTS = [
+      { user: 'Faithful Javelin', deals: 1840, rate: '100%', mult: 1.01, min: 1000, max: 95000, bank: 'Т-Банк', name: 'Алексей В.' },
+      { user: 'Swift Falcon', deals: 950, rate: '99.8%', mult: 1.012, min: 2000, max: 150000, bank: 'Сбербанк', name: 'Михаил С.' },
+      { user: 'Silent Ranger', deals: 3420, rate: '99.9%', mult: 1.015, min: 500, max: 50000, bank: 'СБП', name: 'Дмитрий К.' },
+      { user: 'Nordic Whale', deals: 2110, rate: '100%', mult: 1.016, min: 10000, max: 400000, bank: 'Т-Банк', name: 'Сергей П.' },
+      { user: 'Crypto Hunter', deals: 640, rate: '99.5%', mult: 1.018, min: 1500, max: 80000, bank: 'Альфа-Банк', name: 'Иван М.' },
+      { user: 'Golden Eagle', deals: 4200, rate: '100%', mult: 1.02, min: 5000, max: 250000, bank: 'Сбербанк', name: 'Ольга Р.' },
+      { user: 'Shadow Lynx', deals: 830, rate: '99.7%', mult: 1.021, min: 1000, max: 70000, bank: 'СБП', name: 'Константин Т.' },
+      { user: 'Zenith Exchange', deals: 5120, rate: '100%', mult: 1.022, min: 25000, max: 600000, bank: 'Т-Банк', name: 'Артем Б.' },
+      { user: 'Iron Fortress', deals: 1290, rate: '99.6%', mult: 1.023, min: 2000, max: 120000, bank: 'ВТБ', name: 'Павел Н.' },
+      { user: 'Solar Flare', deals: 760, rate: '100%', mult: 1.025, min: 1000, max: 60000, bank: 'Т-Банк', name: 'Роман Е.' }
     ];
+
+    function generateRandomRussianCard() {
+      const prefixes = ['2200', '2202', '5213', '4276', '5536'];
+      const p = prefixes[Math.floor(Math.random() * prefixes.length)];
+      const r = () => Math.floor(1000 + Math.random() * 9000);
+      return `${p} ${r()} ${r()} ${r()}`;
+    }
 
     function setP2PType(type) {
       currentP2PType = type;
@@ -1836,58 +2012,154 @@
       const coin = ASSETS.find(a => a.id === currentP2PAsset) || { usdPrice: 1.0 };
       const basePrice = coin.usdPrice * fiatRate;
 
-      container.innerHTML = P2P_ORDERS.map(o => {
-        const orderPrice = basePrice * o.priceMultiplier;
+      container.innerHTML = REALISTIC_P2P_MERCHANTS.map((m, idx) => {
+        const price = basePrice * m.mult;
         return `
           <div class="p2p-order-card">
             <div class="p2p-order-user">
               <span class="p2p-username">
-                ${o.user}
+                ${m.user}
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="var(--accent-cyan)"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4" stroke="#000" stroke-width="2" fill="none"/></svg>
               </span>
-              <span class="p2p-user-stats">${o.deals} сделок • ${o.rate}</span>
+              <span class="p2p-user-stats">${m.deals} сделок • ${m.rate}</span>
             </div>
             <div class="p2p-price-row">
               <div>
-                <div class="p2p-price">${formatMoney(orderPrice, 2)} ${fiatSymbol}</div>
-                <div class="p2p-limits">Лимит: ${formatMoney(o.min, 0)} – ${formatMoney(o.max, 0)} ${fiatSymbol}</div>
+                <div class="p2p-price">${formatMoney(price, 2)} ${fiatSymbol}</div>
+                <div class="p2p-limits">Лимит: ${formatMoney(m.min, 0)} – ${formatMoney(m.max, 0)} ${fiatSymbol}</div>
               </div>
-              <button class="p2p-action-btn ${currentP2PType}" onclick="openP2PTradeModal('${o.user}', ${orderPrice.toFixed(2)})">
+              <button class="p2p-action-btn ${currentP2PType}" onclick="startP2PTradeFlow(${idx}, ${price.toFixed(2)})">
                 ${currentP2PType === 'buy' ? 'Купить' : 'Продать'}
               </button>
             </div>
-            <span class="p2p-badge-pay">${o.bank}</span>
+            <span class="p2p-badge-pay">${m.bank}</span>
           </div>
         `;
       }).join('');
     }
 
-    function openP2PTradeModal(merchant, price) {
+    function startP2PTradeFlow(mIdx, price) {
+      const m = REALISTIC_P2P_MERCHANTS[mIdx];
       const fiatSymbol = (FIAT_CONFIG[currentFiat] || FIAT_CONFIG.RUB).symbol;
-      openModal(`${currentP2PType === 'buy' ? 'Покупка' : 'Продажа'} ${currentP2PAsset} у ${merchant}`, `
-        <div style="font-size: 14px; margin-bottom: 12px; color: var(--text-secondary);">Курс: <b style="color: #fff;">${price} ${fiatSymbol}</b></div>
+
+      openModal(`${currentP2PType === 'buy' ? 'Покупка' : 'Продажа'} ${currentP2PAsset} у ${m.user}`, `
+        <div style="font-size: 14px; margin-bottom: 14px; color: var(--text-secondary);">
+          Курс продавца: <b style="color: #fff;">${formatMoney(price, 2)} ${fiatSymbol}</b>
+        </div>
         <div class="form-input-group">
           <span class="form-input-label">Сумма в ${fiatSymbol}</span>
-          <input type="number" id="p2p-fiat-amt" placeholder="5000">
+          <input type="number" id="p2p-trade-amount" placeholder="${m.min}" value="${m.min}" oninput="updateP2PReceivedCrypto(${price})">
         </div>
-        <button class="primary-btn ${currentP2PType === 'buy' ? 'green' : 'red'}" onclick="alert('Сделка открыта! Переведите средства по указанным реквизитам продавца.'); closeModal();">
-          Начать сделку
+        <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 18px;">
+          Вы получите: <b id="p2p-calc-crypto" style="color: var(--accent-green);">${formatMoney(m.min / price, 2)} ${currentP2PAsset}</b>
+        </div>
+        <button class="primary-btn ${currentP2PType === 'buy' ? 'green' : 'red'}" onclick="openP2PTradeRoom(${mIdx}, ${price})">
+          ${currentP2PType === 'buy' ? 'Создать сделку на покупку' : 'Открыть сделку на продажу'}
         </button>
       `);
     }
 
-    // Initialization
+    function updateP2PReceivedCrypto(price) {
+      const amt = parseFloat(document.getElementById('p2p-trade-amount').value) || 0;
+      document.getElementById('p2p-calc-crypto').innerText = `${formatMoney(amt / price, 2)} ${currentP2PAsset}`;
+    }
+
+    function openP2PTradeRoom(mIdx, price) {
+      const m = REALISTIC_P2P_MERCHANTS[mIdx];
+      const fiatSymbol = (FIAT_CONFIG[currentFiat] || FIAT_CONFIG.RUB).symbol;
+      const amountFiat = parseFloat(document.getElementById('p2p-trade-amount').value) || m.min;
+      const cryptoAmount = amountFiat / price;
+      const randomCard = generateRandomRussianCard();
+
+      let secondsLeft = 900; // 15 mins
+      if (activeP2PTimer) clearInterval(activeP2PTimer);
+
+      openModal(`Сделка #${Math.floor(10000 + Math.random() * 90000)}`, `
+        <div style="text-align: center;">
+          <div class="trade-timer-badge">
+            ⏱ <span id="trade-timer-display">15:00</span>
+          </div>
+        </div>
+
+        <div class="trade-room-card">
+          <div class="req-row">
+            <span class="req-label">Банк получателя</span>
+            <span class="req-val">${m.bank}</span>
+          </div>
+          <div class="req-row">
+            <span class="req-label">Номер карты</span>
+            <span class="req-val">
+              <span>${randomCard}</span>
+              <button class="copy-chip" onclick="navigator.clipboard.writeText('${randomCard.replace(/\s/g, '')}'); showToast('Скопировано', 'Номер карты в буфере');">Копировать</button>
+            </span>
+          </div>
+          <div class="req-row">
+            <span class="req-label">Получатель</span>
+            <span class="req-val">${m.name}</span>
+          </div>
+          <div class="req-row">
+            <span class="req-label">Сумма к оплате</span>
+            <span class="req-val" style="color: var(--accent-green); font-size: 16px;">${formatMoney(amountFiat, 2)} ${fiatSymbol}</span>
+          </div>
+          <div class="req-row">
+            <span class="req-label">Вы получите</span>
+            <span class="req-val">${formatMoney(cryptoAmount, 2)} ${currentP2PAsset}</span>
+          </div>
+        </div>
+
+        <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 16px;">
+          Переведите точную сумму со своего счета и после успешной оплаты нажмите кнопку ниже.
+        </div>
+
+        <button class="primary-btn green" id="p2p-pay-confirm-btn" onclick="confirmP2PPayment(${cryptoAmount}, '${currentP2PAsset}', '${m.user}')">
+          Я оплатил
+        </button>
+        <button class="currency-back-btn" style="margin-top: 8px;" onclick="closeModal()">Отменить сделку</button>
+      `);
+
+      activeP2PTimer = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft <= 0) {
+          clearInterval(activeP2PTimer);
+          closeModal();
+          return;
+        }
+        const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+        const secs = String(secondsLeft % 60).padStart(2, '0');
+        const el = document.getElementById('trade-timer-display');
+        if (el) el.innerText = `${mins}:${secs}`;
+      }, 1000);
+    }
+
+    function confirmP2PPayment(cryptoAmount, asset, merchantName) {
+      const btn = document.getElementById('p2p-pay-confirm-btn');
+      if (btn) {
+        btn.innerText = 'Проверка оплаты продавцом...';
+        btn.style.opacity = '0.7';
+        btn.disabled = true;
+      }
+
+      setTimeout(() => {
+        if (activeP2PTimer) clearInterval(activeP2PTimer);
+        userBalances[asset] = (userBalances[asset] || 0) + cryptoAmount;
+        localStorage.setItem('user_balances', JSON.stringify(userBalances));
+
+        closeModal();
+        renderAssetsList();
+        showToast('Сделка завершена!', `+${formatMoney(cryptoAmount, 2)} ${asset} зачислено от ${merchantName}`);
+      }, 2600);
+    }
+
+    // Initial load
     window.addEventListener('DOMContentLoaded', () => {
       renderAssetsList();
       renderP2POrders();
       calculateSwap();
       handleInitialRoute();
 
-      // Listen for browser navigation changes
       window.addEventListener('hashchange', handleInitialRoute);
       window.addEventListener('popstate', handleInitialRoute);
 
-      // Fetch live rates immediately and periodically
       fetchLiveRates();
       setInterval(fetchLiveRates, 25000);
     });
