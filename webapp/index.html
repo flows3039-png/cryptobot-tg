@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Crypto Bot</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #14171a;
+      --surface: #1e2329;
+      --card-bg: #181d22;
+      --text: #ffffff;
+      --text-muted: #848e9c;
+      --primary: #0098ea;
+      --primary-hover: #0087d1;
+      --green: #0ecb81;
+      --red: #f6465d;
+      --border: #23272e;
+      --pill-bg: rgba(30, 36, 44, 0.94);
+      --dock-active: #2b3542;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      padding-bottom: 95px;
+    }
+
+    /* Top Banner */
+    .banner {
+      background: #1c2127;
+      border: 1px solid #282f38;
+      border-radius: 14px;
+      margin: 12px 16px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+    .banner-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+      font-weight: 500;
+    }
+    .banner-text {
+      font-size: 13px;
+      line-height: 1.35;
+      color: #e6e8ea;
+    }
+    .banner-arrow {
+      color: var(--text-muted);
+      font-size: 16px;
+      margin-left: 10px;
+    }
+
+    /* View containers */
+    .view {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      animation: fadeIn 0.15s ease-out;
+    }
+    .view.active {
+      display: flex;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* =================== 1. WALLET VIEW =================== */
+    .wallet-header {
+      padding: 24px 16px 16px;
+      text-align: center;
+    }
+    .main-balance-row {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .currency-symbol {
+      font-size: 38px;
+      font-weight: 700;
+      color: #9aa2ac;
+    }
+    .main-balance {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: -1px;
+    }
+    .eye-btn {
+      background: none;
+      border: none;
+      color: #717a87;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 4px;
+    }
+    .balance-subtitle {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+    .balance-subtitle span {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* Quick Action Round Buttons */
+    .quick-actions {
+      display: flex;
+      justify-content: center;
+      gap: 36px;
+      margin: 18px 0 10px;
+    }
+    .action-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .action-circle {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #2a7dbd;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s;
+    }
+    .action-circle:active {
+      transform: scale(0.94);
+    }
+    .action-label {
+      color: #4da6e9;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    /* Assets List */
+    .assets-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px 8px;
+    }
+    .assets-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #2793e6;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .assets-hide-toggle {
+      font-size: 13px;
+      color: #3b9fe8;
+      cursor: pointer;
+    }
+
+    .asset-list {
+      display: flex;
+      flex-direction: column;
+    }
+    .asset-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid #1a1e24;
+      cursor: pointer;
+    }
+    .asset-item:active {
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .asset-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+    .asset-info {
+      flex: 1;
+    }
+    .asset-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .asset-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .asset-sub .change-pos { color: var(--green); }
+    .asset-sub .change-neg { color: var(--red); }
+    .asset-vals {
+      text-align: right;
+    }
+    .asset-crypto {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .asset-fiat {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* =================== 2. EXCHANGE VIEW =================== */
+    .exchange-top-bar {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .pair-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .pair-name {
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .pair-stats {
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      border-bottom: 1px solid #1c2127;
+      color: var(--text-muted);
+    }
+
+    .exchange-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 12px 16px;
+      gap: 12px;
+    }
+
+    .buy-sell-tabs {
+      display: flex;
+      background: #191e24;
+      border-radius: 8px;
+      padding: 2px;
+      margin-bottom: 10px;
+    }
+    .bs-tab {
+      flex: 1;
+      padding: 8px 0;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      color: #88929e;
+      background: none;
+    }
+    .bs-tab.active-buy {
+      background: var(--green);
+      color: #fff;
+    }
+    .bs-tab.active-sell {
+      background: var(--red);
+      color: #fff;
+    }
+
+    .inp-box {
+      background: #191e24;
+      border: 1px solid #282f38;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+    }
+    .inp-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .inp-field {
+      width: 100%;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      outline: none;
+      margin-top: 2px;
+    }
+    .pct-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin: 6px 0 10px;
+    }
+    .pct-item {
+      cursor: pointer;
+      padding: 2px 4px;
+    }
+    .pct-item:hover { color: #fff; }
+
+    .trade-btn {
+      width: 100%;
+      padding: 12px 0;
+      background: #373e48;
+      color: #79828d;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    .trade-btn.active {
+      background: var(--green);
+      color: #fff;
+    }
+
+    /* Orderbook column */
+    .orderbook-col {
+      display: flex;
+      flex-direction: column;
+      font-size: 11px;
+      font-family: monospace;
+    }
+    .ob-header {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+      padding-bottom: 6px;
+      font-family: sans-serif;
+    }
+    .ob-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+    .ob-ask { color: var(--red); }
+    .ob-bid { color: var(--green); }
+    .ob-mid {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--green);
+      text-align: center;
+      padding: 8px 0;
+    }
+
+    /* Orders Bottom Section */
+    .orders-section {
+      padding: 16px;
+      border-top: 1px solid #1c2127;
+      margin-top: 10px;
+    }
+    .orders-tabs {
+      display: flex;
+      gap: 16px;
+      border-bottom: 1px solid #23272e;
+      padding-bottom: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .order-tab.active {
+      color: var(--text);
+      font-weight: 600;
+      position: relative;
+    }
+    .order-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -9px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--primary);
+    }
+    .empty-state {
+      padding: 36px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #636b76;
+      font-size: 13px;
+      gap: 8px;
+    }
+
+    /* =================== 3. SWAP (ОБМЕН) VIEW =================== */
+    .swap-container {
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .swap-card {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid #232a32;
+      border-radius: 16px;
+      padding: 18px 16px;
+      position: relative;
+    }
+    .swap-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .swap-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .swap-coin-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+    }
+    .swap-input {
+      background: none;
+      border: none;
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      text-align: right;
+      width: 50%;
+      outline: none;
+    }
+    .swap-divider {
+      position: relative;
+      margin: 16px 0;
+      height: 1px;
+      background: #252d36;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .swap-switch-circle {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      background: #232e3a;
+      border: 2px solid var(--bg);
+      border-radius: 50%;
+      color: #3b9fe8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .swap-switch-circle:active {
+      transform: scale(0.9) rotate(180deg);
+    }
+    .swap-action-btn {
+      width: 100%;
+      margin-top: 24px;
+      padding: 16px;
+      border-radius: 14px;
+      background: #3992d9;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+    .swap-action-btn:active {
+      background: #2d82c6;
+    }
+
+    /* =================== 4. P2P VIEW =================== */
+    .p2p-header {
+      padding: 24px 16px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .p2p-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 20px;
+      background: #2b7ebb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 30px;
+      margin-bottom: 14px;
+    }
+    .p2p-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .p2p-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      max-width: 320px;
+    }
+    .profile-card {
+      margin: 10px 16px;
+      background: #1c2127;
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+    .profile-card-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .p2p-filters {
+      display: flex;
+      gap: 8px;
+      padding: 8px 16px;
+      overflow-x: auto;
+    }
+    .p2p-filter-pill {
+      background: #1c2127;
+      border: 1px solid #29303a;
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: #c1c8d1;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* =================== 5. MORE (ЕЩЁ) VIEW =================== */
+    .more-container {
+      padding: 16px;
+    }
+    .grid-section-title {
+      font-size: 13px;
+      color: #8c96a3;
+      margin: 18px 0 10px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px 10px;
+    }
+    .grid-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+    }
+    .grid-icon-box {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #fff;
+      margin-bottom: 6px;
+      transition: transform 0.1s;
+    }
+    .grid-item:active .grid-icon-box {
+      transform: scale(0.93);
+    }
+    .grid-label {
+      font-size: 11px;
+      color: #d1d5db;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    /* Help & Docs Rows */
+    .link-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid #1a1e24;
+      cursor: pointer;
+    }
+    .link-row-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: #fff;
+      font-weight: 500;
+    }
+    .link-row-arrow {
+      color: #636d7a;
+      font-size: 14px;
+    }
+
+    /* =================== BOTTOM FLOATING DOCK =================== */
+    .bottom-dock-wrapper {
+      position: fixed;
+      bottom: 12px;
+      left: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .bottom-dock {
+      pointer-events: auto;
+      background: var(--pill-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 28px;
+      display: flex;
+      align-items: center;
+      padding: 4px 6px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    }
+    .dock-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: none;
+      background: none;
+      color: #838d99;
+      cursor: pointer;
+      gap: 3px;
+      transition: all 0.15s ease;
+      min-width: 58px;
+    }
+    .dock-tab.active {
+      background: var(--dock-active);
+      color: #2ea5ff;
+    }
+    .dock-tab svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+    .dock-title {
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .dock-footer {
+      font-size: 11px;
+      color: #626c78;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= 1. КОШЕЛЁК ================= -->
+  <div id="view-wallet" class="view active">
+    <div class="wallet-header">
+      <div class="main-balance-row">
+        <span class="currency-symbol">₽</span>
+        <span id="wallet-balance-num" class="main-balance">0</span>
+        <button class="eye-btn" onclick="toggleBalanceVisibility()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+      </div>
+      <div class="balance-subtitle">Общий баланс в <span>RUB</span></div>
+    </div>
+
+    <!-- Quick Buttons -->
+    <div class="quick-actions">
+      <button class="action-item" onclick="openAction('withdraw')">
+        <div class="action-circle">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="7" y1="17" x2="17" y2="7"></line>
+            <polyline points="7 7 17 7 17 17"></polyline>
+          </svg>
+        </div>
+        <span class="action-label">Вывести</span>
+      </button>
+
+      <button class="action-item" onclick="openAction('history')">
+        <div class="action-circle">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </div>
+        <span class="action-label">История</span>
+      </button>
+    </div>
+
+    <!-- Regional Restriction Banner -->
+    <div class="banner">
+      <div>
+        <div class="banner-title">Региональное ограничение</div>
+        <div class="banner-text">Сервис недоступен в вашем регионе.<br>Средства можно вывести в любой момент.</div>
+      </div>
+      <div class="banner-arrow">›</div>
+    </div>
+
+    <!-- Assets List -->
+    <div class="assets-header">
+      <div class="assets-title">Мои активы ›</div>
+      <div class="assets-hide-toggle" onclick="toggleSmallBalances()">Скрыть мелкие балансы</div>
+    </div>
+
+    <div class="asset-list" id="asset-list-container">
+      <!-- Dynamic Assets inserted via JS -->
+    </div>
+  </div>
+
+  <!-- ================= 2. БИРЖА ================= -->
+  <div id="view-exchange" class="view">
+    <div class="exchange-top-bar">
+      <div class="pair-badge">
+        <span style="font-size:20px;">🔷</span>
+        <span class="pair-name">USDC / USDT</span>
+        <span style="color:#78828f;">▼</span>
+      </div>
+      <div style="font-size:18px; color:#848e9c; cursor:pointer;">⇄</div>
+    </div>
+
+    <div class="pair-stats">
+      <div>Изменение за 24ч: <span style="color:var(--red); font-weight:600;">-0.0002 -0.02%</span></div>
+      <div>Объём 24ч: <span style="color:#fff; font-weight:600;">10 572.75 USDT</span></div>
+    </div>
+
+    <!-- Regional Restriction Banner in Exchange -->
+    <div class="banner" style="margin:8px 16px;">
+      <div>
+        <div class="banner-title">Региональное ограничение</div>
+        <div class="banner-text">Сервис недоступен в вашем регионе.</div>
+      </div>
+      <div class="banner-arrow">›</div>
+    </div>
+
+    <div class="exchange-grid">
+      <!-- Left Trading Column -->
+      <div class="trading-col">
+        <div class="buy-sell-tabs">
+          <button class="bs-tab active-buy" id="btn-buy" onclick="setOrderSide('buy')">Купить</button>
+          <button class="bs-tab" id="btn-sell" onclick="setOrderSide('sell')">Продать</button>
+        </div>
+
+        <div class="inp-box">
+          <div class="inp-label">Тип ордера</div>
+          <div style="font-size:13px; font-weight:600; padding-top:2px;">Лимитный ордер ▼</div>
+        </div>
+
+        <div class="inp-box">
+          <div class="inp-label">Цена (USDT)</div>
+          <input type="text" class="inp-field" value="0.9946">
+        </div>
+
+        <div class="inp-box">
+          <div class="inp-label">Сумма</div>
+          <input type="text" class="inp-field" placeholder="0">
+        </div>
+
+        <div class="pct-row">
+          <span class="pct-item">0%</span>
+          <span class="pct-item">25%</span>
+          <span class="pct-item">50%</span>
+          <span class="pct-item">75%</span>
+          <span class="pct-item">100%</span>
+        </div>
+
+        <div class="inp-box">
+          <div class="inp-label">Всего</div>
+          <input type="text" class="inp-field" placeholder="0">
+        </div>
+
+        <div style="font-size:11px; color:var(--text-muted); line-height:1.4; margin-bottom:8px;">
+          <div>Доступно: <b style="color:#fff;">0 USDT</b></div>
+          <div>Макс. покупка: <b style="color:#fff;">0 USDC</b></div>
+        </div>
+
+        <button class="trade-btn active" id="btn-submit-order">Купить USDC</button>
+      </div>
+
+      <!-- Right Orderbook Column -->
+      <div class="orderbook-col">
+        <div class="ob-header">
+          <span>Цена (USDT)</span>
+          <span>Сумма</span>
+        </div>
+        <!-- Asks -->
+        <div class="ob-row ob-ask"><span>1.0099</span><span>9.90</span></div>
+        <div class="ob-row ob-ask"><span>1.0047</span><span>15K</span></div>
+        <div class="ob-row ob-ask"><span>1.0045</span><span>7.61K</span></div>
+        <div class="ob-row ob-ask"><span>1.0040</span><span>7.06K</span></div>
+        <div class="ob-row ob-ask"><span>1.0000</span><span>8.51K</span></div>
+        <div class="ob-row ob-ask"><span>0.9947</span><span>159.33</span></div>
+
+        <!-- Mid Price -->
+        <div class="ob-mid">0.9946 <span style="font-size:10px; color:var(--text-muted); display:block;">$0.9934</span></div>
+
+        <!-- Bids -->
+        <div class="ob-row ob-bid"><span>0.9946</span><span>6.85K</span></div>
+        <div class="ob-row ob-bid"><span>0.9945</span><span>7.73K</span></div>
+        <div class="ob-row ob-bid"><span>0.9942</span><span>7.78</span></div>
+        <div class="ob-row ob-bid"><span>0.9940</span><span>1.30</span></div>
+        <div class="ob-row ob-bid"><span>0.9937</span><span>81.46</span></div>
+        <div class="ob-row ob-bid"><span>0.9934</span><span>2.12K</span></div>
+      </div>
+    </div>
+
+    <!-- Bottom Orders List -->
+    <div class="orders-section">
+      <div class="orders-tabs">
+        <span class="order-tab active">Открытые ордера (0)</span>
+        <span class="order-tab">История</span>
+        <span class="order-tab">Сделки</span>
+      </div>
+      <div class="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="9" y1="13" x2="15" y2="13"></line>
+          <line x1="9" y1="17" x2="13" y2="17"></line>
+        </svg>
+        <div>Открытых ордеров пока нет.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 3. ОБМЕН ================= -->
+  <div id="view-swap" class="view">
+    <div class="swap-container">
+      <div class="swap-card">
+        <div class="swap-label-row">
+          <span>Вы отправляете</span>
+          <span style="color:#3da7f2; cursor:pointer;">Кошелёк 0 МАКС</span>
+        </div>
+        <div class="swap-row">
+          <div class="swap-coin-btn" onclick="selectSwapCoin('from')">
+            <span style="color:#0098ea;">💠</span>
+            <span id="swap-from-sym">GRAM</span>
+            <span style="color:#6f7884; font-size:14px;">›</span>
+          </div>
+          <input type="text" class="swap-input" id="swap-from-amt" placeholder="0" oninput="calculateSwap()">
+        </div>
+
+        <div class="swap-divider">
+          <div class="swap-switch-circle" onclick="switchSwapCoins()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <polyline points="19 12 12 19 5 12"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <div class="swap-label-row">
+          <span>Вы получаете</span>
+        </div>
+        <div class="swap-row">
+          <div class="swap-coin-btn" onclick="selectSwapCoin('to')">
+            <span style="color:#0098ea;">💎</span>
+            <span id="swap-to-sym">USDT</span>
+            <span style="color:#6f7884; font-size:14px;">›</span>
+          </div>
+          <input type="text" class="swap-input" id="swap-to-amt" placeholder="0" readonly>
+        </div>
+      </div>
+
+      <button class="swap-action-btn" onclick="executeSwap()">Продолжить</button>
+    </div>
+  </div>
+
+  <!-- ================= 4. P2P ================= -->
+  <div id="view-p2p" class="view">
+    <div class="p2p-header">
+      <div class="p2p-logo">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+          <line x1="2" y1="10" x2="22" y2="10"></line>
+        </svg>
+      </div>
+      <div class="p2p-title">P2P Маркет</div>
+      <div class="p2p-desc">Здесь вы можете купить или продать криптовалюту переводом на карту или электронный кошелёк.</div>
+    </div>
+
+    <!-- Restriction banner -->
+    <div class="banner">
+      <div>
+        <div class="banner-title">Доступ ограничен</div>
+        <div class="banner-text">P2P недоступен, пока действует ограничение аккаунта.</div>
+      </div>
+      <div class="banner-arrow">›</div>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-card-left">
+        <span style="color:#3ba2ef;">👤</span>
+        <span>Мой профиль</span>
+      </div>
+      <div class="banner-arrow">›</div>
+    </div>
+
+    <div class="p2p-filters">
+      <div class="p2p-filter-pill">Статус ▼</div>
+      <div class="p2p-filter-pill">Тип ▼</div>
+      <div class="p2p-filter-pill">Монета ▼</div>
+      <div class="p2p-filter-pill">Способ ▼</div>
+    </div>
+
+    <div class="empty-state">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+      </svg>
+      <div>Сделок пока нет.</div>
+    </div>
+  </div>
+
+  <!-- ================= 5. ЕЩЁ ================= -->
+  <div id="view-more" class="view">
+    <div class="more-container">
+      <!-- Кошелёк секция -->
+      <div class="grid-section-title">
+        <span>👛</span> Кошелёк
+      </div>
+      <div class="icon-grid">
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#585f6a;">↙</div>
+          <div class="grid-label">Пополнить</div>
+        </div>
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#f59e0b;">↗</div>
+          <div class="grid-label">Вывести</div>
+        </div>
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#64748b;">⠶</div>
+          <div class="grid-label">QR Pay</div>
+        </div>
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#0ea5e9;">🗓</div>
+          <div class="grid-label">История</div>
+        </div>
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#38bdf8; font-weight:700; font-size:17px;">Pay</div>
+          <div class="grid-label">Crypto Pay</div>
+        </div>
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#64748b;">🔖</div>
+          <div class="grid-label">Книга адресов</div>
+        </div>
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#64748b;">%</div>
+          <div class="grid-label">Комиссии</div>
+        </div>
+      </div>
+
+      <!-- Торговля секция -->
+      <div class="grid-section-title">
+        <span>🔄</span> Торговля
+      </div>
+      <div class="icon-grid">
+        <div class="grid-item" onclick="switchTab('swap')">
+          <div class="grid-icon-box" style="background:#c084fc;">⇄</div>
+          <div class="grid-label">Обмен</div>
+        </div>
+        <div class="grid-item" onclick="switchTab('exchange')">
+          <div class="grid-icon-box" style="background:#fb7185;">📊</div>
+          <div class="grid-label">Биржа</div>
+        </div>
+        <div class="grid-item" onclick="switchTab('p2p')">
+          <div class="grid-icon-box" style="background:#38bdf8;">🤝</div>
+          <div class="grid-label">P2P Маркет</div>
+        </div>
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#6366f1;">🛍</div>
+          <div class="grid-label">P2C</div>
+        </div>
+      </div>
+
+      <!-- Аккаунт секция -->
+      <div class="grid-section-title">
+        <span>👤</span> Аккаунт
+      </div>
+      <div class="icon-grid">
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#6b7280;">⚙️</div>
+          <div class="grid-label">Настройки</div>
+        </div>
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#22c55e;">🔒</div>
+          <div class="grid-label">Безопасность</div>
+        </div>
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#06b6d4;">🛡</div>
+          <div class="grid-label">Верификация</div>
+        </div>
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#f97316;">🔔</div>
+          <div class="grid-label">Уведомления</div>
+        </div>
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#4b5563;">🖼</div>
+          <div class="grid-label">Обои</div>
+        </div>
+        <div class="grid-item">
+          <div class="grid-icon-box" style="background:#38bdf8;">🎫</div>
+          <div class="grid-label">Ваучеры</div>
+        </div>
+      </div>
+
+      <!-- Помощь и документы -->
+      <div class="grid-section-title" style="margin-top:24px;">
+        <span>❓</span> Помощь
+      </div>
+      <div class="link-row">
+        <div class="link-row-left">
+          <span>ℹ️</span> Справка Crypto Bot
+        </div>
+        <div class="link-row-arrow">↗</div>
+      </div>
+      <div class="link-row">
+        <div class="link-row-left">
+          <span>💬</span> Написать в поддержку
+        </div>
+        <div class="link-row-arrow">↗</div>
+      </div>
+      <div class="link-row">
+        <div class="link-row-left">
+          <span>✉️</span> Обратная связь
+        </div>
+        <div class="link-row-arrow">↗</div>
+      </div>
+
+      <div class="grid-section-title" style="margin-top:20px;">
+        <span>📄</span> Документы
+      </div>
+      <div class="link-row">
+        <div class="link-row-left">
+          <span>🛡</span> Политика конфиденциальности
+        </div>
+        <div class="link-row-arrow">↗</div>
+      </div>
+      <div class="link-row">
+        <div class="link-row-left">
+          <span>💲</span> Политика AML
+        </div>
+        <div class="link-row-arrow">↗</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= FLOATING BOTTOM DOCK ================= -->
+  <div class="bottom-dock-wrapper">
+    <div class="bottom-dock">
+      <button class="dock-tab active" id="dock-wallet" onclick="switchTab('wallet')">
+        <svg viewBox="0 0 24 24"><path d="M21 7.28V5c0-1.1-.9-2-2-2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-2.28c.59-.35 1-.99 1-1.72V9c0-.73-.41-1.37-1-1.72zM20 9v6h-7V9h7zM5 5h14v2h-6c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h6v2H5V5z"/><circle cx="16" cy="12" r="1.5"/></svg>
+        <span class="dock-title">Кошелёк</span>
+      </button>
+
+      <button class="dock-tab" id="dock-exchange" onclick="switchTab('exchange')">
+        <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5V9.2zM10.5 5h3v14h-3V5zm5.5 8h3v6h-3v-6z"/></svg>
+        <span class="dock-title">Биржа</span>
+      </button>
+
+      <button class="dock-tab" id="dock-swap" onclick="switchTab('swap')">
+        <svg viewBox="0 0 24 24"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
+        <span class="dock-title">Обмен</span>
+      </button>
+
+      <button class="dock-tab" id="dock-p2p" onclick="switchTab('p2p')">
+        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+        <span class="dock-title">P2P</span>
+      </button>
+
+      <button class="dock-tab" id="dock-more" onclick="switchTab('more')">
+        <svg viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+        <span class="dock-title">Ещё</span>
+      </button>
+    </div>
+    <div class="dock-footer">@send</div>
+  </div>
+
+  <script>
+    // Initialize Telegram WebApp
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      tg.setHeaderColor('#14171a');
+      tg.setBackgroundColor('#14171a');
+    }
+
+    // Asset data exact from CryptoBot
+    const ASSETS = [
+      { ticker: 'USDT', name: 'Tether', price: 0.9988, change: -0.02, color: '#26a17b', icon: '₮', balance: 0 },
+      { ticker: 'GRAM', name: 'Gram', price: 1.26, change: 3.20, color: '#3ca3f8', icon: '💎', balance: 0 },
+      { ticker: 'TON', name: 'Toncoin', price: 5.50, change: 1.10, color: '#0088cc', icon: '💎', balance: 0 },
+      { ticker: 'SOL', name: 'Solana', price: 101.49, change: 1.86, color: '#9945ff', icon: 'S', balance: 0 },
+      { ticker: 'TRX', name: 'TRON', price: 0.329, change: 0.07, color: '#ef1c27', icon: 'T', balance: 0 },
+      { ticker: 'BTC', name: 'Bitcoin', price: 80551.37, change: 3.23, color: '#f7931a', icon: '₿', balance: 0 },
+      { ticker: 'ETH', name: 'Ethereum', price: 2341.81, change: 1.65, color: '#627eea', icon: 'Ξ', balance: 0 },
+      { ticker: 'DOGE', name: 'Dogecoin', price: 0.07701, change: 2.06, color: '#c2a633', icon: 'Ð', balance: 0 },
+      { ticker: 'LTC', name: 'Litecoin', price: 57.02, change: 2.40, color: '#345d9d', icon: 'Ł', balance: 0 },
+      { ticker: 'BNB', name: 'Binance Coin', price: 740.99, change: 2.74, color: '#f3ba2f', icon: 'B', balance: 0 },
+      { ticker: 'USDC', name: 'USD Coin', price: 0.9996, change: 0.00, color: '#2775ca', icon: '$', balance: 0 },
+      { ticker: 'XAUT', name: 'Tether Gold', price: 3989.19, change: 0.15, color: '#c39b36', icon: 'G', balance: 0 }
+    ];
+
+    const RUB_RATE = 95.5;
+    let hideBalance = false;
+    let hideSmall = false;
+
+    function renderAssets() {
+      const container = document.getElementById('asset-list-container');
+      container.innerHTML = '';
+
+      ASSETS.forEach(item => {
+        const fiatVal = (item.balance * item.price * RUB_RATE).toFixed(0);
+        const changeClass = item.change >= 0 ? 'change-pos' : 'change-neg';
+        const changeSign = item.change > 0 ? '+' : '';
+
+        const div = document.createElement('div');
+        div.className = 'asset-item';
+        div.innerHTML = `
+          <div class="asset-icon" style="background:${item.color};">${item.icon}</div>
+          <div class="asset-info">
+            <div class="asset-name">${item.name}</div>
+            <div class="asset-sub">
+              $${item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+              <span class="${changeClass}">${changeSign}${item.change.toFixed(2)}%</span>
+            </div>
+          </div>
+          <div class="asset-vals">
+            <div class="asset-crypto">${hideBalance ? '••••' : item.balance + ' ' + item.ticker}</div>
+            <div class="asset-fiat">${hideBalance ? '••••' : fiatVal + ' ₽'}</div>
+          </div>
+        `;
+        div.onclick = () => {
+          if (tg) tg.HapticFeedback?.impactOccurred('light');
+        };
+        container.appendChild(div);
+      });
+    }
+
+    // Toggle navigation tabs
+    function switchTab(tabId) {
+      if (tg) tg.HapticFeedback?.selectionChanged();
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.dock-tab').forEach(t => t.classList.remove('active'));
+
+      const activeView = document.getElementById(`view-${tabId}`);
+      const activeDock = document.getElementById(`dock-${tabId}`);
+      if (activeView) activeView.classList.add('active');
+      if (activeDock) activeDock.classList.add('active');
+
+      window.scrollTo(0, 0);
+    }
+
+    // Hide/show balance
+    function toggleBalanceVisibility() {
+      hideBalance = !hideBalance;
+      document.getElementById('wallet-balance-num').textContent = hideBalance ? '••••' : '0';
+      renderAssets();
+    }
+
+    function toggleSmallBalances() {
+      hideSmall = !hideSmall;
+      renderAssets();
+    }
+
+    function setOrderSide(side) {
+      const buyBtn = document.getElementById('btn-buy');
+      const sellBtn = document.getElementById('btn-sell');
+      const submitBtn = document.getElementById('btn-submit-order');
+
+      if (side === 'buy') {
+        buyBtn.className = 'bs-tab active-buy';
+        sellBtn.className = 'bs-tab';
+        submitBtn.textContent = 'Купить USDC';
+        submitBtn.style.background = 'var(--green)';
+      } else {
+        buyBtn.className = 'bs-tab';
+        sellBtn.className = 'bs-tab active-sell';
+        submitBtn.textContent = 'Продать USDC';
+        submitBtn.style.background = 'var(--red)';
+      }
+    }
+
+    function switchSwapCoins() {
+      const fromSym = document.getElementById('swap-from-sym');
+      const toSym = document.getElementById('swap-to-sym');
+      const temp = fromSym.textContent;
+      fromSym.textContent = toSym.textContent;
+      toSym.textContent = temp;
+      calculateSwap();
+    }
+
+    function calculateSwap() {
+      const fromAmt = parseFloat(document.getElementById('swap-from-amt').value) || 0;
+      const rate = 1.26; // Example GRAM to USDT
+      document.getElementById('swap-to-amt').value = fromAmt ? (fromAmt * rate).toFixed(4) : '';
+    }
+
+    function executeSwap() {
+      if (tg) {
+        tg.HapticFeedback?.notificationOccurred('success');
+        tg.showAlert('Заявка на обмен создана!');
+      } else {
+        alert('Заявка на обмен создана!');
+      }
+    }
+
+    function openAction(action) {
+      if (tg) tg.HapticFeedback?.impactOccurred('medium');
+      if (action === 'withdraw') {
+        switchTab('more');
+      } else if (action === 'history') {
+        alert('История транзакций пуста');
+      }
+    }
+
+    // Initial render
+    renderAssets();
+  </script>
+</body>
+</html>
