@@ -1,0 +1,9 @@
+[2026-10-24 17:29:46] log_check_error: activate_check_link: обычное редактирование chat_id=5742263111, msg_id=14599 | Ошибка: TelegramBadRequest: Telegram server says - Bad Request: message to edit not found
+[2026-10-24 18:04:53] log_check_error: business_check_cmd: не удалось удалить команду /чек у 7162454634 | Ошибка: TelegramBadRequest: Telegram server says - Bad Request: message to delete not found
+[2026-10-24 18:08:29] log_check_error: business_check_cmd: не удалось удалить команду /чек у 7162454634 | Ошибка: TelegramBadRequest: Telegram server says - Bad Request: message to delete not found
+[2026-10-24 18:33:34] log_check_error: activate_check_link: парсинг inline_id=BQAAAGpi6qoBAAAAUjkAAFD77ixpf960 для 4wp4j5CILW98 | Ошибка: ValueError: invalid literal for int() with base 10: 'BQAAAGpi6qoBAAAAUjkAAFD77ixpf960'
+[2026-10-25 00:12:37] log_check_error: activate_check_link: ошибка редактирования бизнес-сообщения ba6fa8a4 | Ошибка: TelegramBadRequest: Telegram server says - Bad Request: BUSINESS_CONNECTION_INVALID
+[2026-10-25 17:14:51] log_check_error: business_check_cmd: не удалось удалить команду /чек | Ошибка: TelegramBadRequest: Telegram server says - Bad Request: message to delete not found
+[2026-10-25 17:14:52] log_check_error: business_check_cmd: не удалось удалить команду /чек | Ошибка: TelegramBadRequest: Telegram server says - Bad Request: message to delete not found
+[2026-10-25 17:14:59] log_check_error: business_check_cmd: не удалось удалить команду /чек | Ошибка: TelegramBadRequest: Telegram server says - Bad Request: message to delete not found
+[2026-10-25 17:14:59] log_check_error: business_check_cmd: не удалось удалить команду /чек | Ошибка: TelegramBadRequest: Telegram server says - Bad Request: message to delete not found
