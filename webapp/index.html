@@ -46,6 +46,19 @@
       font-family: var(--font-display);
       user-select: none;
     }
+    
+    /* Hide scrollbars completely on desktop and mobile */
+    html, body {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    html::-webkit-scrollbar, body::-webkit-scrollbar,
+    .app-container::-webkit-scrollbar, *::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+
     body {
       background-color: var(--bg-primary);
       color: var(--text-primary);
@@ -1376,21 +1389,21 @@
       </div>
 
       <div class="wallet-actions-row">
+        <div class="wallet-circle-btn-wrap" onclick="openDepositModal()">
+          <div class="wallet-circle-btn">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="7" x2="7" y2="17"></line><polyline points="17 17 7 17 7 7"></polyline></svg>
+          </div>
+          <span class="wallet-circle-label">Пополнить</span>
+        </div>
         <div class="wallet-circle-btn-wrap" onclick="handleWithdrawClick()">
           <div class="wallet-circle-btn">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
           </div>
           <span class="wallet-circle-label">Вывести</span>
         </div>
-        <div class="wallet-circle-btn-wrap" onclick="openHistoryModal()">
-          <div class="wallet-circle-btn">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3" ry="3"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-          </div>
-          <span class="wallet-circle-label">История</span>
-        </div>
       </div>
 
-      <div class="cb-banner" onclick="showToast('Информация', 'Средства на кошельке доступны для вывода в любой момент.')">
+      <div class="cb-banner" onclick="openRegionalRestrictionModal()">
         <div class="cb-banner-content">
           <div class="cb-banner-title">Региональное ограничение</div>
           <div class="cb-banner-desc">Сервис недоступен в вашем регионе.<br>Средства можно вывести в любой момент.</div>
@@ -1435,7 +1448,7 @@
         </div>
       </div>
 
-      <div class="cb-banner" style="margin-bottom: 14px;" onclick="showToast('Информация', 'Торговля доступна в полном объёме')">
+      <div class="cb-banner" style="margin-bottom: 14px;" onclick="openRegionalRestrictionModal()">
         <div class="cb-banner-content">
           <div class="cb-banner-title">Региональное ограничение</div>
           <div class="cb-banner-desc">Сервис недоступен в вашем регионе.<br>Средства можно вывести в любой момент.</div>
@@ -1615,7 +1628,7 @@
         </div>
       </div>
 
-      <div class="cb-banner" onclick="showToast('Информация', 'P2P функционал доступен в штатном режиме')">
+      <div class="cb-banner" onclick="openRegionalRestrictionModal()">
         <div class="cb-banner-content">
           <div class="cb-banner-title">Доступ ограничен</div>
           <div class="cb-banner-desc">P2P недоступен, пока действует ограничение аккаунта.</div>
@@ -1698,7 +1711,7 @@
             </div>
             <span class="more-grid-label">История</span>
           </div>
-          <div class="more-grid-item" onclick="showToast('Crypto Pay', 'Платежная система активна')">
+          <div class="more-grid-item" onclick="openCryptoPayModal()">
             <div class="more-squircle-icon" style="background: var(--accent-cyan); font-weight: 700; font-size: 15px;">Pay</div>
             <span class="more-grid-label">Crypto Pay</span>
           </div>
@@ -1740,7 +1753,7 @@
             </div>
             <span class="more-grid-label">P2P Маркет</span>
           </div>
-          <div class="more-grid-item" onclick="showToast('P2C', 'Сервис оплаты товаров')">
+          <div class="more-grid-item" onclick="openP2CModal()">
             <div class="more-squircle-icon" style="background: var(--accent-blue);">
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             </div>
@@ -1786,7 +1799,7 @@
             </div>
             <span class="more-grid-label">Обои</span>
           </div>
-          <div class="more-grid-item" onclick="showToast('Ваучеры', 'Активных ваучеров нет')">
+          <div class="more-grid-item" onclick="openVouchersModal()">
             <div class="more-squircle-icon" style="background: var(--accent-blue);">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V9z"/></svg>
             </div>
@@ -3916,6 +3929,239 @@
         });
       } else {
         showToast('Подсказка', 'Вставьте адрес долгим нажатием на поле');
+      }
+    }
+
+
+    /* ==========================================
+       CRYPTO BOT MODALS & FUNCTIONALITY
+       ========================================== */
+    const FIAT_FLAGS = {
+      RUB: '🇷🇺', USD: '🇺🇸', EUR: '🇪🇺', BYN: '🇧🇾', UAH: '🇺🇦', GBP: '🇬🇧',
+      CNY: '🇨🇳', KZT: '🇰🇿', UZS: '🇺🇿', GEL: '🇬🇪', TRY: '🇹🇷', AMD: '🇦🇲',
+      THB: '🇹🇭', INR: '🇮🇳', BRL: '🇧🇷', IDR: '🇮🇩', AZN: '🇦🇿', AED: '🇦🇪',
+      PLN: '🇵🇱', ILS: '🇮🇱', KGS: '🇰🇬', TJS: '🇹🇯', LKR: '🇱🇰', MDL: '🇲🇩'
+    };
+
+    function selectFiatCurrency(code) {
+      if (!FIAT_CONFIG[code]) return;
+      localStorage.setItem('selected_fiat', code);
+      renderAssetsList();
+      closeModal();
+      showToast('Валюта кошелька', 'Установлено: ' + code + ' (' + FIAT_CONFIG[code].symbol + ')');
+    }
+
+    function openCurrencySelectorModal() {
+      const cur = localStorage.getItem('selected_fiat') || 'RUB';
+      const rows = Object.entries(FIAT_CONFIG).map(([code, cfg]) => {
+        const flag = FIAT_FLAGS[code] || '🌐';
+        const isSelected = code === cur;
+        return `
+          <div class="market-cur-row" onclick="selectFiatCurrency('${code}')" style="display: flex; align-items: center; justify-content: space-between; padding: 13px 14px; background: var(--bg-card); border-radius: 12px; margin-bottom: 8px; cursor: pointer; border: ${isSelected ? '1px solid var(--accent-blue)' : '1px solid rgba(255,255,255,0.04)'};">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 22px; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--bg-card-secondary);">${flag}</span>
+              <div>
+                <div style="font-weight: 600; font-size: 15px;">${cfg.name}</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">${code} · ${cfg.symbol}</div>
+              </div>
+            </div>
+            ${isSelected ? '<span style="color: var(--accent-blue); font-size: 18px; font-weight: 700;">✓</span>' : ''}
+          </div>
+        `;
+      }).join('');
+
+      openModal('Валюта кошелька', `
+        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+          Выберите основную валюту для отображения общего баланса и стоимости активов:
+        </div>
+        <div style="max-height: 60vh; overflow-y: auto; padding-right: 2px;">
+          ${rows}
+        </div>
+      `);
+    }
+
+    function openRegionalRestrictionModal() {
+      openModal('Региональное ограничение', `
+        <div style="padding: 10px 0;">
+          <div style="font-size: 14px; line-height: 1.5; color: var(--text-secondary); margin-bottom: 18px;">
+            В связи с соблюдением требований регионального регулирования некоторые функции могут быть ограничены в вашей юрисдикции.
+          </div>
+          <div style="background: var(--bg-card); border-radius: 14px; padding: 14px; margin-bottom: 18px; border: 1px solid rgba(255,255,255,0.06);">
+            <div style="font-weight: 600; color: #fff; margin-bottom: 6px;">🛡 Ваши средства в безопасности</div>
+            <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.4;">
+              Вы можете пополнять и выводить криптовалюту в любое время на любые внешние кошельки без ограничений.
+            </div>
+          </div>
+          <button class="primary-btn" onclick="closeModal(); handleWithdrawClick();" style="margin-bottom: 10px;">Вывести средства</button>
+          <button class="action-btn" onclick="openDocumentModal('terms')">Условия обслуживания</button>
+        </div>
+      `);
+    }
+
+    function openAddressBookModal() {
+      let book = [];
+      try { book = JSON.parse(localStorage.getItem('cb_address_book') || '[]'); } catch(e){}
+
+      const bookRows = book.length ? book.map((item, idx) => `
+        <div style="background: var(--bg-card); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between;">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 600; font-size: 14px; margin-bottom: 2px;">${item.label} <span style="font-size: 12px; color: var(--accent-blue); background: rgba(43,140,255,0.12); padding: 2px 6px; border-radius: 6px;">${item.coin}</span></div>
+            <div style="font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace;">${item.addr}</div>
+          </div>
+          <div style="display: flex; gap: 8px; margin-left: 10px;">
+            <button onclick="navigator.clipboard.writeText('${item.addr}'); showToast('Скопировано', 'Адрес скопирован');" style="background: var(--bg-card-secondary); border: none; color: #fff; padding: 6px 10px; border-radius: 8px; font-size: 12px; cursor: pointer;">Копия</button>
+            <button onclick="deleteAddressBookEntry(${idx})" style="background: rgba(255,69,58,0.15); border: none; color: var(--accent-red); padding: 6px 10px; border-radius: 8px; font-size: 12px; cursor: pointer;">✕</button>
+          </div>
+        </div>
+      `).join('') : '<div style="text-align: center; color: var(--text-secondary); padding: 20px 0; font-size: 13px;">В книге пока нет сохранённых адресов</div>';
+
+      openModal('Книга адресов', `
+        <div style="padding: 6px 0;">
+          <div style="margin-bottom: 16px;">
+            <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">Быстрый доступ к сохранённым адресам для вывода:</div>
+            ${bookRows}
+          </div>
+          <div style="background: var(--bg-card); border-radius: 14px; padding: 14px; border: 1px solid rgba(255,255,255,0.06); margin-top: 14px;">
+            <div style="font-weight: 600; font-size: 14px; margin-bottom: 10px;">Добавить новый адрес</div>
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <select id="new-ab-coin" style="background: var(--bg-card-secondary); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px; border-radius: 10px; font-size: 13px; width: 100px;">
+                <option value="USDT">USDT</option>
+                <option value="TON">TON</option>
+                <option value="BTC">BTC</option>
+                <option value="ETH">ETH</option>
+                <option value="SOL">SOL</option>
+              </select>
+              <input id="new-ab-label" placeholder="Метка (напр. Bybit)" style="flex: 1; background: var(--bg-card-secondary); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px; border-radius: 10px; font-size: 13px;">
+            </div>
+            <input id="new-ab-addr" placeholder="Адрес кошелька" style="width: 100%; background: var(--bg-card-secondary); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px; border-radius: 10px; font-size: 13px; margin-bottom: 12px; font-family: monospace;">
+            <button class="primary-btn" onclick="saveAddressBookEntry()">Сохранить адрес</button>
+          </div>
+        </div>
+      `);
+    }
+
+    function saveAddressBookEntry() {
+      const coin = document.getElementById('new-ab-coin')?.value || 'USDT';
+      const label = (document.getElementById('new-ab-label')?.value || '').trim() || 'Кошелёк';
+      const addr = (document.getElementById('new-ab-addr')?.value || '').trim();
+      if (!addr) {
+        showToast('Ошибка', 'Введите адрес кошелька', false);
+        return;
+      }
+      let book = [];
+      try { book = JSON.parse(localStorage.getItem('cb_address_book') || '[]'); } catch(e){}
+      book.push({ coin, label, addr });
+      localStorage.setItem('cb_address_book', JSON.stringify(book));
+      showToast('Успешно', 'Адрес сохранён в книгу');
+      openAddressBookModal();
+    }
+
+    function deleteAddressBookEntry(idx) {
+      let book = [];
+      try { book = JSON.parse(localStorage.getItem('cb_address_book') || '[]'); } catch(e){}
+      book.splice(idx, 1);
+      localStorage.setItem('cb_address_book', JSON.stringify(book));
+      showToast('Удалено', 'Адрес удалён из книги');
+      openAddressBookModal();
+    }
+
+    function openCommissionsModal() {
+      openModal('Комиссии и лимиты', `
+        <div style="font-size: 13px; line-height: 1.5; padding: 6px 0;">
+          <div style="color: var(--text-secondary); margin-bottom: 14px;">
+            Актуальные тарифы и сетевые сборы Crypto Bot:
+          </div>
+          <div style="background: var(--bg-card); border-radius: 14px; padding: 14px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="font-weight: 700; color: #fff; margin-bottom: 8px;">Вывод криптовалюты</div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04);"><span>USDT (TRC20)</span><span style="font-weight: 600;">1.50 USDT</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04);"><span>USDT (TON)</span><span style="font-weight: 600;">0.10 USDT</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04);"><span>TON</span><span style="font-weight: 600;">0.05 TON</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04);"><span>BTC</span><span style="font-weight: 600;">0.0001 BTC</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0;"><span>ETH</span><span style="font-weight: 600;">0.001 ETH</span></div>
+          </div>
+          <div style="background: var(--bg-card); border-radius: 14px; padding: 14px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="font-weight: 700; color: #fff; margin-bottom: 8px;">Торговля и обмен</div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04);"><span>Быстрый обмен (Swap)</span><span style="color: var(--accent-green); font-weight: 600;">0% комиссии</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04);"><span>Биржа (Maker / Taker)</span><span style="font-weight: 600;">0.1% / 0.1%</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0;"><span>P2P Маркет</span><span style="color: var(--accent-green); font-weight: 600;">0% для покупателя</span></div>
+          </div>
+          <button class="primary-btn" onclick="openExternalDoc('https://help.crypt.bot/fees')">Подробнее в официальной справке ↗</button>
+        </div>
+      `);
+    }
+
+    function openCryptoPayModal() {
+      openModal('Crypto Pay', `
+        <div style="padding: 6px 0; text-align: center;">
+          <div style="width: 54px; height: 54px; border-radius: 16px; background: var(--accent-cyan); display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 12px;">Pay</div>
+          <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Crypto Pay API</div>
+          <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 18px;">
+            Платёжная система для приёма платежей в криптовалюте в Telegram-ботах, каналах и на сайтах через официальный API.
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="primary-btn" onclick="openExternalDoc('https://help.crypt.bot/crypto-pay-api')">Документация API ↗</button>
+            <button class="action-btn" onclick="openExternalDoc('https://t.me/CryptoPayDevRu')">Чат разработчиков ↗</button>
+            <button class="action-btn" onclick="closeModal(); showToast('Crypto Pay', 'Создать приложение можно в боте через команду /pay');">Создать приложение</button>
+          </div>
+        </div>
+      `);
+    }
+
+    function openP2CModal() {
+      openModal('P2C Сервис', `
+        <div style="padding: 6px 0;">
+          <div style="font-size: 14px; line-height: 1.5; color: var(--text-secondary); margin-bottom: 14px;">
+            <b>P2C (Peer-to-Customer)</b> — сервис автоматизированного приёма оплаты товаров и услуг через банковские карты и СБП с мгновенной конвертацией в криптовалюту.
+          </div>
+          <div style="background: var(--bg-card); border-radius: 14px; padding: 14px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04);"><span>Статус интеграции</span><span style="color: var(--accent-green); font-weight: 600;">Активен</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04);"><span>Поддерживаемые валюты</span><span style="font-weight: 600;">RUB, KZT, UAH</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0;"><span>Комиссия мерчанта</span><span style="font-weight: 600;">от 1.5%</span></div>
+          </div>
+          <button class="primary-btn" onclick="openExternalDoc('https://help.crypt.bot/p2c')">Руководство P2C ↗</button>
+        </div>
+      `);
+    }
+
+    function openVouchersModal() {
+      openModal('Ваучеры', `
+        <div style="padding: 6px 0;">
+          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+            Активируйте подарочный ваучер или промокод Crypto Bot для мгновенного зачисления средств на ваш баланс:
+          </div>
+          <input id="voucher-code-input" placeholder="Введите код ваучера" style="width: 100%; background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 14px; border-radius: 12px; font-size: 15px; margin-bottom: 14px; text-transform: uppercase;">
+          <button class="primary-btn" onclick="redeemVoucher()">Активировать</button>
+        </div>
+      `);
+    }
+
+    function redeemVoucher() {
+      const code = (document.getElementById('voucher-code-input')?.value || '').trim();
+      if (!code) {
+        showToast('Ошибка', 'Введите код ваучера', false);
+        return;
+      }
+      closeModal();
+      showToast('Ваучер', 'Ваучер ' + code + ' проверен. Активных средств не обнаружено.', false);
+    }
+
+    function openAuctionsModal() {
+      openModal('Аукционы', `
+        <div style="padding: 10px 0; text-align: center;">
+          <div style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">Аукционы имён и юзернеймов</div>
+          <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
+            В данный момент нет активных торгов. Следите за обновлениями в официальном канале @CryptoBot.
+          </div>
+          <button class="primary-btn" onclick="closeModal()">Понятно</button>
+        </div>
+      `);
+    }
+
+    function openExternalDoc(url) {
+      if (window.Telegram?.WebApp?.openLink) {
+        window.Telegram.WebApp.openLink(url);
+      } else {
+        window.open(url, '_blank');
       }
     }
 

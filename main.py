@@ -8,7 +8,8 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import (
     Message, CallbackQuery, FSInputFile, 
     ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, 
-    InlineKeyboardMarkup, InlineKeyboardButton
+    InlineKeyboardMarkup, InlineKeyboardButton,
+    InlineQuery, InlineQueryResultArticle, InputTextMessageContent, ChosenInlineResult
 )
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
@@ -224,6 +225,140 @@ async def cmd_pay(msg: Message):
 async def cmd_settings(msg: Message):
     fake_cb = CallbackQuery(id="fake", from_user=msg.from_user, chat_instance="fake", message=msg, data="menu:settings")
     await menu_stubs.cb_menu_settings(fake_cb)
+
+
+INLINE_CHECK_DRAFTS = {}
+
+@dp.inline_query()
+async def inline_query_handler(query: InlineQuery):
+    q = (query.query or '').strip()
+    uid = query.from_user.id
+    bot_info = await query.bot.get_me()
+    bot_username = bot_info.username or 'CryptoBot'
+
+    from database import get_all_balances
+    balances = await get_all_balances(uid)
+    results = []
+
+    m = re.match(r'^(\\d+(?:[.,]\\d+)?)\\s*([a-zA-Z]+)$', q)
+    if not m:
+        m2 = re.match(r'^([a-zA-Z]+)\\s*(\\d+(?:[.,]\\d+)?)$', q)
+        if m2:
+            asset_str = m2.group(1).upper()
+            amount_val = float(m2.group(2).replace(',', '.'))
+        else:
+            asset_str = None
+            amount_val = None
+    else:
+        amount_val = float(m.group(1).replace(',', '.'))
+        asset_str = m.group(2).upper()
+
+    if asset_str and amount_val and amount_val > 0:
+        asset = asset_str
+        cur_bal = balances.get(asset, 0.0)
+        if cur_bal >= amount_val:
+            cid = secrets.token_hex(4)
+            INLINE_CHECK_DRAFTS[cid] = {
+                'user_id': uid,
+                'amount': amount_val,
+                'asset': asset,
+                'time': time.time()
+            }
+            deep_link = f'https://t.me/{bot_username}?start=check_{cid}'
+            kb = InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text=f'🎁 Получить {amount_val:g} {asset}', url=deep_link)
+            ]])
+            content = InputTextMessageContent(
+                message_text=(
+                    f'🧾 <b>Чек на {amount_val:g} {asset}</b>\\n\\n'
+                    f'Для получения криптовалюты нажмите кнопку ниже.'
+                ),
+                parse_mode='HTML'
+            )
+            results.append(InlineQueryResultArticle(
+                id=f'chk_{cid}',
+                title=f'Отправить чек на {amount_val:g} {asset}',
+                description=f'Баланс: {cur_bal:g} {asset}. Нажмите для отправки',
+                input_message_content=content,
+                reply_markup=kb,
+                thumbnail_url='https://imggen.cr.bot/checks/image?asset=' + asset + '&asset_amount=' + str(amount_val) + '&fiat=USD&fiat_amount=10&main=asset&v5'
+            ))
+        else:
+            content = InputTextMessageContent(
+                message_text=f'❌ Недостаточно средств для отправки чека на {amount_val:g} {asset}.',
+                parse_mode='HTML'
+            )
+            results.append(InlineQueryResultArticle(
+                id='insufficient',
+                title=f'❌ Недостаточно {asset}',
+                description=f'Ваш баланс: {cur_bal:g} {asset}, требуется: {amount_val:g} {asset}',
+                input_message_content=content
+            ))
+    else:
+        for a, b in balances.items():
+            if b > 0:
+                cid = secrets.token_hex(4)
+                INLINE_CHECK_DRAFTS[cid] = {
+                    'user_id': uid,
+                    'amount': b,
+                    'asset': a,
+                    'time': time.time()
+                }
+                deep_link = f'https://t.me/{bot_username}?start=check_{cid}'
+                kb = InlineKeyboardMarkup(inline_keyboard=[[
+                    InlineKeyboardButton(text=f'🎁 Получить {b:g} {a}', url=deep_link)
+                ]])
+                content = InputTextMessageContent(
+                    message_text=(
+                        f'🧾 <b>Чек на {b:g} {a}</b>\\n\\n'
+                        f'Для получения криптовалюты нажмите кнопку ниже.'
+                    ),
+                    parse_mode='HTML'
+                )
+                results.append(InlineQueryResultArticle(
+                    id=f'chk_{cid}',
+                    title=f'Отправить чек на весь баланс {b:g} {a}',
+                    description=f'Формат: @{bot_username} <сумма> <валюта>',
+                    input_message_content=content,
+                    reply_markup=kb
+                ))
+        if not results:
+            content = InputTextMessageContent(
+                message_text=f'ℹ️ Чтобы отправить чек в чат, введите:\\n@{bot_username} <сумма> <валюта>\\n\\nНапример: @{bot_username} 10 USDT',
+                parse_mode='HTML'
+            )
+            results.append(InlineQueryResultArticle(
+                id='help',
+                title='Отправить чек: @бот сумма валюта',
+                description='Например: 10 USDT или 1.5 TON',
+                input_message_content=content
+            ))
+
+    await query.answer(results=results, cache_time=1, is_personal=True)
+
+@dp.chosen_inline_result()
+async def chosen_inline_result_handler(chosen: ChosenInlineResult):
+    res_id = chosen.result_id
+    if res_id.startswith('chk_'):
+        cid = res_id[4:]
+        draft = INLINE_CHECK_DRAFTS.pop(cid, None)
+        if draft:
+            uid = draft['user_id']
+            amount = draft['amount']
+            asset = draft['asset']
+            try:
+                from database import create_check
+                await create_check(
+                    uid=uid,
+                    asset=asset,
+                    total=amount,
+                    limit=1,
+                    inline_message_id=chosen.inline_message_id,
+                    check_id=cid
+                )
+                log.info('Created inline check %s for user %d: %s %s (inline_msg=%s)', cid, uid, amount, asset, chosen.inline_message_id)
+            except Exception as e:
+                log.error('Failed to create inline check %s: %s', cid, e)
 
 from keep_alive import start_health_server
 

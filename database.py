@@ -219,8 +219,9 @@ def hash_password(pw: str, salt: str) -> str:
 def verify_password(pw: str, salt: str, expected: str) -> bool:
     return hmac.compare_digest(hash_password(pw, salt), expected)
 
-async def create_check(uid: int, asset: str, total: float, limit: int = 1, password: str = None, inline_message_id: str = None) -> str:
-    check_id = secrets.token_hex(4)
+async def create_check(uid: int, asset: str, total: float, limit: int = 1, password: str = None, inline_message_id: str = None, check_id: str = None) -> str:
+    if not check_id:
+        check_id = secrets.token_hex(4)
     now = int(time.time())
     per = total / limit
     

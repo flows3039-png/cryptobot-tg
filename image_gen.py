@@ -1,3 +1,4 @@
+# image_gen.py
 import os
 import io
 import time
@@ -55,6 +56,61 @@ def get_cached_font(size: int):
             _cached_fonts[size] = ImageFont.load_default()
     return _cached_fonts[size]
 
+def add_ticket_frame(check_bytes: bytes) -> bytes:
+    """Оборачивает фото чека в купонный билетный фрейм с перфорацией и скругленными углами."""
+    try:
+        check_img = Image.open(io.BytesIO(check_bytes)).convert("RGBA")
+        cw, ch = check_img.size
+
+        # Отступы под рамку и перфорацию
+        left_margin = int(cw * 0.055)
+        right_margin = int(cw * 0.035)
+        top_margin = int(ch * 0.045)
+        bottom_margin = int(ch * 0.045)
+
+        fw = cw + left_margin + right_margin
+        fh = ch + top_margin + bottom_margin
+
+        # Цвет рамки из официального скриншота: (86, 72, 117)
+        frame_bg_color = (86, 72, 117, 255)
+        frame = Image.new("RGBA", (fw, fh), frame_bg_color)
+
+        # Скругляем внутренний чек
+        corner_radius = int(ch * 0.035)
+        mask = Image.new("L", (cw, ch), 0)
+        draw_mask = ImageDraw.Draw(mask)
+        draw_mask.rounded_rectangle((0, 0, cw, ch), radius=corner_radius, fill=255)
+
+        frame.paste(check_img, (left_margin, top_margin), mask)
+
+        # Рисуем линию отрывной перфорации на левой планке билета
+        draw = ImageDraw.Draw(frame)
+        stub_x = left_margin // 2 + 4
+        dash_length = int(ch * 0.02)
+        gap_length = int(ch * 0.012)
+        line_width = max(2, int(cw * 0.003))
+        stitch_color = (130, 115, 175, 255)
+
+        y = top_margin
+        while y < fh - bottom_margin:
+            draw.line([(stub_x, y), (stub_x, min(y + dash_length, fh - bottom_margin))], fill=stitch_color, width=line_width)
+            y += dash_length + gap_length
+
+        # Тонкая внутренняя обводка вокруг чека
+        draw.rounded_rectangle(
+            (left_margin, top_margin, left_margin + cw, top_margin + ch),
+            radius=corner_radius,
+            outline=(60, 50, 85, 200),
+            width=max(2, int(cw * 0.002))
+        )
+
+        out_buf = io.BytesIO()
+        frame.convert("RGB").save(out_buf, format="JPEG", quality=95)
+        return out_buf.getvalue()
+    except Exception as e:
+        log.warning("add_ticket_frame failed (%s), returning original check bytes", e)
+        return check_bytes
+
 def generate_check_image_bytes(
     amount: str,
     currency: str,
@@ -107,8 +163,9 @@ def generate_check_image(
     output_path: str = "generated_check.png"
 ) -> str:
     data = generate_check_image_bytes(amount, currency, check_id=check_id, creator_name=creator_name)
+    framed = add_ticket_frame(data)
     with open(output_path, "wb") as f:
-        f.write(data)
+        f.write(framed)
     return output_path
 
 _http_client: httpx.AsyncClient | None = None
@@ -133,10 +190,10 @@ async def fetch_check_image(asset: str, amount: str, fiat_amount: str, check_id:
         client = get_http_client()
         r = await client.get(url)
         if r.status_code == 200 and len(r.content) > 1000:
-            return r.content
+            return add_ticket_frame(r.content)
         log.warning("imggen returned %s, falling back to local generator", r.status_code)
     except Exception as e:
         log.warning("imggen request failed (%s), falling back to local generator", e)
 
-    return generate_check_image_bytes(amount, asset, check_id=check_id, fiat_amount=clean_fiat)
-
+    raw_bytes = generate_check_image_bytes(amount, asset, check_id=check_id, fiat_amount=clean_fiat)
+    return add_ticket_frame(raw_bytes)

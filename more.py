@@ -460,6 +460,23 @@ async def cb_check_confirm(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
 
 @router.message(F.text.startswith("/start check_"))
+async def notify_check_creator(bot: Bot, res: dict, activator_user):
+    creator_id = res.get("creator_id")
+    if not creator_id:
+        return
+    try:
+        user_mention = f"@{activator_user.username}" if activator_user.username else f'<a href="tg://user?id={activator_user.id}">{activator_user.first_name}</a>'
+        check_icon = '<tg-emoji emoji-id="5311998535032409760">🧾</tg-emoji>'
+        fire_icon = '<tg-emoji emoji-id="5427009714745517609">🎉</tg-emoji>'
+        notify_text = (
+            f"{check_icon} <b>Ваш чек успешно активирован!</b>\n\n"
+            f"Пользователь {user_mention} активировал ваш чек на <b>{res['per_activation']:g} {res['asset']}</b>.\n\n"
+            f"{fire_icon} Средства успешно начислены получателю."
+        )
+        await bot.send_message(creator_id, notify_text, parse_mode="HTML")
+    except Exception as e:
+        log.warning("Could not notify check creator: %s", e)
+
 async def activate_check_link(msg: Message, state: FSMContext):
     cid = msg.text.split("check_", 1)[1].strip()
     try:
@@ -469,6 +486,7 @@ async def activate_check_link(msg: Message, state: FSMContext):
         new_text = f"✅ <b>Чек на {res['per_activation']} {res['asset']} активирован</b>"
         disabled_kb = check_activated_kb()
         await finalize_business_check(msg.bot, cid, new_text, disabled_kb)
+        await notify_check_creator(msg.bot, res, msg.from_user)
 
     except CheckError as e:
         if e.code == "bad_password":
@@ -484,6 +502,21 @@ async def activate_check_link(msg: Message, state: FSMContext):
         elif e.code == "already_activated":
             await msg.answer("❌ Вы уже активировали этот чек.")
         elif e.code == "not_found":
+            try:
+                import main as main_mod
+                draft = getattr(main_mod, "INLINE_CHECK_DRAFTS", {}).pop(cid, None)
+                if draft:
+                    from database import create_check
+                    await create_check(uid=draft["user_id"], asset=draft["asset"], total=draft["amount"], limit=1, check_id=cid)
+                    res = await activate_check(cid, msg.from_user.id, username=msg.from_user.username)
+                    await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
+                    new_text = f"✅ <b>Чек на {res['per_activation']} {res['asset']} активирован</b>"
+                    disabled_kb = check_activated_kb()
+                    await finalize_business_check(msg.bot, cid, new_text, disabled_kb)
+                    await notify_check_creator(msg.bot, res, msg.from_user)
+                    return
+            except Exception as ex_recovery:
+                log.warning("Recovery activation error: %s", ex_recovery)
             await msg.answer("❌ Чек не найден.")
         else:
             await msg.answer(f"❌ Ошибка: {e.code}")
@@ -499,6 +532,7 @@ async def process_activate_pass(msg: Message, state: FSMContext):
         new_text = f"✅ <b>Чек на {res['per_activation']} {res['asset']} активирован</b>"
         disabled_kb = check_activated_kb()
         await finalize_business_check(msg.bot, cid, new_text, disabled_kb)
+        await notify_check_creator(msg.bot, res, msg.from_user)
 
         await state.clear()
     except CheckError as e:
