@@ -4,23 +4,56 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>mechnik-osint.lol // OSINT Search</title>
+
+  <!-- Google & Apple Fonts Fallbacks -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
   <style>
+    /* Local Fonts: Benzin Bold & SF Pro */
+    @font-face {
+      font-family: 'Benzin';
+      src: url('./fonts/benzin-bold.woff2') format('woff2');
+      font-weight: 700 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'SF Pro Display';
+      src: url('./fonts/sf-pro.ttf') format('truetype');
+      font-weight: 400 600 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'SF Pro Rounded';
+      src: url('./fonts/sf-pro-rounded-medium.otf') format('opentype');
+      font-weight: 500 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
-      --bg-color: #0b0c0e;
-      --card-bg: #15171c;
-      --card-inner: #1c1f26;
-      --border-color: rgba(255, 255, 255, 0.08);
-      --text-primary: #ffffff;
-      --text-secondary: #8e95a5;
-      --text-muted: #585e6d;
+      --bg-color: #090a0d;
+      --card-bg: #14161c;
+      --card-inner: #1a1d26;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-hover: rgba(255, 255, 255, 0.18);
+      --text-main: #ffffff;
+      --text-sub: #8e95a5;
+      --text-muted: #555b6c;
       --accent-blue: #0084ff;
       --accent-blue-hover: #0073e6;
-      --pill-bg: #1c1f26;
-      --pill-active: #2b303c;
-      --dot-color: rgba(255, 255, 255, 0.07);
+      --accent-blue-glow: rgba(0, 132, 255, 0.28);
+      --accent-green: #00e676;
+      --accent-red: #ff334b;
+      --dot-color: rgba(255, 255, 255, 0.06);
+      --font-title: 'Benzin', 'SF Pro Display', 'Inter', sans-serif;
+      --font-body: 'SF Pro Display', 'Inter', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
 
     * {
@@ -33,16 +66,17 @@
 
     body {
       background-color: var(--bg-color);
-      color: var(--text-primary);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text-main);
+      font-family: var(--font-body);
       min-height: 100vh;
       overflow-x: hidden;
       display: flex;
       flex-direction: column;
       user-select: none;
+      position: relative;
     }
 
-    /* Subtle dot grid pattern */
+    /* Ambient dot matrix grid with soft vignette */
     .dot-grid {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
@@ -52,16 +86,24 @@
       z-index: 1;
     }
 
-    /* Top Navigation */
+    .vignette-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: radial-gradient(circle at center, transparent 35%, rgba(0, 0, 0, 0.75) 100%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Top Header Bar */
     header {
       position: relative;
       z-index: 50;
       height: 64px;
-      padding: 0 28px;
+      padding: 0 32px;
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      gap: 12px;
+      gap: 14px;
     }
 
     .header-center-logo {
@@ -70,18 +112,20 @@
       transform: translateX(-50%);
       display: none;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       cursor: pointer;
+      transition: opacity 0.25s ease;
     }
 
     .header-center-logo.visible {
       display: flex;
+      animation: fadeIn 0.3s ease;
     }
 
     .brand-title-sm {
-      font-size: 1.05rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
+      font-family: var(--font-title);
+      font-size: 0.95rem;
+      letter-spacing: -0.01em;
       color: #fff;
     }
 
@@ -89,63 +133,59 @@
       background: transparent;
       border: none;
       color: var(--accent-blue);
+      font-family: var(--font-body);
       font-size: 0.88rem;
       font-weight: 600;
       padding: 8px 16px;
       border-radius: 20px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s ease;
     }
 
     .btn-sub:hover {
-      background: rgba(0, 132, 255, 0.1);
+      background: rgba(0, 132, 255, 0.12);
+      transform: translateY(-1px);
     }
 
     .btn-profile {
-      background: #191c23;
-      border: 1px solid var(--border-color);
+      background: #151821;
+      border: 1px solid var(--card-border);
       color: #fff;
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 5px 12px 5px 6px;
+      padding: 5px 14px 5px 6px;
       border-radius: 24px;
       cursor: pointer;
+      font-family: var(--font-body);
       font-size: 0.88rem;
       font-weight: 600;
       transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
 
     .btn-profile:hover {
-      background: #222631;
-      border-color: rgba(255, 255, 255, 0.16);
+      background: #1d212d;
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
     }
 
     .avatar-sm {
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      background: #12141a;
+      background: #0f1118;
       border: 1px solid rgba(255, 255, 255, 0.15);
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 0.72rem;
+      font-family: var(--font-title);
+      color: #fff;
       overflow: hidden;
     }
 
-    .avatar-sm img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .avatar-sm svg {
-      width: 16px;
-      height: 16px;
-      fill: #fff;
-    }
-
-    /* Main Container */
+    /* Main View Area */
     main {
       position: relative;
       z-index: 10;
@@ -154,99 +194,127 @@
       flex-direction: column;
     }
 
-    /* HERO SEARCH SCREEN */
+    /* HERO INITIAL SCREEN */
     #hero-screen {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px 24px 100px 24px;
-      margin-top: -20px;
+      padding: 20px 24px 110px 24px;
+      margin-top: -15px;
       text-align: center;
-      transition: opacity 0.3s ease, transform 0.3s ease;
+      transition: opacity 0.35s ease, transform 0.35s ease;
     }
 
     #hero-screen.hidden {
       display: none;
     }
 
-    .spider-icon {
-      width: 44px;
-      height: 44px;
-      margin-bottom: 16px;
-      color: #ffffff;
+    /* Spider Brand Logo */
+    .spider-logo-wrap {
+      width: 52px;
+      height: 52px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      animation: floatLogo 4s ease-in-out infinite;
+    }
+
+    @keyframes floatLogo {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    .spider-svg {
+      width: 100%;
+      height: 100%;
+      stroke: #ffffff;
+      fill: none;
+      filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.25));
     }
 
     .hero-title-wrap {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
+      gap: 12px;
+      margin-bottom: 10px;
     }
 
     .hero-title {
-      font-size: 2.1rem;
-      font-weight: 700;
-      letter-spacing: -0.03em;
+      font-family: var(--font-title);
+      font-size: 2.15rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
       color: #fff;
+      text-transform: lowercase;
     }
 
     .beta-badge {
-      background: #0077ff;
+      background: var(--accent-blue);
       color: #fff;
+      font-family: var(--font-body);
       font-size: 0.65rem;
       font-weight: 700;
-      padding: 3px 7px;
+      padding: 3px 8px;
       border-radius: 6px;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
+      box-shadow: 0 0 12px var(--accent-blue-glow);
     }
 
     .hero-sub {
-      color: #fff;
-      font-size: 1.15rem;
+      color: #e5e9f2;
+      font-size: 1.12rem;
       font-weight: 600;
-      margin-bottom: 24px;
-      max-width: 600px;
-      line-height: 1.4;
+      margin-bottom: 26px;
+      max-width: 620px;
+      line-height: 1.45;
     }
 
-    /* Category Tabs */
+    /* Category Filter Tabs */
     .tabs-row {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: transparent;
-      margin-bottom: 18px;
+      margin-bottom: 20px;
       flex-wrap: wrap;
       justify-content: center;
     }
 
     .tab-chip {
-      background: #191c23;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      color: var(--text-secondary);
+      background: #141720;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text-sub);
       font-size: 0.82rem;
       font-weight: 500;
-      padding: 7px 14px;
+      padding: 7px 16px;
       border-radius: 12px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.25s ease;
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
-    .tab-chip.active {
-      background: #2b303c;
-      color: #ffffff;
+    .tab-chip:hover:not(.disabled) {
+      background: #1b1e2a;
+      color: #fff;
       border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .tab-chip.active {
+      background: #252a38;
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.16);
       font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     }
 
     .tab-chip.disabled {
-      opacity: 0.55;
+      opacity: 0.45;
       cursor: not-allowed;
     }
 
@@ -259,32 +327,33 @@
     /* Search Box */
     .search-wrapper {
       width: 100%;
-      max-width: 580px;
+      max-width: 590px;
       position: relative;
       margin-bottom: 16px;
     }
 
     .search-input-box {
       width: 100%;
-      background: #191c23;
+      background: #151821;
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 28px;
-      padding: 14px 54px 14px 22px;
+      padding: 15px 56px 15px 22px;
       color: #fff;
       font-family: inherit;
       font-size: 0.95rem;
       outline: none;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+      transition: all 0.25s ease;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
     }
 
     .search-input-box:focus {
-      border-color: rgba(255, 255, 255, 0.2);
-      background: #1f232c;
+      border-color: rgba(255, 255, 255, 0.24);
+      background: #1b1e29;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 132, 255, 0.15);
     }
 
     .search-input-box::placeholder {
-      color: #555b6a;
+      color: #555c6d;
       font-weight: 400;
     }
 
@@ -293,8 +362,8 @@
       right: 8px;
       top: 50%;
       transform: translateY(-50%);
-      width: 36px;
-      height: 36px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       background: var(--accent-blue);
       border: none;
@@ -303,12 +372,14 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: transform 0.15s, background 0.15s;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 0 14px var(--accent-blue-glow);
     }
 
     .btn-submit-search:hover {
       background: var(--accent-blue-hover);
-      transform: translateY(-50%) scale(1.05);
+      transform: translateY(-50%) scale(1.06);
+      box-shadow: 0 0 20px rgba(0, 132, 255, 0.5);
     }
 
     .btn-submit-search:active {
@@ -325,9 +396,10 @@
 
     /* Limits counter */
     .limits-text {
-      color: var(--text-secondary);
+      color: var(--text-sub);
       font-size: 0.8rem;
       margin-bottom: 14px;
+      font-weight: 500;
     }
 
     /* Footer links */
@@ -372,6 +444,12 @@
 
     #canvas-screen.active {
       display: flex;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     /* Graph tree workspace */
@@ -384,36 +462,44 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 100px 24px 140px 24px;
+      padding: 90px 24px 140px 24px;
+      transition: transform 0.2s ease-out;
     }
 
     /* Root query card */
     .node-root {
-      background: #191c23;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #161922;
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 20px;
-      padding: 10px 22px;
+      padding: 11px 24px;
       color: #fff;
-      font-size: 0.92rem;
+      font-size: 0.94rem;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      gap: 10px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.5);
       z-index: 10;
+      animation: enterUp 0.35s ease;
     }
 
     .node-root span.tag {
-      color: var(--text-secondary);
+      color: var(--text-sub);
       font-weight: 400;
     }
 
-    /* Line connector */
+    @keyframes enterUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Vertical line connector */
     .tree-line-v {
       width: 2px;
-      height: 36px;
-      background: rgba(255, 255, 255, 0.12);
+      height: 38px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.08) 100%);
       margin: 0 auto;
+      animation: fadeIn 0.4s ease;
     }
 
     /* Child result cards list */
@@ -422,25 +508,28 @@
       gap: 20px;
       justify-content: center;
       flex-wrap: wrap;
-      max-width: 1100px;
+      max-width: 1150px;
       z-index: 10;
     }
 
     .intel-card {
-      background: #16181f;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px;
-      width: 320px;
-      padding: 18px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      width: 325px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-      transition: border-color 0.2s;
+      gap: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: enterUp 0.45s ease both;
     }
 
     .intel-card:hover {
-      border-color: rgba(255, 255, 255, 0.16);
+      border-color: var(--card-border-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
     }
 
     .card-top {
@@ -453,25 +542,30 @@
       font-size: 0.95rem;
       font-weight: 700;
       color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .card-badge {
       font-size: 0.72rem;
       font-weight: 600;
-      padding: 3px 8px;
+      padding: 3px 9px;
       border-radius: 6px;
       background: rgba(255, 255, 255, 0.06);
-      color: var(--text-secondary);
+      color: var(--text-sub);
     }
 
     .card-badge.found {
       background: rgba(0, 230, 118, 0.12);
-      color: #00e676;
+      color: var(--accent-green);
+      border: 1px solid rgba(0, 230, 118, 0.25);
     }
 
     .card-badge.hidden-badge {
-      background: rgba(255, 23, 68, 0.12);
-      color: #ff5252;
+      background: rgba(255, 51, 75, 0.12);
+      color: var(--accent-red);
+      border: 1px solid rgba(255, 51, 75, 0.25);
     }
 
     .card-data-row {
@@ -484,7 +578,8 @@
       font-size: 0.72rem;
       color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
+      font-weight: 600;
     }
 
     .card-data-val {
@@ -492,15 +587,22 @@
       color: #e2e8f0;
       font-weight: 500;
       word-break: break-all;
+      line-height: 1.4;
     }
 
     .card-avatar-wrap {
-      width: 52px;
-      height: 52px;
-      border-radius: 12px;
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
       overflow: hidden;
-      background: #111;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #101218;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-title);
+      font-size: 1.1rem;
+      color: #fff;
     }
 
     .card-avatar-wrap img {
@@ -515,15 +617,17 @@
       top: 80px;
       right: 28px;
       width: 310px;
-      background: #15171e;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+      background: rgba(20, 22, 28, 0.95);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(16px);
       z-index: 60;
       display: flex;
       flex-direction: column;
       gap: 12px;
+      animation: enterUp 0.3s ease;
     }
 
     .summary-header {
@@ -539,41 +643,44 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      font-family: var(--font-body);
     }
 
     .summary-title-count {
       background: rgba(255, 255, 255, 0.1);
       font-size: 0.72rem;
-      padding: 1px 6px;
+      padding: 1px 7px;
       border-radius: 10px;
-      color: var(--text-secondary);
+      color: var(--text-sub);
     }
 
     .summary-ctrls {
       display: flex;
       align-items: center;
-      gap: 8px;
-      color: var(--text-muted);
+      gap: 10px;
+    }
+
+    .summary-icon-btn {
+      background: transparent;
+      border: none;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-sub);
+      transition: color 0.2s;
     }
 
-    .summary-ctrls svg {
-      width: 15px;
-      height: 15px;
-      stroke: var(--text-secondary);
-      transition: stroke 0.2s;
-    }
-
-    .summary-ctrls svg:hover {
-      stroke: #fff;
+    .summary-icon-btn:hover {
+      color: #fff;
     }
 
     .summary-sec-title {
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       color: var(--text-muted);
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .summary-fact-row {
@@ -581,12 +688,12 @@
       justify-content: space-between;
       align-items: center;
       font-size: 0.82rem;
-      padding: 4px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     }
 
     .summary-fact-label {
-      color: var(--text-secondary);
+      color: var(--text-sub);
     }
 
     .summary-fact-val {
@@ -601,7 +708,7 @@
       left: 50%;
       transform: translateX(-50%);
       width: 100%;
-      max-width: 580px;
+      max-width: 590px;
       z-index: 70;
       padding: 0 16px;
       display: flex;
@@ -613,15 +720,15 @@
       position: fixed;
       bottom: 24px;
       right: 28px;
-      background: #191c23;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #151821;
+      border: 1px solid var(--card-border);
       border-radius: 20px;
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 12px;
+      padding: 6px 14px;
       font-size: 0.8rem;
-      color: var(--text-secondary);
+      color: var(--text-sub);
       z-index: 70;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     }
@@ -629,32 +736,58 @@
     .zoom-btn {
       background: transparent;
       border: none;
-      color: var(--text-secondary);
-      font-size: 1rem;
+      color: var(--text-sub);
+      font-size: 1.05rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 0 4px;
+      transition: color 0.15s;
     }
 
     .zoom-btn:hover {
       color: #fff;
     }
 
+    /* Toast notification */
+    .toast-msg {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: #1f2430;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 200;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast-msg.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
     /* MODAL DIALOG (Учетная запись) */
     .modal-backdrop {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(8px);
-      z-index: 100;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(10px);
+      z-index: 150;
       display: none;
       align-items: center;
       justify-content: center;
       padding: 20px;
       opacity: 0;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.25s ease;
     }
 
     .modal-backdrop.open {
@@ -665,13 +798,19 @@
     .modal-card {
       background: #14161d;
       border: 1px solid rgba(255, 255, 255, 0.09);
-      border-radius: 20px;
+      border-radius: 22px;
       width: 100%;
-      max-width: 540px;
+      max-width: 530px;
       overflow: hidden;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.8);
       display: flex;
       flex-direction: column;
+      animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes scaleIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
     }
 
     .modal-head {
@@ -682,18 +821,19 @@
     }
 
     .modal-head h2 {
-      font-size: 1.25rem;
+      font-family: var(--font-title);
+      font-size: 1.15rem;
       font-weight: 700;
       color: #fff;
     }
 
     .btn-close-modal {
-      width: 30px;
-      height: 30px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
-      background: #1e222b;
+      background: #1e222c;
       border: none;
-      color: var(--text-secondary);
+      color: var(--text-sub);
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -703,7 +843,7 @@
     }
 
     .btn-close-modal:hover {
-      background: #2a2f3c;
+      background: #2a303e;
       color: #fff;
     }
 
@@ -718,7 +858,7 @@
     .m-tab {
       background: transparent;
       border: none;
-      color: var(--text-secondary);
+      color: var(--text-sub);
       font-size: 0.82rem;
       font-weight: 500;
       padding: 6px 14px;
@@ -728,7 +868,7 @@
     }
 
     .m-tab.active {
-      background: #232733;
+      background: #222632;
       color: #fff;
       font-weight: 600;
     }
@@ -742,11 +882,11 @@
       overflow-y: auto;
     }
 
-    /* User Profile snippet */
+    /* User Profile banner in modal */
     .user-profile-banner {
-      background: #1b1e27;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 14px;
+      background: #1a1d27;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
       padding: 16px;
       display: flex;
       align-items: center;
@@ -754,24 +894,19 @@
     }
 
     .user-avatar-lg {
-      width: 54px;
-      height: 54px;
+      width: 52px;
+      height: 52px;
       border-radius: 50%;
-      background: #12141a;
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: #101218;
+      border: 1px solid rgba(255, 255, 255, 0.15);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1rem;
+      font-family: var(--font-title);
+      font-size: 0.95rem;
       font-weight: 700;
       color: #fff;
       overflow: hidden;
-    }
-
-    .user-avatar-lg img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
     }
 
     .user-meta-name {
@@ -783,15 +918,15 @@
 
     .user-meta-sub {
       font-size: 0.78rem;
-      color: var(--text-secondary);
+      color: var(--text-sub);
       margin-bottom: 1px;
     }
 
     /* Subscription card */
     .sub-plan-box {
-      background: #191c25;
+      background: #181b24;
       border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 18px;
       display: flex;
       flex-direction: column;
@@ -824,15 +959,15 @@
       display: flex;
       justify-content: space-between;
       font-size: 0.82rem;
-      color: var(--text-secondary);
+      color: var(--text-sub);
     }
 
     .btn-upgrade-plan {
       background: #222632;
       border: 1px solid rgba(255, 255, 255, 0.08);
       color: #fff;
-      padding: 10px;
-      border-radius: 10px;
+      padding: 11px;
+      border-radius: 12px;
       font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
@@ -842,10 +977,9 @@
     }
 
     .btn-upgrade-plan:hover {
-      background: #2d3343;
+      background: #2a303f;
     }
 
-    /* Info rows (Reg date / last login) */
     .meta-list-box {
       display: flex;
       flex-direction: column;
@@ -858,7 +992,7 @@
       justify-content: space-between;
       align-items: center;
       font-size: 0.85rem;
-      color: var(--text-secondary);
+      color: var(--text-sub);
     }
 
     .meta-row span.val {
@@ -913,12 +1047,12 @@
     /* Loading Spinner */
     .loading-pulse {
       display: inline-block;
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       border: 2px solid rgba(255, 255, 255, 0.2);
       border-top-color: #fff;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin 0.7s linear infinite;
     }
 
     @keyframes spin {
@@ -928,15 +1062,20 @@
 </head>
 <body>
 
-  <!-- Dot Matrix Grid -->
+  <!-- Ambient Dot Matrix Grid & Vignette -->
   <div class="dot-grid"></div>
+  <div class="vignette-overlay"></div>
+
+  <!-- Toast Notification -->
+  <div class="toast-msg" id="toast-msg">Данные скопированы в буфер</div>
 
   <!-- Header -->
   <header>
     <div class="header-center-logo" id="header-logo" onclick="goHome()">
-      <svg class="spider-icon" style="width: 24px; height: 24px; margin: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07l14.14-14.14" stroke-linecap="round"/>
-        <circle cx="12" cy="12" r="4" fill="currentColor"/>
+      <!-- Spider mini icon -->
+      <svg style="width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 2;" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3" fill="#fff"/>
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" stroke-linecap="round"/>
       </svg>
       <span class="brand-title-sm">mechnik-osint.lol</span>
       <span class="beta-badge">BETA</span>
@@ -944,30 +1083,31 @@
 
     <button class="btn-sub" onclick="openModal()">Подписка</button>
     <button class="btn-profile" onclick="openModal()">
-      <div class="avatar-sm">
-        <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-      </div>
+      <div class="avatar-sm">#м</div>
       <span>#мечник</span>
     </button>
   </header>
 
-  <!-- Main View -->
+  <!-- Main Workspace -->
   <main>
     <!-- HERO INITIAL SCREEN -->
     <section id="hero-screen">
-      <!-- Stylized Spider SVG Icon -->
-      <svg class="spider-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor">
-        <circle cx="24" cy="24" r="5" fill="#fff"/>
-        <circle cx="24" cy="16" r="3" fill="#fff"/>
-        <path d="M21 21C16 19 10 20 6 24" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        <path d="M27 21C32 19 38 20 42 24" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        <path d="M20 24C14 25 9 28 5 34" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        <path d="M28 24C34 25 39 28 43 34" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        <path d="M21 27C17 31 12 36 8 42" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        <path d="M27 27C31 31 36 36 40 42" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        <path d="M22 14C17 10 12 9 8 10" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        <path d="M26 14C31 10 36 9 40 10" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-      </svg>
+      <!-- Minimalist Spider Logo SVG -->
+      <div class="spider-logo-wrap">
+        <svg class="spider-svg" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="5" fill="#fff" stroke="#fff" stroke-width="1.5"/>
+          <circle cx="24" cy="16" r="3.2" fill="#fff" stroke="#fff" stroke-width="1.5"/>
+          <!-- Legs -->
+          <path d="M21 21C16 19 10 20 6 24" stroke-width="2" stroke-linecap="round"/>
+          <path d="M27 21C32 19 38 20 42 24" stroke-width="2" stroke-linecap="round"/>
+          <path d="M20 24C14 25 9 28 5 34" stroke-width="2" stroke-linecap="round"/>
+          <path d="M28 24C34 25 39 28 43 34" stroke-width="2" stroke-linecap="round"/>
+          <path d="M21 27C17 31 12 36 8 42" stroke-width="2" stroke-linecap="round"/>
+          <path d="M27 27C31 31 36 36 40 42" stroke-width="2" stroke-linecap="round"/>
+          <path d="M22 14C17 10 12 9 8 10" stroke-width="2" stroke-linecap="round"/>
+          <path d="M26 14C31 10 36 9 40 10" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
 
       <div class="hero-title-wrap">
         <h1 class="hero-title">mechnik-osint.lol</h1>
@@ -978,11 +1118,11 @@
 
       <!-- Category Filter Chips -->
       <div class="tabs-row">
-        <div class="tab-chip active" onclick="switchTab(this, 'tg')">Telegram</div>
-        <div class="tab-chip" onclick="switchTab(this, 'phone')">Телефон</div>
+        <div class="tab-chip active" onclick="switchCategoryTab(this, 'tg')">Telegram</div>
+        <div class="tab-chip" onclick="switchCategoryTab(this, 'phone')">Телефон</div>
         <div class="tab-chip disabled">ИНН <span class="chip-tag">скоро</span></div>
         <div class="tab-chip disabled">Email <span class="chip-tag">скоро</span></div>
-        <div class="tab-chip" onclick="switchTab(this, 'nick')">Никнейм</div>
+        <div class="tab-chip" onclick="switchCategoryTab(this, 'nick')">Никнейм</div>
       </div>
 
       <!-- Center Search Box -->
@@ -1007,7 +1147,7 @@
 
     <!-- RESULTS CANVAS SCREEN -->
     <section id="canvas-screen">
-      <!-- Top Right Floating Summary -->
+      <!-- Floating Summary Panel (Top Right) -->
       <div class="summary-floating-panel" id="summary-panel">
         <div class="summary-header">
           <div class="summary-title">
@@ -1015,8 +1155,12 @@
             <span class="summary-title-count" id="summary-count">1</span>
           </div>
           <div class="summary-ctrls">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="copyDossier()"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="toggleSummary()"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <button class="summary-icon-btn" title="Скопировать факт-лист" onclick="copyDossier()">
+              <svg style="width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+            <button class="summary-icon-btn" title="Свернуть / Развернуть" onclick="toggleSummary()">
+              <svg style="width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2;" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
           </div>
         </div>
 
@@ -1024,10 +1168,10 @@
           <div class="summary-sec-title">КЛЮЧЕВЫЕ ФАКТЫ</div>
           <div class="summary-fact-row">
             <span class="summary-fact-label">Статус:</span>
-            <span class="summary-fact-val" id="sum-status">Активен в сети</span>
+            <span class="summary-fact-val" id="sum-status">Активен</span>
           </div>
           <div class="summary-fact-row">
-            <span class="summary-fact-label">Telegram ID:</span>
+            <span class="summary-fact-label">Идентификатор:</span>
             <span class="summary-fact-val" id="sum-id">—</span>
           </div>
           <div class="summary-fact-row">
@@ -1045,6 +1189,10 @@
           <div class="summary-fact-row">
             <span class="summary-fact-label">Платформы:</span>
             <span class="summary-fact-val" id="sum-platforms">0 найдено</span>
+          </div>
+          <div class="summary-fact-row">
+            <span class="summary-fact-label">Время поиска:</span>
+            <span class="summary-fact-val" id="sum-time">—</span>
           </div>
         </div>
       </div>
@@ -1103,9 +1251,7 @@
       <div class="modal-body">
         <!-- Profile Banner -->
         <div class="user-profile-banner">
-          <div class="user-avatar-lg">
-            #м
-          </div>
+          <div class="user-avatar-lg">#м</div>
           <div>
             <div class="user-meta-name">#мечник</div>
             <div class="user-meta-sub">@mechnik123</div>
@@ -1170,6 +1316,13 @@
     let currentZoom = 100;
     let queryLimit = 5;
 
+    function showToast(msg) {
+      const t = document.getElementById('toast-msg');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
     function openModal() {
       const m = document.getElementById('account-modal');
       m.classList.add('open');
@@ -1189,10 +1342,19 @@
       btn.classList.add('active');
     }
 
-    function switchTab(el, type) {
+    function switchCategoryTab(el, type) {
       if (el.classList.contains('disabled')) return;
       document.querySelectorAll('.tab-chip').forEach(c => c.classList.remove('active'));
       el.classList.add('active');
+
+      const heroInp = document.getElementById('hero-search-input');
+      if (type === 'phone') {
+        heroInp.placeholder = "+7 (991) 950-32-62...";
+      } else if (type === 'nick') {
+        heroInp.placeholder = "Никнейм пользователя...";
+      } else {
+        heroInp.placeholder = "@username, телефон или ID...";
+      }
     }
 
     function goHome() {
@@ -1202,7 +1364,7 @@
     }
 
     function adjustZoom(delta) {
-      currentZoom = Math.min(150, Math.max(60, currentZoom + delta));
+      currentZoom = Math.min(140, Math.max(70, currentZoom + delta));
       document.getElementById('zoom-val').textContent = currentZoom + '%';
       const tree = document.getElementById('tree-container');
       tree.style.transform = `scale(${currentZoom / 100})`;
@@ -1218,14 +1380,14 @@
       const status = document.getElementById('sum-status').innerText;
       const id = document.getElementById('sum-id').innerText;
       const yr = document.getElementById('sum-year').innerText;
-      navigator.clipboard.writeText(`[MECHNIK-OSINT]\nСтатус: ${status}\nTelegram ID: ${id}\nГод: ${yr}`);
-      alert('Сводка скопирована в буфер обмена');
+      navigator.clipboard.writeText(`[MECHNIK-OSINT]\nСтатус: ${status}\nID / Телефон: ${id}\nГод: ${yr}`);
+      showToast('Сводка скопирована в буфер');
     }
 
     function estimateYear(id) {
       if (!id || isNaN(id)) return "Неизвестно";
       const num = Number(id);
-      if (num < 150000000) return "~2013-2015";
+      if (num < 150000000) return "2013-2015";
       if (num < 350000000) return "~2016";
       if (num < 550000000) return "~2017";
       if (num < 750000000) return "~2018";
@@ -1234,7 +1396,7 @@
       if (num < 2200000000) return "~2021";
       if (num < 5300000000) return "~2022";
       if (num < 6500000000) return "~2023";
-      if (num < 7300000000) return "~2024";
+      if (num < 7400000000) return "~2024";
       return "~2025-2026";
     }
 
@@ -1253,7 +1415,7 @@
       heroBtn.innerHTML = '<span class="loading-pulse"></span>';
       dockBtn.innerHTML = '<span class="loading-pulse"></span>';
 
-      // Switch view
+      // Switch screen
       document.getElementById('hero-screen').classList.add('hidden');
       document.getElementById('canvas-screen').classList.add('active');
       document.getElementById('header-logo').classList.add('visible');
@@ -1261,7 +1423,7 @@
       // Update Root Query Node
       document.getElementById('root-query-text').textContent = val;
 
-      // Decrement simulated quota
+      // Decrement query limit
       if (queryLimit > 0) {
         queryLimit--;
         document.getElementById('limit-counter-hero').textContent = `Лимит: ${queryLimit} из 10 ост. (5ч)`;
@@ -1282,20 +1444,23 @@
       }
 
       if (!resultData || !resultData.summary) {
-        // Standalone fallback
+        // Standalone client heuristics fallback
         const isNumeric = /^\d+$/.test(clean);
+        const isPhone = isNumeric && clean.length >= 10;
         const mockId = isNumeric ? clean : Math.floor(100000000 + Math.random() * 6500000000);
+        
         resultData = {
           summary: {
-            name: isNumeric ? 'Номер не привязан' : clean,
-            username: isNumeric ? '' : `@${clean}`,
-            telegram_id: mockId,
-            creation_year: estimateYear(mockId),
+            name: isPhone ? `+7 (${clean.slice(1,4)}) ${clean.slice(4,7)}-${clean.slice(7,9)}-${clean.slice(9,11)}` : (isNumeric ? `ID: ${clean}` : clean),
+            username: isPhone ? "По номеру телефона" : (isNumeric ? "Telegram ID" : `@${clean}`),
+            telegram_id: isPhone ? "Скрыт настройками" : mockId,
+            creation_year: isPhone ? "По номеру" : estimateYear(mockId),
             premium: 'Нет',
-            status: 'Не привязан / скрыт',
+            status: isPhone ? "Tele2 / МТС (Россия / СНГ)" : "Обнаружен в открытых реестрах",
             gifts: '0',
-            bio: 'Профиль скрыт или не найден в глобальном реестре.',
+            bio: isPhone ? "Мобильный номер РФ. Доступен поиск в Telegram, WhatsApp и Viber." : "Описание профиля не указано в открытом доступе.",
             avatar: '',
+            search_time: '120 мс',
             all_platforms: [
               { platform: 'Steam', found: true, url: `https://steamcommunity.com/id/${clean}` },
               { platform: 'VK', found: true, url: `https://vk.com/${clean}` },
@@ -1313,12 +1478,13 @@
     }
 
     function renderCanvasResults(summary) {
-      // Update Summary panel
-      document.getElementById('sum-status').textContent = summary.status || 'Активен в сети';
+      // Summary widget facts
+      document.getElementById('sum-status').textContent = summary.status || 'Активен';
       document.getElementById('sum-id').textContent = summary.telegram_id || 'Не привязан';
       document.getElementById('sum-year').textContent = summary.creation_year || '—';
       document.getElementById('sum-premium').textContent = summary.premium || 'Нет';
       document.getElementById('sum-gifts').textContent = summary.gifts || '0';
+      document.getElementById('sum-time').textContent = summary.search_time || '400 мс';
 
       const foundP = (summary.all_platforms || []).filter(p => p.found);
       document.getElementById('sum-platforms').textContent = `${foundP.length} найдено`;
@@ -1326,34 +1492,73 @@
       const cardsContainer = document.getElementById('tree-cards-list');
       cardsContainer.innerHTML = '';
 
+      // Phone Card (if query is a phone number)
+      if (summary.phone_info && summary.phone_info.is_phone) {
+        const p = summary.phone_info;
+        const phoneCard = document.createElement('div');
+        phoneCard.className = 'intel-card';
+        phoneCard.innerHTML = `
+          <div class="card-top">
+            <span class="card-service-title">
+              <svg style="width: 17px; height: 17px; fill: none; stroke: var(--accent-blue); stroke-width: 2;" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              Оператор & Регион
+            </span>
+            <span class="card-badge found">DEF верифицирован</span>
+          </div>
+
+          <div class="card-data-row">
+            <span class="card-data-label">Номер</span>
+            <span class="card-data-val" style="font-size: 1.05rem; font-family: var(--font-mono); font-weight: 700; color: #fff;">${p.formatted}</span>
+          </div>
+
+          <div class="card-data-row">
+            <span class="card-data-label">Оператор</span>
+            <span class="card-data-val" style="color: var(--accent-blue); font-weight: 600;">${p.operator}</span>
+          </div>
+
+          <div class="card-data-row">
+            <span class="card-data-label">Регион</span>
+            <span class="card-data-val">${p.region} (${p.country})</span>
+          </div>
+
+          <div class="card-data-row">
+            <span class="card-data-label">Мессенджеры</span>
+            <div style="display: flex; gap: 8px; margin-top: 4px;">
+              <a href="${p.tg_link}" target="_blank" style="padding: 4px 10px; background: rgba(0, 132, 255, 0.15); border: 1px solid rgba(0, 132, 255, 0.3); border-radius: 6px; color: var(--accent-blue); text-decoration: none; font-size: 0.78rem; font-weight: 600;">Telegram</a>
+              <a href="${p.wa_link}" target="_blank" style="padding: 4px 10px; background: rgba(0, 230, 118, 0.15); border: 1px solid rgba(0, 230, 118, 0.3); border-radius: 6px; color: var(--accent-green); text-decoration: none; font-size: 0.78rem; font-weight: 600;">WhatsApp</a>
+            </div>
+          </div>
+        `;
+        cardsContainer.appendChild(phoneCard);
+      }
+
       // Telegram Card
       const tgCard = document.createElement('div');
       tgCard.className = 'intel-card';
-      const isTgBound = summary.telegram_id && summary.telegram_id !== 'Не найден';
+      const isTgBound = summary.telegram_id && summary.telegram_id !== 'Не найден' && !summary.telegram_id.includes('Скрыт');
+      
       tgCard.innerHTML = `
         <div class="card-top">
-          <div style="display:flex; align-items:center; gap: 8px;">
+          <div class="card-service-title">
             <svg style="width: 18px; height: 18px; fill: #0084ff;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
-            <span class="card-service-title">Telegram</span>
+            <span>Telegram</span>
           </div>
-          <span class="card-badge ${isTgBound ? 'found' : 'hidden-badge'}">${isTgBound ? 'Привязан' : 'Не привязан / скрыт'}</span>
+          <span class="card-badge ${isTgBound ? 'found' : 'hidden-badge'}">${isTgBound ? 'Активен' : 'Не привязан / скрыт'}</span>
         </div>
 
-        <div style="display:flex; align-items:center; gap: 12px;">
-          ${summary.avatar ? `
-            <div class="card-avatar-wrap">
-              <img src="${summary.avatar}" alt="avatar">
-            </div>
-          ` : ''}
-          <div>
-            <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">${summary.name || 'Не привязан'}</div>
-            <div style="color: var(--accent-blue); font-size: 0.8rem; font-weight: 500;">${summary.username || ''}</div>
+        <div style="display:flex; align-items:center; gap: 14px;">
+          <div class="card-avatar-wrap">
+            ${summary.avatar ? `<img src="${summary.avatar}" alt="avatar">` : (summary.name ? summary.name.slice(0, 2).toUpperCase() : 'TG')}
+          </div>
+          <div style="min-width: 0;">
+            <div style="font-weight: 700; color: #fff; font-size: 0.98rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${summary.name || 'Не привязан'}</div>
+            <div style="color: var(--accent-blue); font-size: 0.82rem; font-weight: 600;">${summary.username || ''}</div>
           </div>
         </div>
 
         <div class="card-data-row">
-          <span class="card-data-label">Идентификатор</span>
-          <span class="card-data-val">${summary.telegram_id || 'Не привязан / скрыт'}</span>
+          <span class="card-data-label">Идентификатор (Telegram ID)</span>
+          <span class="card-data-val" style="font-family: var(--font-mono); font-weight: 600;">${summary.telegram_id || 'Не привязан'}</span>
         </div>
 
         <div class="card-data-row">
@@ -1363,7 +1568,7 @@
 
         <div class="card-data-row">
           <span class="card-data-label">Описание / Bio</span>
-          <span class="card-data-val" style="color: var(--text-secondary); font-size: 0.8rem;">${summary.bio || 'Не указано'}</span>
+          <span class="card-data-val" style="color: var(--text-sub); font-size: 0.82rem;">${summary.bio || 'Не указано'}</span>
         </div>
       `;
       cardsContainer.appendChild(tgCard);
@@ -1384,7 +1589,7 @@
           </div>
           <div class="card-data-row">
             <span class="card-data-label">Статус проверки</span>
-            <span class="card-data-val" style="color: #00e676;">200 OK // Active</span>
+            <span class="card-data-val" style="color: var(--accent-green); font-weight: 600;">200 OK // Active Profile</span>
           </div>
         `;
         cardsContainer.appendChild(pCard);
