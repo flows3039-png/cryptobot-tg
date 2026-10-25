@@ -3,6 +3,17 @@ import config
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import CURRENCIES, FIAT_CURRENCIES, FIAT_FLAGS, EMOJI
 
+WEBAPP_URL = "https://flows3039-png.github.io/cryptobot-tg/"
+
+def webapp_btn(text: str, emoji_key: str, subpath: str = "") -> InlineKeyboardButton:
+    from aiogram.types import WebAppInfo
+    url = f"{WEBAPP_URL}#{subpath}" if subpath else WEBAPP_URL
+    return InlineKeyboardButton(
+        text=text,
+        web_app=WebAppInfo(url=url),
+        icon_custom_emoji_id=EMOJI.get(emoji_key)
+    )
+
 def btn(text: str, emoji_key: str, callback_data: str) -> InlineKeyboardButton:
     return InlineKeyboardButton(
         text=text,
@@ -12,8 +23,8 @@ def btn(text: str, emoji_key: str, callback_data: str) -> InlineKeyboardButton:
 
 def main_menu_inline() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [btn("Кошелёк", "wallet", "menu:wallet"), btn("Обмен", "arrows_diff", "menu:swap")],
-        [btn("P2P", "home_dollar", "menu:p2p"), btn("Биржа", "arrows_cycle", "menu:exchange")],
+        [webapp_btn("Кошелёк", "wallet", "wallet"), webapp_btn("Обмен", "arrows_diff", "swap")],
+        [btn("P2P", "home_dollar", "menu:p2p"), webapp_btn("Биржа", "arrows_cycle", "exchange")],
         [btn("Чеки", "check_btn", "menu:checks"), btn("Счета", "invoice_btn", "menu:invoices")],
         [btn("Crypto Pay", "pay", "menu:pay"), btn("Розыгрыши", "gift", "menu:giveaways")],
         [btn("Подписки", "megaphone", "menu:subs"), btn("Настройки", "settings", "menu:settings")]

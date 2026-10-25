@@ -1,12 +1,13 @@
 # p2p.py
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from config import CURRENCIES, FIAT_CURRENCIES, FIAT_FLAGS
 from database import get_p2p_orders, create_p2p_order, get_user_orders, generate_fake_orders
 
 router = Router()
+WEBAPP_URL = "https://flows3039-png.github.io/cryptobot-tg/#p2p"
 
 class P2PFSM(StatesGroup):
     waiting_crypto = State()
@@ -24,6 +25,7 @@ async def cb_p2p_menu(cb: CallbackQuery):
         "Переводом на карту или электронный кошелек."
     )
     kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📱 Открыть P2P Маркет", web_app=WebAppInfo(url=WEBAPP_URL))],
         [InlineKeyboardButton(text="📈 Купить", callback_data="p2p:buy"), InlineKeyboardButton(text="📉 Продать", callback_data="p2p:sell")],
         [InlineKeyboardButton(text="💼 Мои сделки", callback_data="p2p:my_deals")],
         [InlineKeyboardButton(text="🤝 Создать объявление", callback_data="p2p:create_ad")],
