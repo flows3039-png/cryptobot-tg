@@ -281,6 +281,27 @@ def referral_kb(ref_link: str, current_period: str = "all") -> InlineKeyboardMar
 def admin_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [btn("✏️ Изменить баланс", "settings", "admin:set_bal"), btn("➕ Добавить баланс", "dollar", "admin:bal")],
-        [btn("🧾 Фейк-чек", "fake", "admin:fake"), btn("📊 Мои балансы", "message", "admin:all")],
-        [btn("👑 Добавить админа", "plus", "admin:add")]
+        [btn("🎁 NFT-парсер", "gem", "admin:nft"), btn("🧾 Фейк-чек", "fake", "admin:fake")],
+        [btn("📊 Мои балансы", "message", "admin:all"), btn("👑 Добавить админа", "plus", "admin:add")]
     ])
+
+def nft_parser_menu_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🟢 Лёгкий (2 – 5 TON)", callback_data="nft:range:low")],
+        [InlineKeyboardButton(text="🟡 Средний (15 – 25 TON)", callback_data="nft:range:mid")],
+        [InlineKeyboardButton(text="🔴 Высокий (45 – 100 TON)", callback_data="nft:range:high")],
+        [InlineKeyboardButton(text="⚙️ Свой диапазон", callback_data="nft:range:custom")],
+        [InlineKeyboardButton(text="🔍 Проверить по ссылке", callback_data="nft:check_link")],
+        [InlineKeyboardButton(text="‹ Назад в админку", callback_data="admin:menu")]
+    ])
+
+def nft_found_actions_kb(gift_url: str, range_key: str = None) -> InlineKeyboardMarkup:
+    buttons = [
+        [InlineKeyboardButton(text="🎁 Открыть подарок", url=gift_url)]
+    ]
+    row2 = []
+    if range_key and range_key != "custom":
+        row2.append(InlineKeyboardButton(text="🔄 Искать ещё", callback_data=f"nft:range:{range_key}"))
+    row2.append(InlineKeyboardButton(text="‹ Меню парсера", callback_data="admin:nft"))
+    buttons.append(row2)
+    return InlineKeyboardMarkup(inline_keyboard=buttons)

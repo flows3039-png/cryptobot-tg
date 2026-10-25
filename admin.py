@@ -14,7 +14,7 @@ from database import (
     get_balance, DB_PATH, create_check,
     add_admin, is_admin, create_admin_fake_check
 )
-from keyboards import admin_menu_kb
+from keyboards import admin_menu_kb, nft_parser_menu_kb, nft_found_actions_kb
 
 router = Router()
 
@@ -23,6 +23,8 @@ class AdminFSM(StatesGroup):
     waiting_set_balance = State()
     waiting_fake_check = State()
     waiting_add_admin = State()
+    waiting_nft_range = State()
+    waiting_nft_link = State()
 
 async def check_admin(user_id: int) -> bool:
     if user_id == OWNER_ID:
@@ -325,3 +327,172 @@ async def proc_admin_add(msg: Message, state: FSMContext):
         parse_mode="HTML"
     )
     await state.clear()
+
+# --- NFT ПАРСЕР ПОДАРКОВ TELEGRAM ---
+@router.callback_query(F.data == "admin:nft")
+async def cb_admin_nft(cb: CallbackQuery, state: FSMContext):
+    if not await check_admin(cb.from_user.id):
+        await cb.answer("Нет доступа.", show_alert=True)
+        return
+    await state.clear()
+    text = (
+        "🎁 <b>NFT-парсер подарков Telegram</b>\n\n"
+        "Парсер в реальном времени мониторит рынок Fragment и сеть TON, "
+        "вычисляет стоимость подарка и определяет юзернейм владельца.\n\n"
+        "Выберите диапазон поиска или введите ссылку:"
+    )
+    await cb.message.edit_text(text, reply_markup=nft_parser_menu_kb(), parse_mode="HTML")
+    await cb.answer()
+
+@router.callback_query(F.data == "admin:menu")
+async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
+    if not await check_admin(cb.from_user.id):
+        await cb.answer("Нет доступа.", show_alert=True)
+        return
+    await state.clear()
+    await cb.message.edit_text(
+        f"{_e('crypto', '👑')} <b>Админ-панель</b>\n\nВыберите действие:",
+        reply_markup=admin_menu_kb(),
+        parse_mode="HTML"
+    )
+    await cb.answer()
+
+@router.callback_query(F.data.startswith("nft:range:"))
+async def cb_nft_range(cb: CallbackQuery, state: FSMContext):
+    if not await check_admin(cb.from_user.id):
+        await cb.answer("Нет доступа.", show_alert=True)
+        return
+    range_key = cb.data.split("nft:range:", 1)[1]
+    
+    if range_key == "custom":
+        await state.set_state(AdminFSM.waiting_nft_range)
+        await cb.message.edit_text(
+            "⚙️ <b>Поиск по своему диапазону цен</b>\n\n"
+            "Введите минимальную и максимальную цену в TON через дефис или пробел (например: <code>10-30</code> или <code>50 150</code>):",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="‹ Отмена", callback_data="admin:nft")]]),
+            parse_mode="HTML"
+        )
+        await cb.answer()
+        return
+
+    ranges = {
+        "low": (2.0, 5.0, "Лёгкий (2 – 5 TON)"),
+        "mid": (15.0, 25.0, "Средний (15 – 25 TON)"),
+        "high": (45.0, 100.0, "Высокий (45 – 100 TON)")
+    }
+    cfg = ranges.get(range_key)
+    if not cfg:
+        await cb.answer("Неверный диапазон", show_alert=True)
+        return
+
+    min_t, max_t, title = cfg
+    await cb.answer()
+    status_msg = await cb.message.answer(
+        f"⏳ <b>Поиск NFT-подарков ({title})...</b>\n"
+        "Парсер опрашивает листинги и определяет юзернеймы владельцев...",
+        parse_mode="HTML"
+    )
+
+    from nft_parser import search_gifts_by_range
+    gifts = await search_gifts_by_range(min_t, max_t, limit=3)
+    try:
+        await status_msg.delete()
+    except Exception:
+        pass
+
+    if not gifts:
+        await cb.message.answer(
+            f"❌ В диапазоне <b>{title}</b> сейчас не найдено доступных лотов.",
+            reply_markup=nft_parser_menu_kb(),
+            parse_mode="HTML"
+        )
+        return
+
+    for g in gifts:
+        out_text = (
+            f"Подарок {g['link']} был успешно найден!\n\n"
+            f"Цена : {g['price']:g} TON\n\n"
+            f"Владелец : {g['owner']}"
+        )
+        await cb.message.answer(
+            out_text,
+            reply_markup=nft_found_actions_kb(g["link"], range_key),
+            disable_web_page_preview=False
+        )
+
+@router.message(AdminFSM.waiting_nft_range)
+async def proc_nft_custom_range(msg: Message, state: FSMContext):
+    if not await check_admin(msg.from_user.id):
+        return
+    nums = re.findall(r"[\d.]+", msg.text or "")
+    if len(nums) < 2:
+        await msg.answer("❌ Введите две цифры диапазона через дефис или пробел (например: <code>10-50</code>):", parse_mode="HTML")
+        return
+    try:
+        min_t = float(nums[0])
+        max_t = float(nums[1])
+        if min_t > max_t:
+            min_t, max_t = max_t, min_t
+    except ValueError:
+        await msg.answer("❌ Некорректные числа.")
+        return
+
+    await state.clear()
+    status_msg = await msg.answer(f"⏳ <b>Поиск NFT-подарков в диапазоне {min_t:g} – {max_t:g} TON...</b>", parse_mode="HTML")
+    from nft_parser import search_gifts_by_range
+    gifts = await search_gifts_by_range(min_t, max_t, limit=3)
+    try:
+        await status_msg.delete()
+    except Exception:
+        pass
+
+    if not gifts:
+        await msg.answer(f"❌ В диапазоне <b>{min_t:g} – {max_t:g} TON</b> лотов не найдено.", reply_markup=nft_parser_menu_kb(), parse_mode="HTML")
+        return
+
+    for g in gifts:
+        out_text = (
+            f"Подарок {g['link']} был успешно найден!\n\n"
+            f"Цена : {g['price']:g} TON\n\n"
+            f"Владелец : {g['owner']}"
+        )
+        await msg.answer(out_text, reply_markup=nft_found_actions_kb(g["link"], "custom"), disable_web_page_preview=False)
+
+@router.callback_query(F.data == "nft:check_link")
+async def cb_nft_check_link(cb: CallbackQuery, state: FSMContext):
+    if not await check_admin(cb.from_user.id):
+        await cb.answer("Нет доступа.", show_alert=True)
+        return
+    await state.set_state(AdminFSM.waiting_nft_link)
+    await cb.message.edit_text(
+        "🔍 <b>Проверка NFT-подарка по ссылке</b>\n\n"
+        "Отправьте ссылку на подарок (например: <code>https://t.me/nft/chillflame-344906</code>) или его название/номер:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="‹ Отмена", callback_data="admin:nft")]]),
+        parse_mode="HTML"
+    )
+    await cb.answer()
+
+@router.message(AdminFSM.waiting_nft_link)
+async def proc_nft_link(msg: Message, state: FSMContext):
+    if not await check_admin(msg.from_user.id):
+        return
+    raw_val = (msg.text or "").strip()
+    status_msg = await msg.answer("⏳ <b>Парсинг данных NFT-подарка и определение владельца...</b>", parse_mode="HTML")
+    from nft_parser import parse_single_nft_gift
+    info = await parse_single_nft_gift(raw_val)
+    try:
+        await status_msg.delete()
+    except Exception:
+        pass
+
+    if not info:
+        await msg.answer("❌ Не удалось найти информацию о данном подарке. Проверьте правильность ссылки.", reply_markup=nft_parser_menu_kb())
+        return
+
+    await state.clear()
+    out_text = (
+        f"Подарок {info['link']} был успешно найден!\n\n"
+        f"Цена : {info['price']:g} TON\n\n"
+        f"Владелец : {info['owner']}"
+    )
+    await msg.answer(out_text, reply_markup=nft_found_actions_kb(info["link"]), disable_web_page_preview=False)
