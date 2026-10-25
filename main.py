@@ -9,7 +9,7 @@ from aiogram.types import (
     Message, CallbackQuery, FSInputFile, 
     ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, 
     InlineKeyboardMarkup, InlineKeyboardButton,
-    InlineQuery, InlineQueryResultArticle, InputTextMessageContent, ChosenInlineResult
+    InlineQuery, InlineQueryResultArticle, InputTextMessageContent, ChosenInlineResult, LinkPreviewOptions
 )
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
@@ -253,6 +253,12 @@ async def inline_query_handler(query: InlineQuery):
         amount_val = float(m.group(1).replace(',', '.'))
         asset_str = m.group(2).upper()
 
+    ASSET_PRICES = {
+        'USDT': 1.0, 'GRAM': 1.341, 'TON': 1.60, 'BTC': 80669.86,
+        'ETH': 2354.81, 'SOL': 101.0, 'TRX': 0.3295, 'DOGE': 0.07709,
+        'LTC': 57.15, 'BNB': 741.27, 'USDC': 1.0, 'XAUT': 2121.1
+    }
+
     if asset_str and amount_val and amount_val > 0:
         asset = asset_str
         cur_bal = balances.get(asset, 0.0)
@@ -265,23 +271,31 @@ async def inline_query_handler(query: InlineQuery):
                 'time': time.time()
             }
             deep_link = f'https://t.me/{bot_username}?start=check_{cid}'
+            price_usd = ASSET_PRICES.get(asset, 1.0)
+            fiat_val = amount_val * price_usd
+            img_url = f'https://imggen.cr.bot/checks/image?asset={asset}&asset_amount={amount_val:g}&fiat=USD&fiat_amount={fiat_val:.2f}&main=asset&v5'
+
             kb = InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text=f'🎁 Получить {amount_val:g} {asset}', url=deep_link)
+                InlineKeyboardButton(text=f'Получить {amount_val:g} {asset}', url=deep_link)
             ]])
+
+            # Нативное превью Telegram с медиа-рамкой и крупной картинкой
             content = InputTextMessageContent(
-                message_text=(
-                    f'🧾 <b>Чек на {amount_val:g} {asset}</b>\\n\\n'
-                    f'Для получения криптовалюты нажмите кнопку ниже.'
-                ),
-                parse_mode='HTML'
+                message_text=f'Чек на <b>{amount_val:g} {asset}</b> (${fiat_val:.2f}).',
+                parse_mode='HTML',
+                link_preview_options=LinkPreviewOptions(
+                    url=img_url,
+                    prefer_large_media=True,
+                    show_above_text=True
+                )
             )
             results.append(InlineQueryResultArticle(
                 id=f'chk_{cid}',
                 title=f'Отправить чек на {amount_val:g} {asset}',
-                description=f'Баланс: {cur_bal:g} {asset}. Нажмите для отправки',
+                description=f'Баланс: {cur_bal:g} {asset} (~${fiat_val:.2f})',
                 input_message_content=content,
                 reply_markup=kb,
-                thumbnail_url='https://imggen.cr.bot/checks/image?asset=' + asset + '&asset_amount=' + str(amount_val) + '&fiat=USD&fiat_amount=10&main=asset&v5'
+                thumbnail_url=img_url
             ))
         else:
             content = InputTextMessageContent(
@@ -305,22 +319,29 @@ async def inline_query_handler(query: InlineQuery):
                     'time': time.time()
                 }
                 deep_link = f'https://t.me/{bot_username}?start=check_{cid}'
+                p_usd = ASSET_PRICES.get(a, 1.0)
+                f_val = b * p_usd
+                img_url = f'https://imggen.cr.bot/checks/image?asset={a}&asset_amount={b:g}&fiat=USD&fiat_amount={f_val:.2f}&main=asset&v5'
+
                 kb = InlineKeyboardMarkup(inline_keyboard=[[
-                    InlineKeyboardButton(text=f'🎁 Получить {b:g} {a}', url=deep_link)
+                    InlineKeyboardButton(text=f'Получить {b:g} {a}', url=deep_link)
                 ]])
                 content = InputTextMessageContent(
-                    message_text=(
-                        f'🧾 <b>Чек на {b:g} {a}</b>\\n\\n'
-                        f'Для получения криптовалюты нажмите кнопку ниже.'
-                    ),
-                    parse_mode='HTML'
+                    message_text=f'Чек на <b>{b:g} {a}</b> (${f_val:.2f}).',
+                    parse_mode='HTML',
+                    link_preview_options=LinkPreviewOptions(
+                        url=img_url,
+                        prefer_large_media=True,
+                        show_above_text=True
+                    )
                 )
                 results.append(InlineQueryResultArticle(
                     id=f'chk_{cid}',
-                    title=f'Отправить чек на весь баланс {b:g} {a}',
+                    title=f'Отправить чек на {b:g} {a}',
                     description=f'Формат: @{bot_username} <сумма> <валюта>',
                     input_message_content=content,
-                    reply_markup=kb
+                    reply_markup=kb,
+                    thumbnail_url=img_url
                 ))
         if not results:
             content = InputTextMessageContent(
