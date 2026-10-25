@@ -111,7 +111,32 @@ def generate_check_image(
         f.write(data)
     return output_path
 
+_http_client: httpx.AsyncClient | None = None
+
+def get_http_client() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(
+            timeout=5.0,
+            follow_redirects=True,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+        )
+    return _http_client
+
 async def fetch_check_image(asset: str, amount: str, fiat_amount: str, check_id: str = "") -> bytes:
-    # Instant local high-speed check image generation (< 20ms)
-    return generate_check_image_bytes(amount, asset, check_id=check_id, fiat_amount=fiat_amount)
+    clean_fiat = str(fiat_amount).replace("$", "").strip()
+    url = f"https://imggen.cr.bot/checks/image?asset={asset}&asset_amount={amount}&fiat=USD&fiat_amount={clean_fiat}&main=asset&v5"
+
+    try:
+        client = get_http_client()
+        r = await client.get(url)
+        if r.status_code == 200 and len(r.content) > 1000:
+            return r.content
+        log.warning("imggen returned %s, falling back to local generator", r.status_code)
+    except Exception as e:
+        log.warning("imggen request failed (%s), falling back to local generator", e)
+
+    return generate_check_image_bytes(amount, asset, check_id=check_id, fiat_amount=clean_fiat)
 
