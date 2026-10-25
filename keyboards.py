@@ -7,7 +7,7 @@ WEBAPP_URL = "https://flows3039-png.github.io/cryptobot-tg/"
 
 def webapp_btn(text: str, emoji_key: str, subpath: str = "") -> InlineKeyboardButton:
     from aiogram.types import WebAppInfo
-    url = f"{WEBAPP_URL}#{subpath}" if subpath else WEBAPP_URL
+    url = f"{WEBAPP_URL}?tab={subpath}" if subpath else WEBAPP_URL
     return InlineKeyboardButton(
         text=text,
         web_app=WebAppInfo(url=url),

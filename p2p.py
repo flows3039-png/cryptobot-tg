@@ -7,7 +7,7 @@ from config import CURRENCIES, FIAT_CURRENCIES, FIAT_FLAGS
 from database import get_p2p_orders, create_p2p_order, get_user_orders, generate_fake_orders
 
 router = Router()
-WEBAPP_URL = "https://flows3039-png.github.io/cryptobot-tg/#p2p"
+WEBAPP_URL = "https://flows3039-png.github.io/cryptobot-tg/?tab=p2p"
 
 class P2PFSM(StatesGroup):
     waiting_crypto = State()
