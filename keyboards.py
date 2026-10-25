@@ -279,29 +279,34 @@ def referral_kb(ref_link: str, current_period: str = "all") -> InlineKeyboardMar
 
 # --- АДМИН-ПАНЕЛЬ ---
 def admin_menu_kb() -> InlineKeyboardMarkup:
+    # Без стандартных системных эмодзи Windows — премиальный стиль
     return InlineKeyboardMarkup(inline_keyboard=[
-        [btn("✏️ Изменить баланс", "settings", "admin:set_bal"), btn("➕ Добавить баланс", "dollar", "admin:bal")],
-        [btn("🎁 NFT-парсер", "gem", "admin:nft"), btn("🧾 Фейк-чек", "fake", "admin:fake")],
-        [btn("📊 Мои балансы", "message", "admin:all"), btn("👑 Добавить админа", "plus", "admin:add")]
+        [InlineKeyboardButton(text="Изменить баланс", callback_data="admin:set_bal"), InlineKeyboardButton(text="Выдать баланс", callback_data="admin:bal")],
+        [InlineKeyboardButton(text="NFT-парсер подарков", callback_data="admin:nft"), InlineKeyboardButton(text="Фейк-чек", callback_data="admin:fake")],
+        [InlineKeyboardButton(text="Статистика базы", callback_data="admin:all"), InlineKeyboardButton(text="Назначить админа", callback_data="admin:add")]
     ])
 
-def nft_parser_menu_kb() -> InlineKeyboardMarkup:
+def nft_parser_menu_kb(auto_active: bool = False) -> InlineKeyboardMarkup:
+    auto_btn_text = "Остановить авто-охоту" if auto_active else "Запустить авто-охоту 24/7"
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🟢 Лёгкий (2 – 5 TON)", callback_data="nft:range:low")],
-        [InlineKeyboardButton(text="🟡 Средний (15 – 25 TON)", callback_data="nft:range:mid")],
-        [InlineKeyboardButton(text="🔴 Высокий (45 – 100 TON)", callback_data="nft:range:high")],
-        [InlineKeyboardButton(text="⚙️ Свой диапазон", callback_data="nft:range:custom")],
-        [InlineKeyboardButton(text="🔍 Проверить по ссылке", callback_data="nft:check_link")],
-        [InlineKeyboardButton(text="‹ Назад в админку", callback_data="admin:menu")]
+        [InlineKeyboardButton(text="Лёгкий (2 – 5 TON)", callback_data="nft:range:low"), InlineKeyboardButton(text="Средний (15 – 25 TON)", callback_data="nft:range:mid")],
+        [InlineKeyboardButton(text="Высокий (45 – 100 TON)", callback_data="nft:range:high"), InlineKeyboardButton(text="Свой диапазон", callback_data="nft:range:custom")],
+        [InlineKeyboardButton(text="Редкие узоры (<1%)", callback_data="nft:filter:rare"), InlineKeyboardButton(text="Красивые номера (#777)", callback_data="nft:filter:serial")],
+        [InlineKeyboardButton(text=auto_btn_text, callback_data="nft:auto_toggle")],
+        [InlineKeyboardButton(text="Проверить ссылку", callback_data="nft:check_link"), InlineKeyboardButton(text="Экспорт базы (CSV)", callback_data="nft:export_csv")],
+        [InlineKeyboardButton(text="‹ Назад в админ-панель", callback_data="admin:menu")]
     ])
 
-def nft_found_actions_kb(gift_url: str, range_key: str = None) -> InlineKeyboardMarkup:
+def nft_found_actions_kb(gift_url: str, outreach_url: str = None, range_key: str = None) -> InlineKeyboardMarkup:
     buttons = [
-        [InlineKeyboardButton(text="🎁 Открыть подарок", url=gift_url)]
+        [InlineKeyboardButton(text="Открыть подарок", url=gift_url)]
     ]
-    row2 = []
+    if outreach_url:
+        buttons.append([InlineKeyboardButton(text="Написать владельцу в ЛС", url=outreach_url)])
+    
+    nav_row = []
     if range_key and range_key != "custom":
-        row2.append(InlineKeyboardButton(text="🔄 Искать ещё", callback_data=f"nft:range:{range_key}"))
-    row2.append(InlineKeyboardButton(text="‹ Меню парсера", callback_data="admin:nft"))
-    buttons.append(row2)
+        nav_row.append(InlineKeyboardButton(text="Искать ещё", callback_data=f"nft:range:{range_key}"))
+    nav_row.append(InlineKeyboardButton(text="‹ Меню парсера", callback_data="admin:nft"))
+    buttons.append(nav_row)
     return InlineKeyboardMarkup(inline_keyboard=buttons)
