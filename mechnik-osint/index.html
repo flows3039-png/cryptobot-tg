@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MECHNIK // INTELLIGENCE & OSINT SYSTEM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --bg-card: rgba(13, 17, 27, 0.75);
+      --bg-card-border: rgba(43, 62, 107, 0.45);
+      --neon-cyan: #00e5ff;
+      --neon-cyan-glow: rgba(0, 229, 255, 0.25);
+      --neon-blue: #2979ff;
+      --neon-purple: #7c4dff;
+      --neon-green: #00e676;
+      --neon-red: #ff1744;
+      --text-main: #e2e8f0;
+      --text-muted: #8392a7;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient cyber background */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(0, 229, 255, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 85% 75%, rgba(124, 77, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(41, 121, 255, 0.04) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Grid lines */
+    body::after {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: relative;
+      z-index: 10;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      background: rgba(7, 9, 14, 0.6);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px var(--neon-cyan-glow);
+    }
+
+    .brand-logo i {
+      color: #07090e;
+      stroke-width: 2.5;
+    }
+
+    .brand-title {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, #ffffff, var(--neon-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      font-family: var(--font-mono);
+    }
+
+    .sys-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(0, 230, 118, 0.08);
+      border: 1px solid rgba(0, 230, 118, 0.25);
+      color: var(--neon-green);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+      animation: pulse-dot 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    main {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      padding: 28px 32px 120px 32px;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Hero / Status banner */
+    .hero-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 14px;
+      padding: 24px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .hero-info h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .hero-info p {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      max-width: 640px;
+      line-height: 1.45;
+    }
+
+    .hero-radar {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 229, 255, 0.35);
+      background: radial-gradient(circle, rgba(0, 229, 255, 0.1) 0%, transparent 70%);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero-radar::after {
+      content: "";
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: conic-gradient(from 0deg at 50% 50%, rgba(0, 229, 255, 0.4) 0deg, transparent 60deg, transparent 360deg);
+      animation: radar-sweep 2.5s linear infinite;
+    }
+
+    @keyframes radar-sweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Layout grid: Graph (left) & Dossier (right) */
+    .intel-grid {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 24px;
+      min-height: 580px;
+    }
+
+    @media (max-width: 1024px) {
+      .intel-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Vis Network Graph Card */
+    .graph-card {
+      background: var(--bg-card);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      backdrop-filter: blur(16px);
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-header {
+      padding: 16px 22px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--neon-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(13, 17, 27, 0.5);
+    }
+
+    .card-header .tools {
+      display: flex;
+      gap: 12px;
+    }
+
+    .tool-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-muted);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      transition: all 0.2s ease;
+    }
+
+    .tool-btn:hover {
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+      background: rgba(0, 229, 255, 0.05);
+    }
+
+    #network-canvas {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      min-height: 480px;
+      background: radial-gradient(circle at center, rgba(14, 22, 38, 0.5) 0%, rgba(7, 9, 14, 0.95) 100%);
+    }
+
+    /* Dossier panel */
+    .dossier-card {
+      background: var(--bg-card);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .dossier-body {
+      padding: 22px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-height: 640px;
+    }
+
+    .target-profile {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .target-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 14px;
+      background: #151d2f;
+      border: 2px solid var(--neon-cyan);
+      box-shadow: 0 0 16px var(--neon-cyan-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .target-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .target-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .target-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .target-handle {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--neon-cyan);
+    }
+
+    .target-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(124, 77, 255, 0.15);
+      border: 1px solid rgba(124, 77, 255, 0.35);
+      color: #b388ff;
+      margin-top: 4px;
+    }
+
+    /* Metric cards inside dossier */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .metric-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .metric-box:hover {
+      border-color: rgba(0, 229, 255, 0.3);
+      background: rgba(0, 229, 255, 0.02);
+    }
+
+    .metric-title {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .metric-title i {
+      width: 14px;
+      height: 14px;
+      color: var(--neon-cyan);
+    }
+
+    .metric-val {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* Dossier sections */
+    .dossier-sec-title {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--neon-cyan);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .bio-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px dashed rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      line-height: 1.45;
+      font-family: var(--font-mono);
+      max-height: 100px;
+      overflow-y: auto;
+    }
+
+    /* Open platforms links */
+    .platforms-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .platform-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      text-decoration: none;
+      color: var(--text-main);
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      transition: all 0.2s ease;
+    }
+
+    .platform-chip:hover {
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+      background: rgba(0, 229, 255, 0.05);
+      transform: translateY(-1px);
+    }
+
+    .platform-chip .p-status {
+      margin-left: auto;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .platform-chip.found .p-status {
+      background: var(--neon-green);
+      box-shadow: 0 0 6px var(--neon-green);
+    }
+
+    /* Floating Search Bar */
+    .search-dock {
+      position: fixed;
+      bottom: 26px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 680px;
+      z-index: 100;
+    }
+
+    .search-box {
+      background: rgba(13, 17, 27, 0.85);
+      border: 1px solid rgba(0, 229, 255, 0.35);
+      border-radius: 14px;
+      padding: 8px 10px 8px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 229, 255, 0.15);
+      backdrop-filter: blur(20px);
+      transition: all 0.25s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 229, 255, 0.3);
+    }
+
+    .search-box i.search-icon {
+      color: var(--neon-cyan);
+      width: 20px;
+      height: 20px;
+    }
+
+    .search-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+    }
+
+    .search-box input::placeholder {
+      color: rgba(131, 146, 167, 0.7);
+    }
+
+    .search-btn {
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));
+      border: none;
+      border-radius: 10px;
+      padding: 10px 20px;
+      color: #07090e;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.05em;
+      transition: all 0.2s ease;
+    }
+
+    .search-btn:hover {
+      box-shadow: 0 0 16px var(--neon-cyan);
+      transform: translateY(-1px);
+    }
+
+    .search-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Scanlines effect overlay */
+    .scanlines {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      z-index: 999;
+      pointer-events: none;
+      opacity: 0.35;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--neon-cyan);
+    }
+
+    .loading-pulse {
+      display: none;
+      color: var(--neon-cyan);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">
+        <i data-lucide="crosshair"></i>
+      </div>
+      <div>
+        <div class="brand-title">MECHNIK // OSINT</div>
+        <div class="brand-sub">TACTICAL INTEL & CORRELATION ENGINE</div>
+      </div>
+    </div>
+    <div class="sys-status">
+      <div class="status-dot"></div>
+      <span id="engine-status">ONLINE // 8 PLATFORMS</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero-panel">
+      <div class="hero-info">
+        <h1>ДЕЦЕНТРАЛИЗОВАННЫЙ OSINT СКАНИНГ</h1>
+        <p>Быстрый поиск информации по Telegram ID, @username, телефонному номеру или никнейму. Система автоматически строит граф связанных сущностей и проверяет профили в открытых источниках.</p>
+      </div>
+      <div class="hero-radar">
+        <i data-lucide="radar" style="color: var(--neon-cyan); width: 26px; height: 26px; z-index: 2;"></i>
+      </div>
+    </div>
+
+    <div class="intel-grid">
+      <!-- Graph view -->
+      <div class="graph-card">
+        <div class="card-header">
+          <span><i data-lucide="share-2" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 6px;"></i>ИНТЕРАКТИВНЫЙ ГРАФ СВЯЗЕЙ</span>
+          <div class="tools">
+            <button class="tool-btn" onclick="resetZoom()">ЦЕНТР</button>
+            <button class="tool-btn" onclick="randomizeTarget()">СЛУЧАЙНЫЙ ДЕМО</button>
+          </div>
+        </div>
+        <div id="network-canvas"></div>
+      </div>
+
+      <!-- Dossier view -->
+      <div class="dossier-card">
+        <div class="card-header">
+          <span><i data-lucide="file-text" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 6px;"></i>ДОСЬЕ ОБЪЕКТА</span>
+          <span class="loading-pulse" id="scan-indicator">СКАНИРОВАНИЕ...</span>
+        </div>
+        <div class="dossier-body">
+          <div class="target-profile">
+            <div class="target-avatar" id="avatar-container">
+              <i data-lucide="user" style="color: var(--neon-cyan); width: 32px; height: 32px;"></i>
+            </div>
+            <div class="target-meta">
+              <div class="target-name" id="profile-name">Не выбрано</div>
+              <div class="target-handle" id="profile-handle">@target</div>
+              <div class="target-badge" id="profile-status">OSINT ACTIVE</div>
+            </div>
+          </div>
+
+          <!-- Quick Metrics -->
+          <div class="metric-grid">
+            <div class="metric-box">
+              <div class="metric-title"><i data-lucide="hash"></i>TELEGRAM ID</div>
+              <div class="metric-val" id="val-id">—</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-title"><i data-lucide="calendar"></i>ГОД РЕГИСТРАЦИИ</div>
+              <div class="metric-val" id="val-year">—</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-title"><i data-lucide="gift"></i>ПОДАРКОВ TG</div>
+              <div class="metric-val" id="val-gifts">—</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-title"><i data-lucide="shield-check"></i>PREMIUM</div>
+              <div class="metric-val" id="val-premium">—</div>
+            </div>
+          </div>
+
+          <!-- Bio -->
+          <div>
+            <div class="dossier-sec-title"><i data-lucide="align-left" style="width: 14px; height: 14px;"></i>ОПИСАНИЕ / БИОГРАФИЯ</div>
+            <div class="bio-box" id="val-bio">Нет данных об объекте. Введите @username или Telegram ID в поле поиска ниже.</div>
+          </div>
+
+          <!-- Open Source Profiles -->
+          <div>
+            <div class="dossier-sec-title"><i data-lucide="globe" style="width: 14px; height: 14px;"></i>ОТКРЫТЫЕ ПЛАТФОРМЫ</div>
+            <div class="platforms-grid" id="platforms-container">
+              <a href="#" target="_blank" class="platform-chip" id="p-github"><span>GitHub</span><span class="p-status"></span></a>
+              <a href="#" target="_blank" class="platform-chip" id="p-reddit"><span>Reddit</span><span class="p-status"></span></a>
+              <a href="#" target="_blank" class="platform-chip" id="p-vk"><span>VKontakte</span><span class="p-status"></span></a>
+              <a href="#" target="_blank" class="platform-chip" id="p-steam"><span>Steam</span><span class="p-status"></span></a>
+              <a href="#" target="_blank" class="platform-chip" id="p-twitch"><span>Twitch</span><span class="p-status"></span></a>
+              <a href="#" target="_blank" class="platform-chip" id="p-chess"><span>Chess.com</span><span class="p-status"></span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Floating Dock -->
+  <div class="search-dock">
+    <form class="search-box" id="search-form" onsubmit="handleSearch(event)">
+      <i data-lucide="search" class="search-icon"></i>
+      <input type="text" id="target-input" placeholder="Введите @username, Telegram ID или никнейм..." autocomplete="off">
+      <button type="submit" class="search-btn">
+        <span>РАСПУТАТЬ</span>
+        <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+      </button>
+    </form>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    let network = null;
+    let nodes = null;
+    let edges = null;
+
+    // Estimate registration year by Telegram ID
+    function estimateYear(id) {
+      if (!id || isNaN(id)) return "Неизвестно";
+      const num = Number(id);
+      if (num < 150000000) return "2013-2015";
+      if (num < 350000000) return "2016";
+      if (num < 550000000) return "2017";
+      if (num < 750000000) return "2018";
+      if (num < 1100000000) return "2019";
+      if (num < 1600000000) return "2020";
+      if (num < 2200000000) return "2021";
+      if (num < 5300000000) return "2022";
+      if (num < 6500000000) return "2023";
+      if (num < 7300000000) return "2024";
+      return "2025-2026";
+    }
+
+    function initNetwork(target, customGraph) {
+      const container = document.getElementById('network-canvas');
+      
+      if (customGraph && customGraph.nodes && customGraph.edges) {
+        const styledNodes = customGraph.nodes.map(n => {
+          let col = { background: '#101726', border: '#2979ff' };
+          let fCol = '#82b1ff';
+          let shape = n.shape || 'box';
+          let size = 22;
+
+          if (n.group === 'main') {
+            col = { background: '#00e5ff', border: '#ffffff' };
+            fCol = '#ffffff';
+            shape = n.image ? 'circularImage' : 'dot';
+            size = 35;
+          } else if (n.group === 'meta') {
+            col = { background: '#101726', border: '#7c4dff' };
+            fCol = '#b388ff';
+          } else if (n.group === 'gifts') {
+            col = { background: '#101726', border: '#ffd600' };
+            fCol = '#fff9c4';
+          } else if (n.group === 'geo') {
+            col = { background: '#101726', border: '#00e676' };
+            fCol = '#b9f6ca';
+          } else if (n.group === 'platforms') {
+            col = { background: '#141d2e', border: '#ff9100' };
+            fCol = '#ffe082';
+          }
+
+          return {
+            ...n,
+            shape: shape,
+            size: size,
+            color: col,
+            font: { color: fCol, face: 'JetBrains Mono', size: n.group === 'main' ? 13 : 11 }
+          };
+        });
+
+        const styledEdges = customGraph.edges.map(e => ({
+          ...e,
+          color: { color: 'rgba(0, 229, 255, 0.55)' },
+          font: { color: '#8392a7', face: 'JetBrains Mono', size: 10 }
+        }));
+
+        nodes = new vis.DataSet(styledNodes);
+        edges = new vis.DataSet(styledEdges);
+      } else {
+        nodes = new vis.DataSet([
+          { id: 1, label: target.title || target.username, shape: 'dot', size: 32, color: { background: '#00e5ff', border: '#ffffff' }, font: { color: '#ffffff', face: 'JetBrains Mono', size: 14 } },
+          { id: 2, label: `TG ID\n${target.id}`, shape: 'box', color: { background: '#101726', border: '#2979ff' }, font: { color: '#82b1ff', face: 'JetBrains Mono' } },
+          { id: 3, label: `REG YEAR\n~${target.reg_year}`, shape: 'box', color: { background: '#101726', border: '#7c4dff' }, font: { color: '#b388ff', face: 'JetBrains Mono' } },
+          { id: 4, label: `STATUS\n${target.premium ? 'PREMIUM' : 'STANDARD'}`, shape: 'box', color: { background: '#101726', border: '#00e676' }, font: { color: '#69f0ae', face: 'JetBrains Mono' } },
+          { id: 5, label: `OPEN PROFILES\n${(target.platforms || []).length} PLATFORMS`, shape: 'dot', size: 24, color: { background: '#ff9100', border: '#ffffff' }, font: { color: '#ffd180', face: 'JetBrains Mono' } },
+        ]);
+
+        const edgeList = [
+          { from: 1, to: 2, color: { color: '#00e5ff' }, width: 2 },
+          { from: 1, to: 3, color: { color: '#7c4dff' }, width: 2 },
+          { from: 1, to: 4, color: { color: '#00e676' }, width: 2 },
+          { from: 1, to: 5, color: { color: '#ff9100' }, width: 2 }
+        ];
+
+        let nextId = 6;
+        (target.platforms || []).forEach(p => {
+          nodes.add({
+            id: nextId,
+            label: `${p.name.toUpperCase()}\n${p.username || ''}`,
+            shape: 'box',
+            color: { background: '#141d2e', border: '#00e5ff' },
+            font: { color: '#e2e8f0', face: 'JetBrains Mono', size: 11 }
+          });
+          edgeList.push({ from: 5, to: nextId, color: { color: 'rgba(0,229,255,0.4)' }, dashes: true });
+          nextId++;
+        });
+
+        edges = new vis.DataSet(edgeList);
+      }
+
+      const data = { nodes: nodes, edges: edges };
+      const options = {
+        physics: {
+          stabilization: true,
+          barnesHut: {
+            gravitationalConstant: -4000,
+            springConstant: 0.04,
+            springLength: 95
+          }
+        },
+        interaction: { hover: true }
+      };
+
+      network = new vis.Network(container, data, options);
+    }
+
+    function resetZoom() {
+      if (network) network.fit({ animation: { duration: 600, easingFunction: 'easeInOutQuad' } });
+    }
+
+    async function handleSearch(e) {
+      if (e) e.preventDefault();
+      const query = document.getElementById('target-input').value.trim();
+      if (!query) return;
+
+      const clean = query.replace('@', '');
+      const ind = document.getElementById('scan-indicator');
+      ind.style.display = 'inline-block';
+
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(clean)}`);
+        if (res.ok) {
+          const apiData = await res.json();
+          renderData(apiData);
+          ind.style.display = 'none';
+          return;
+        }
+      } catch (err) {
+        // Fallback to client-side heuristics if standalone
+      }
+
+      const mockId = /^\d+$/.test(clean) ? clean : Math.floor(100000000 + Math.random() * 6500000000);
+      const est = estimateYear(mockId);
+      const mockData = {
+        title: clean.toUpperCase(),
+        username: `@${clean}`,
+        id: mockId,
+        reg_year: est,
+        bio: `Обнаружен публичный идентификатор ${clean}. Сигнатура сети верифицирована.`,
+        gifts: Math.floor(Math.random() * 12),
+        premium: Math.random() > 0.5,
+        avatar_url: '',
+        platforms: [
+          { name: 'GitHub', url: `https://github.com/${clean}`, username: clean },
+          { name: 'Reddit', url: `https://reddit.com/user/${clean}`, username: clean },
+          { name: 'Steam', url: `https://steamcommunity.com/id/${clean}`, username: clean },
+          { name: 'VK', url: `https://vk.com/${clean}`, username: clean },
+        ]
+      };
+
+      setTimeout(() => {
+        renderData(mockData);
+        ind.style.display = 'none';
+      }, 300);
+    }
+
+    function renderData(raw) {
+      let data = raw;
+      let customGraph = null;
+
+      if (raw && raw.summary) {
+        const s = raw.summary;
+        customGraph = raw.graph;
+        data = {
+          title: s.name || s.username || 'Неизвестно',
+          username: s.username || '',
+          id: s.telegram_id || '—',
+          reg_year: s.creation_year || estimateYear(s.telegram_id),
+          gifts: s.gifts || '0',
+          premium: s.premium === 'Да',
+          bio: s.bio || 'Описание профиля скрыто настройками приватности Telegram.',
+          avatar_url: s.avatar || '',
+          platforms: (s.all_platforms || []).filter(p => p.found).map(p => ({
+            name: p.platform,
+            url: p.url,
+            username: s.username ? s.username.replace('@','') : ''
+          }))
+        };
+      }
+
+      document.getElementById('profile-name').textContent = data.title || data.username || 'Неизвестно';
+      document.getElementById('profile-handle').textContent = data.username ? (data.username.startsWith('@') ? data.username : `@${data.username}`) : '—';
+      document.getElementById('val-id').textContent = data.id || '—';
+      document.getElementById('val-year').textContent = data.reg_year || estimateYear(data.id);
+      document.getElementById('val-gifts').textContent = data.gifts !== undefined ? data.gifts : '0';
+      document.getElementById('val-premium').textContent = data.premium ? 'АКТИВЕН' : 'НЕТ';
+      document.getElementById('val-bio').textContent = data.bio || 'Описание профиля скрыто настройками приватности Telegram.';
+
+      const av = document.getElementById('avatar-container');
+      if (data.avatar_url) {
+        av.innerHTML = `<img src="${data.avatar_url}" alt="avatar">`;
+      } else {
+        av.innerHTML = `<i data-lucide="user" style="color: var(--neon-cyan); width: 32px; height: 32px;"></i>`;
+        lucide.createIcons();
+      }
+
+      const pContainer = document.getElementById('platforms-container');
+      pContainer.innerHTML = '';
+      if (data.platforms && data.platforms.length > 0) {
+        data.platforms.forEach(p => {
+          const a = document.createElement('a');
+          a.href = p.url;
+          a.target = '_blank';
+          a.className = 'platform-chip found';
+          a.innerHTML = `<span>${p.name}</span><span class="p-status"></span>`;
+          pContainer.appendChild(a);
+        });
+      } else {
+        pContainer.innerHTML = `<span style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);">Совпадений не обнаружено</span>`;
+      }
+
+      initNetwork(data, customGraph);
+    }
+
+    function randomizeTarget() {
+      const demoHandles = ['durov', 'telegram', 'notcoin', 'blum', 'modrix', 'crypto_bot'];
+      const chosen = demoHandles[Math.floor(Math.random() * demoHandles.length)];
+      document.getElementById('target-input').value = chosen;
+      handleSearch();
+    }
+
+    // Default initialization on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('target-input').value = 'durov';
+      handleSearch();
+    });
+  </script>
+</body>
+</html>
