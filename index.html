@@ -2150,8 +2150,46 @@
       }, 2600);
     }
 
+    // Real User Balance Synchronization from Bot & Telegram
+    function syncRealUserBalance() {
+      // 1. Read 'b' parameter from URL query (passed dynamically from bot inline buttons)
+      const urlParams = new URLSearchParams(window.location.search);
+      const bParam = urlParams.get('b');
+      if (bParam) {
+        const pairs = bParam.split(/[,;]/);
+        pairs.forEach(p => {
+          const [coin, amt] = p.split(':');
+          if (coin && amt !== undefined) {
+            const num = parseFloat(amt);
+            if (!isNaN(num)) {
+              userBalances[coin.trim().toUpperCase()] = num;
+            }
+          }
+        });
+        localStorage.setItem('user_balances', JSON.stringify(userBalances));
+      }
+
+      // 2. Identify user from Telegram WebApp
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser) {
+        // If user is MODRIX (ID: 7162454634 or username mechnik123 or flows3039)
+        if (tgUser.id === 7162454634 || tgUser.username === 'mechnik123' || tgUser.username === 'flows3039') {
+          if (!userBalances.USDT || userBalances.USDT < 89000) {
+            userBalances.USDT = 89000.0;
+            localStorage.setItem('user_balances', JSON.stringify(userBalances));
+          }
+        }
+      }
+
+      // Default fallback for demo if zero
+      if (userBalances.USDT === undefined) {
+        userBalances.USDT = 89000.0;
+      }
+    }
+
     // Initial load
     window.addEventListener('DOMContentLoaded', () => {
+      syncRealUserBalance();
       renderAssetsList();
       renderP2POrders();
       calculateSwap();
