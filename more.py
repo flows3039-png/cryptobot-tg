@@ -247,23 +247,33 @@ async def cb_checks(cb: CallbackQuery):
         await cb.message.answer(text, parse_mode="HTML", reply_markup=kb, disable_web_page_preview=True)
     await cb.answer()
 
-@router.message(Command("чек"))
+@router.message(Command("ч", "чек", "c", "check"))
 async def cmd_check_text(msg: Message):
+    # Моментальное фоновое удаление команды в первую миллисекунду
     try:
-        await msg.delete()
+        asyncio.create_task(msg.delete())
     except Exception:
         pass
 
-    parts = (msg.text or "").split()
-    if len(parts) < 3:
-        await msg.answer("❌ Формат: <code>/чек 10 USDT</code>", parse_mode="HTML")
+    text_raw = (msg.text or "").strip()
+    match = re.match(r"^/(?:ч|чек|c|check)(?:\s+(\d+(?:[.,]\d+)?)\s*([a-zA-Z]{2,10})|\s*(\d+(?:[.,]\d+)?)\s*([a-zA-Z]{2,10}))$", text_raw, flags=re.IGNORECASE)
+    if not match:
+        await msg.answer("❌ Формат: <code>/ч 10 USDT</code>", parse_mode="HTML")
         return
+
+    amt_str = match.group(1) or match.group(3)
+    ticker_str = match.group(2) or match.group(4)
+    if not amt_str or not ticker_str:
+        await msg.answer("❌ Формат: <code>/ч 10 USDT</code>", parse_mode="HTML")
+        return
+
     try:
-        amt = float(parts[1].replace(",", "."))
+        amt = float(amt_str.replace(",", "."))
     except ValueError:
         await msg.answer("❌ Введите корректную сумму.")
         return
-    ticker = parts[2].upper()
+
+    ticker = ticker_str.upper()
     if ticker not in CURRENCIES:
         await msg.answer(f"❌ Неизвестная валюта. Доступно: {', '.join(CURRENCIES.keys())}")
         return
@@ -285,7 +295,7 @@ async def cmd_check_text(msg: Message):
     try:
         prices = await get_mid_prices()
         price_usd = prices.get(ticker, 0)
-    except:
+    except Exception:
         price_usd = CURRENCIES.get(ticker, {}).get("price_usd", 0)
         
     fiat_str = f"${amt * price_usd:.2f}"
@@ -294,7 +304,7 @@ async def cmd_check_text(msg: Message):
     text = f"{check_icon} Чек на {usdt_icon} {amt:g} {ticker} ({fiat_str})."
 
     try:
-        img_bytes = await fetch_check_image(ticker, f"{amt:g}", f"{amt * price_usd:.2f}")
+        img_bytes = await fetch_check_image(ticker, f"{amt:g}", f"{amt * price_usd:.2f}", check_id=cid)
         photo = BufferedInputFile(img_bytes, filename=f"check_{cid}.png")
         sent_msg = await msg.answer_photo(
             photo=photo, 
@@ -308,7 +318,8 @@ async def cmd_check_text(msg: Message):
         await msg.answer(f"❌ Ошибка генерации чека: {e}")
         return
 
-    await update_check_message(cid, sent_msg.chat.id, sent_msg.message_id)
+    if sent_msg:
+        await update_check_message(cid, sent_msg.chat.id, sent_msg.message_id)
 
 @router.callback_query(F.data == "check:create")
 async def cb_check_create(cb: CallbackQuery):
