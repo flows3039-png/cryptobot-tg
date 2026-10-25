@@ -88,7 +88,9 @@ async def cmd_start(msg: Message, state: FSMContext):
     if user and user["is_onboarded"]:
         img_path = os.path.join(BASE_DIR, "start_banner.jpg")
         from database import get_all_balances
+        from keyboards import update_user_chat_menu_button
         balances = await get_all_balances(msg.from_user.id)
+        await update_user_chat_menu_button(msg.bot, msg.from_user.id, balances)
         kb = main_menu_inline(user_id=msg.from_user.id, balances=balances)
         text = get_start_text()
         if os.path.exists(img_path):

@@ -7,6 +7,7 @@ WEBAPP_URL = "https://flows3039-png.github.io/cryptobot-tg/"
 
 def webapp_btn(text: str, emoji_key: str, subpath: str = "", balances: dict = None, user_id: int = None) -> InlineKeyboardButton:
     from aiogram.types import WebAppInfo
+    import time
     params = []
     if subpath:
         params.append(f"tab={subpath}")
@@ -17,6 +18,7 @@ def webapp_btn(text: str, emoji_key: str, subpath: str = "", balances: dict = No
         if not b_parts:
             b_parts = ["USDT:0", "TON:0", "BTC:0"]
         params.append(f"b={','.join(b_parts)}")
+    params.append(f"t={int(time.time())}")
     query = ("?" + "&".join(params)) if params else ""
     url = f"{WEBAPP_URL}{query}"
     return InlineKeyboardButton(
@@ -24,6 +26,26 @@ def webapp_btn(text: str, emoji_key: str, subpath: str = "", balances: dict = No
         web_app=WebAppInfo(url=url),
         icon_custom_emoji_id=EMOJI.get(emoji_key)
     )
+
+async def update_user_chat_menu_button(bot, user_id: int, balances: dict = None):
+    try:
+        from aiogram.types import MenuButtonWebApp, WebAppInfo
+        import time
+        from database import get_all_balances
+        if balances is None:
+            balances = await get_all_balances(user_id)
+        b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') if v != 0 else f"{k}:0" for k, v in balances.items()]
+        if not b_parts:
+            b_parts = ["USDT:0", "TON:0", "BTC:0"]
+        b_str = f"&b={','.join(b_parts)}"
+        ts = int(time.time())
+        url = f"{WEBAPP_URL}?tab=wallet&uid={user_id}{b_str}&t={ts}"
+        await bot.set_chat_menu_button(
+            chat_id=user_id,
+            menu_button=MenuButtonWebApp(text="Кошелёк", web_app=WebAppInfo(url=url))
+        )
+    except Exception:
+        pass
 
 def btn(text: str, emoji_key: str, callback_data: str) -> InlineKeyboardButton:
     return InlineKeyboardButton(

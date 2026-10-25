@@ -77,6 +77,11 @@ async def proc_admin_bal(msg: Message, state: FSMContext):
 
     await update_balance(target_id, asset, amt)
     await log_tx(target_id, "admin_deposit", asset, amt, "success", f"By admin {msg.from_user.id}")
+    try:
+        from keyboards import update_user_chat_menu_button
+        await update_user_chat_menu_button(msg.bot, target_id)
+    except Exception:
+        pass
     
     await msg.answer(
         f"✅ Выдано <b>{amt} {asset}</b> пользователю <code>{target_id}</code>",
@@ -133,16 +138,9 @@ async def proc_admin_set_bal(msg: Message, state: FSMContext):
     await set_balance(target_id, asset, amt)
     await log_tx(target_id, "admin_set_balance", asset, amt, "success", f"Set by admin {msg.from_user.id}")
 
-    # Обновляем кнопку меню с веб-аппом
     try:
-        from aiogram.types import MenuButtonWebApp, WebAppInfo
-        balances = await get_all_balances(target_id)
-        b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') if v != 0 else f"{k}:0" for k, v in balances.items()]
-        b_str = f"&b={','.join(b_parts)}" if b_parts else "&b=USDT:0" 
-        await msg.bot.set_chat_menu_button(
-            chat_id=target_id,
-            menu_button=MenuButtonWebApp(text="Кошелёк", web_app=WebAppInfo(url=f"https://flows3039-png.github.io/cryptobot-tg/?tab=wallet&uid={target_id}{b_str}"))
-        )
+        from keyboards import update_user_chat_menu_button
+        await update_user_chat_menu_button(msg.bot, target_id)
     except Exception:
         pass
 
@@ -183,14 +181,8 @@ async def cmd_set_balance(msg: Message):
     await log_tx(target_id, "admin_set_balance", asset, amt, "success", f"Set via cmd by admin {msg.from_user.id}")
 
     try:
-        from aiogram.types import MenuButtonWebApp, WebAppInfo
-        balances = await get_all_balances(target_id)
-        b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') if v != 0 else f"{k}:0" for k, v in balances.items()]
-        b_str = f"&b={','.join(b_parts)}" if b_parts else "&b=USDT:0" 
-        await msg.bot.set_chat_menu_button(
-            chat_id=target_id,
-            menu_button=MenuButtonWebApp(text="Кошелёк", web_app=WebAppInfo(url=f"https://flows3039-png.github.io/cryptobot-tg/?tab=wallet&uid={target_id}{b_str}"))
-        )
+        from keyboards import update_user_chat_menu_button
+        await update_user_chat_menu_button(msg.bot, target_id)
     except Exception:
         pass
 
@@ -223,6 +215,11 @@ async def cmd_give_balance(msg: Message):
 
     await update_balance(target_id, asset, amt)
     await log_tx(target_id, "admin_deposit", asset, amt, "success", f"Given via cmd by admin {msg.from_user.id}")
+    try:
+        from keyboards import update_user_chat_menu_button
+        await update_user_chat_menu_button(msg.bot, target_id)
+    except Exception:
+        pass
     await msg.answer(f"✅ Выдано <b>{amt:,.2f} {asset}</b> пользователю <code>{target_id}</code>!", parse_mode="HTML")
 
 # --- ФЕЙК-ЧЕК ---
