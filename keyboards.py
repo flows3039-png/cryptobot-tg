@@ -282,9 +282,13 @@ def admin_menu_kb() -> InlineKeyboardMarkup:
     # Без стандартных системных эмодзи Windows — премиальный стиль
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Изменить баланс", callback_data="admin:set_bal"), InlineKeyboardButton(text="Выдать баланс", callback_data="admin:bal")],
-        [InlineKeyboardButton(text="Мульти-чек", callback_data="admin:multicheck"), InlineKeyboardButton(text="Фейк-чек", callback_data="admin:fake")],
-        [InlineKeyboardButton(text="NFT-парсер подарков", callback_data="admin:nft"), InlineKeyboardButton(text="Статистика базы", callback_data="admin:all")],
-        [InlineKeyboardButton(text="Назначить админа", callback_data="admin:add")]
+        [InlineKeyboardButton(text="NFT-парсер подарков", callback_data="admin:nft")],
+        [InlineKeyboardButton(text="Статистика базы", callback_data="admin:all"), InlineKeyboardButton(text="Назначить админа", callback_data="admin:add")]
+    ])
+
+def admin_back_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="‹ Назад в админ-панель", callback_data="admin:menu")]
     ])
 
 def multicheck_created_kb(check_url: str) -> InlineKeyboardMarkup:

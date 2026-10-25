@@ -609,3 +609,19 @@ async def mark_nft_gift_seen(slug: str, price: float = 0.0, owner: str = "") -> 
             "INSERT INTO seen_nft_gifts (slug, price, owner, created_at) VALUES (?,?,?,?) ON CONFLICT(slug) DO UPDATE SET price=excluded.price, owner=excluded.owner",
             (slug, price, owner, now)
         )
+
+# --- СТАТИСТИКА БАЗЫ ---
+async def get_db_stats() -> dict:
+    async with db_conn.tx() as c:
+        users_count = (await (await c.execute("SELECT COUNT(*) FROM users")).fetchone())[0]
+        checks_count = (await (await c.execute("SELECT COUNT(*) FROM checks")).fetchone())[0]
+        active_checks = (await (await c.execute("SELECT COUNT(*) FROM checks WHERE status='active'")).fetchone())[0]
+        tx_count = (await (await c.execute("SELECT COUNT(*) FROM ledger")).fetchone())[0]
+        nft_seen_count = (await (await c.execute("SELECT COUNT(*) FROM seen_nft_gifts")).fetchone())[0]
+    return {
+        "users": users_count,
+        "checks_total": checks_count,
+        "checks_active": active_checks,
+        "transactions": tx_count,
+        "nft_seen": nft_seen_count
+    }

