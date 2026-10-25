@@ -7,6 +7,13 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     @font-face {
+      font-family: 'SF Pro Rounded';
+      src: url('./sf-pro-rounded-medium.otf') format('opentype');
+      font-weight: 500 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
       font-family: 'SF Pro Display';
       src: url('./sf-pro.ttf') format('truetype');
       font-weight: 400 700;
@@ -27,15 +34,16 @@
       --accent-red: #ff3b30;
       --accent-purple: #af52de;
       --accent-pink: #ff2d55;
-      --border-subtle: rgba(255, 255, 255, 0.08);
-      --font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --accent-cyan: #30b0c7;
+      --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-rounded: 'SF Pro Rounded', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
-      font-family: var(--font-family);
+      font-family: var(--font-display);
       user-select: none;
     }
     body {
@@ -44,6 +52,12 @@
       overflow-x: hidden;
       min-height: 100vh;
       padding-bottom: 96px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .num-rounded {
+      font-family: var(--font-rounded) !important;
+      font-feature-settings: "tnum";
+      font-variant-numeric: tabular-nums;
     }
     .app-container {
       max-width: 440px;
@@ -54,7 +68,7 @@
     .tab-view {
       display: none;
       padding: 16px 16px 20px;
-      animation: fadeIn 0.18s ease-out;
+      animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .tab-view.active {
       display: block;
@@ -76,8 +90,12 @@
       justify-content: space-between;
       align-items: center;
       cursor: pointer;
-      border: 1px solid rgba(255, 255, 255, 0.04);
       position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      transition: transform 0.1s;
+    }
+    .cb-banner:active {
+      transform: scale(0.98);
     }
     .cb-banner::before {
       content: '';
@@ -117,7 +135,7 @@
        ========================================== */
     .wallet-center-header {
       text-align: center;
-      padding: 24px 0 18px;
+      padding: 24px 0 16px;
     }
     .wallet-balance-row {
       display: inline-flex;
@@ -126,12 +144,12 @@
       gap: 6px;
     }
     .wallet-curr-sym {
-      font-size: 38px;
-      font-weight: 600;
+      font-size: 40px;
+      font-weight: 700;
       color: #ffffff;
     }
     .wallet-main-balance {
-      font-size: 44px;
+      font-size: 46px;
       font-weight: 700;
       letter-spacing: -0.5px;
       color: #ffffff;
@@ -145,9 +163,10 @@
       display: flex;
       align-items: center;
       margin-left: 6px;
-      transition: color 0.15s;
+      transition: transform 0.1s, color 0.15s;
     }
     .wallet-eye-toggle:active {
+      transform: scale(0.9);
       color: #ffffff;
     }
     .wallet-sub-link {
@@ -165,15 +184,15 @@
     .wallet-actions-row {
       display: flex;
       justify-content: center;
-      gap: 36px;
-      margin: 10px 0 24px;
+      gap: 40px;
+      margin: 12px 0 24px;
     }
     .wallet-circle-btn-wrap {
       display: flex;
       flex-direction: column;
       align-items: center;
       cursor: pointer;
-      transition: transform 0.1s;
+      transition: transform 0.1s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .wallet-circle-btn-wrap:active {
       transform: scale(0.92);
@@ -233,7 +252,7 @@
       transition: background-color 0.1s;
     }
     .asset-row:active {
-      background-color: rgba(255, 255, 255, 0.03);
+      background-color: rgba(255, 255, 255, 0.04);
     }
     .asset-row-left {
       display: flex;
@@ -315,7 +334,7 @@
       transform: scale(0.92);
     }
     .dock-pill-icon-box {
-      width: 40px;
+      width: 44px;
       height: 28px;
       display: flex;
       align-items: center;
@@ -340,7 +359,7 @@
     }
 
     /* ==========================================
-       PASSCODE VIEW (Установите / Введите код-пароль)
+       PASSCODE VIEW (Установите / Введите код-пароль 1-В-1)
        ========================================== */
     .passcode-modal {
       position: fixed;
@@ -350,15 +369,15 @@
       display: none;
       flex-direction: column;
       justify-content: space-between;
-      padding: 30px 24px calc(env(safe-area-inset-bottom, 16px) + 20px);
-      animation: fadeIn 0.15s ease-out;
+      padding: 24px 24px calc(env(safe-area-inset-bottom, 16px) + 20px);
+      animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .passcode-modal.active {
       display: flex;
     }
     .passcode-top-card {
       text-align: center;
-      margin-top: 40px;
+      margin-top: 30px;
     }
     .passcode-lock-icon {
       width: 76px;
@@ -368,7 +387,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 24px;
+      margin: 0 auto 20px;
       box-shadow: 0 6px 20px rgba(41, 144, 255, 0.4);
     }
     .passcode-title {
@@ -381,8 +400,8 @@
       font-size: 14px;
       color: var(--text-secondary);
       line-height: 1.4;
-      max-width: 280px;
-      margin: 0 auto 28px;
+      max-width: 290px;
+      margin: 0 auto 26px;
     }
     .passcode-cells {
       display: flex;
@@ -398,7 +417,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      font-size: 26px;
       font-weight: 700;
       color: #ffffff;
       transition: all 0.12s;
@@ -410,10 +429,19 @@
     .passcode-cell.filled {
       border-color: rgba(255, 255, 255, 0.3);
     }
+    .passcode-cells.shake {
+      animation: shakeCells 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+    @keyframes shakeCells {
+      10%, 90% { transform: translate3d(-2px, 0, 0); }
+      20%, 80% { transform: translate3d(4px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+      40%, 60% { transform: translate3d(6px, 0, 0); }
+    }
     .passcode-keypad {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 14px 20px;
+      gap: 12px 20px;
       max-width: 300px;
       margin: 0 auto;
     }
@@ -497,6 +525,10 @@
       color: var(--text-secondary);
       cursor: pointer;
       padding: 6px;
+      transition: color 0.1s;
+    }
+    .exchange-chart-btn:active {
+      color: #fff;
     }
 
     .exchange-stats-line {
@@ -614,6 +646,9 @@
       cursor: pointer;
       padding: 0 4px;
     }
+    .step-btn:active {
+      color: #fff;
+    }
 
     .slider-stops {
       display: flex;
@@ -624,8 +659,9 @@
     }
     .slider-stop-item {
       cursor: pointer;
+      padding: 2px 4px;
     }
-    .slider-stop-item:hover {
+    .slider-stop-item:hover, .slider-stop-item:active {
       color: #fff;
     }
 
@@ -658,7 +694,6 @@
       opacity: 0.9;
     }
 
-    /* Orderbook column */
     .orderbook-col {
       display: flex;
       flex-direction: column;
@@ -676,7 +711,6 @@
       justify-content: space-between;
       position: relative;
       padding: 2.5px 4px;
-      font-family: monospace;
       font-size: 12px;
     }
     .ob-depth-bar {
@@ -689,8 +723,8 @@
     }
     .ob-row.ask .ob-depth-bar { background: var(--accent-red); }
     .ob-row.bid .ob-depth-bar { background: var(--accent-green); }
-    .ob-row.ask .ob-price { color: var(--accent-red); }
-    .ob-row.bid .ob-price { color: var(--accent-green); }
+    .ob-row.ask .ob-price { color: var(--accent-red); font-weight: 600; }
+    .ob-row.bid .ob-price { color: var(--accent-green); font-weight: 600; }
     .ob-mid-price {
       text-align: center;
       padding: 8px 0;
@@ -704,7 +738,6 @@
       font-weight: 400;
     }
 
-    /* Tabs bottom in Exchange */
     .ex-tabs-bar {
       display: flex;
       gap: 18px;
@@ -745,10 +778,13 @@
       font-size: 13px;
       color: var(--text-secondary);
       cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.12s;
     }
     .filter-chip.active {
       border-color: var(--accent-blue);
       color: var(--accent-blue);
+      background: rgba(41, 144, 255, 0.12);
     }
 
     .empty-state-card {
@@ -784,6 +820,9 @@
       color: var(--accent-blue);
       cursor: pointer;
       font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
     .swap-box-main-row {
       display: flex;
@@ -845,7 +884,7 @@
       color: var(--accent-blue);
       cursor: pointer;
       margin-top: -19px;
-      transition: transform 0.15s;
+      transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .swap-switch-circle:active {
       transform: scale(0.9) rotate(180deg);
@@ -908,6 +947,10 @@
       align-items: center;
       cursor: pointer;
       margin-bottom: 18px;
+      transition: transform 0.1s;
+    }
+    .p2p-profile-strip:active {
+      transform: scale(0.98);
     }
     .p2p-profile-left {
       display: flex;
@@ -987,6 +1030,7 @@
       justify-content: center;
       color: #ffffff;
       margin-bottom: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
     }
     .more-grid-label {
       font-size: 12px;
@@ -1039,7 +1083,7 @@
     }
 
     /* ==========================================
-       MODAL SHEETS & POPUPS
+       MODAL SHEETS & POPUPS (FIXED WITHDRAWAL SHEET)
        ========================================== */
     .modal-overlay {
       display: none;
@@ -1061,20 +1105,27 @@
       border-top-right-radius: 24px;
       width: 100%;
       max-width: 440px;
-      max-height: 85vh;
+      max-height: 88vh;
       overflow-y: auto;
-      padding: 20px 20px calc(env(safe-area-inset-bottom, 16px) + 20px);
+      padding: 16px 20px calc(env(safe-area-inset-bottom, 16px) + 20px);
       animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     }
     @keyframes slideUp {
       from { transform: translateY(100%); }
       to { transform: translateY(0); }
     }
+    .modal-sheet-handle {
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.25);
+      margin: 0 auto 14px;
+    }
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
     .modal-title {
       font-size: 18px;
@@ -1091,6 +1142,10 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .modal-close-btn:active {
+      transform: scale(0.9);
     }
 
     .search-input-box {
@@ -1109,6 +1164,36 @@
       font-size: 15px;
       width: 100%;
       outline: none;
+    }
+
+    /* Withdrawal Custom Styles */
+    .network-chips-scroll {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .network-chips-scroll::-webkit-scrollbar {
+      display: none;
+    }
+    .net-pill-chip {
+      background: #2c2c2e;
+      border: 1.5px solid transparent;
+      border-radius: 14px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.12s;
+    }
+    .net-pill-chip.active {
+      border-color: var(--accent-blue);
+      background: rgba(41, 144, 255, 0.14);
+      color: var(--accent-blue);
     }
 
     /* Toast */
@@ -1143,6 +1228,53 @@
       transform: translateY(0);
       opacity: 1;
     }
+  
+    /* --- CryptoBot Polished Micro-Interactions & Spring Animations --- */
+    .dock-pill-item {
+      transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s ease, color 0.2s ease;
+    }
+    .dock-pill-item:active {
+      transform: scale(0.92);
+    }
+    .keypad-key {
+      transition: transform 0.1s cubic-bezier(0.2, 0.9, 0.3, 1), background-color 0.1s ease;
+    }
+    .keypad-key:active {
+      transform: scale(0.92) !important;
+      background-color: #3a3a3c !important;
+    }
+    .passcode-dot {
+      transition: all 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .passcode-dot.filled {
+      background: var(--accent-blue) !important;
+      border-color: var(--accent-blue) !important;
+      animation: passcodeDotPop 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.4);
+    }
+    @keyframes passcodeDotPop {
+      0% { transform: scale(0.5); opacity: 0.4; }
+      60% { transform: scale(1.28); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .swap-switch-btn {
+      transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s;
+    }
+    .swap-switch-btn:active {
+      transform: rotate(180deg) scale(0.9);
+    }
+    .cb-action-btn:active {
+      transform: scale(0.94);
+    }
+    .more-list-row:active, .more-grid-item:active {
+      transform: scale(0.97);
+      transition: transform 0.1s ease;
+    }
+    .asset-item:active {
+      background: rgba(255, 255, 255, 0.04);
+      transform: scale(0.99);
+      transition: transform 0.1s ease;
+    }
+
   </style>
 </head>
 <body>
@@ -1155,7 +1287,7 @@
       <div class="wallet-center-header">
         <div class="wallet-balance-row">
           <span id="wallet-fiat-symbol" class="wallet-curr-sym">₽</span>
-          <span id="total-balance-display" class="wallet-main-balance" onclick="toggleBalanceVisibility()">0</span>
+          <span id="total-balance-display" class="wallet-main-balance num-rounded" onclick="toggleBalanceVisibility()">0</span>
           <button id="balance-eye-btn" class="wallet-eye-toggle" onclick="toggleBalanceVisibility()">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
           </button>
@@ -1168,7 +1300,7 @@
       <div class="wallet-actions-row">
         <div class="wallet-circle-btn-wrap" onclick="handleWithdrawClick()">
           <div class="wallet-circle-btn">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
           </div>
           <span class="wallet-circle-label">Вывести</span>
         </div>
@@ -1217,11 +1349,11 @@
       <div class="exchange-stats-line">
         <div>
           <div class="ex-sub-label">Изменение за 24ч</div>
-          <div id="ex-24h-change" class="ex-sub-val red">-0.0002 -0.02%</div>
+          <div id="ex-24h-change" class="ex-sub-val num-rounded red">-0.0002 -0.02%</div>
         </div>
         <div style="text-align: right;">
           <div class="ex-sub-label">Объём за 24ч (USDT)</div>
-          <div id="ex-24h-vol" class="ex-sub-val">9 696.1</div>
+          <div id="ex-24h-vol" class="ex-sub-val num-rounded">9 696.1</div>
         </div>
       </div>
 
@@ -1253,7 +1385,7 @@
           <div class="order-input-block">
             <div class="order-input-label" id="trade-price-label">Цена (USDT)</div>
             <div class="order-input-inner">
-              <input type="number" step="any" id="trade-price-input" class="order-field-input" value="0.9948">
+              <input type="number" step="any" id="trade-price-input" class="order-field-input num-rounded" value="0.9948">
               <div style="display: flex; gap: 4px;">
                 <button class="step-btn" onclick="stepPrice(-0.0001)">−</button>
                 <button class="step-btn" onclick="stepPrice(0.0001)">+</button>
@@ -1264,7 +1396,7 @@
           <div class="order-input-block">
             <div class="order-input-label">Сумма</div>
             <div class="order-input-inner">
-              <input type="number" step="any" id="trade-amount-input" class="order-field-input" placeholder="0" oninput="updateTradeCalc()">
+              <input type="number" step="any" id="trade-amount-input" class="order-field-input num-rounded" placeholder="0" oninput="updateTradeCalc()">
             </div>
           </div>
 
@@ -1279,15 +1411,15 @@
           <div class="order-input-block">
             <div class="order-input-label">Всего</div>
             <div class="order-input-inner">
-              <input type="text" id="trade-total-input" class="order-field-input" placeholder="0" readonly>
+              <input type="text" id="trade-total-input" class="order-field-input num-rounded" placeholder="0" readonly>
             </div>
           </div>
 
           <div class="order-avail-row">
-            <span>Доступно <b id="trade-avail-text">0 USDT</b></span>
+            <span>Доступно <b id="trade-avail-text" class="num-rounded">0 USDT</b></span>
           </div>
           <div class="order-avail-row">
-            <span>Макс. покупка <b id="trade-max-text">0 USDC</b></span>
+            <span>Макс. покупка <b id="trade-max-text" class="num-rounded">0 USDC</b></span>
           </div>
 
           <button id="trade-action-btn" class="order-action-execute-btn" onclick="executeTradeOrder()">
@@ -1302,8 +1434,8 @@
           </div>
           <div id="orderbook-asks-list"></div>
           <div class="ob-mid-price">
-            <div id="ob-current-price">0.9948</div>
-            <div id="ob-current-sub" class="ob-mid-sub">$0.9936</div>
+            <div id="ob-current-price" class="num-rounded">0.9948</div>
+            <div id="ob-current-sub" class="ob-mid-sub num-rounded">$0.9936</div>
           </div>
           <div id="orderbook-bids-list"></div>
         </div>
@@ -1333,7 +1465,7 @@
           <span>Сумма</span>
           <span>Время</span>
         </div>
-        <div id="ex-trades-list" style="font-size: 12px; font-family: monospace;"></div>
+        <div id="ex-trades-list" style="font-size: 12px;"></div>
       </div>
     </div>
 
@@ -1347,7 +1479,7 @@
             <span>Вы отправляете</span>
             <span class="swap-box-balance-link" onclick="setSwapMax()">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px;"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="16" cy="12" r="2"></circle></svg>
-              <span id="swap-from-bal-text">0</span> МАКС
+              <span id="swap-from-bal-text" class="num-rounded">0</span> МАКС
             </span>
           </div>
           <div class="swap-box-main-row">
@@ -1356,7 +1488,7 @@
               <span id="swap-from-symbol" class="swap-token-title">GRAM</span>
               <span class="swap-token-arrow">›</span>
             </button>
-            <input type="number" step="any" id="swap-from-amount" class="swap-big-input" placeholder="0" oninput="calculateSwap()">
+            <input type="number" step="any" id="swap-from-amount" class="swap-big-input num-rounded" placeholder="0" oninput="calculateSwap()">
           </div>
         </div>
 
@@ -1376,7 +1508,7 @@
               <span id="swap-to-symbol" class="swap-token-title">USDT</span>
               <span class="swap-token-arrow">›</span>
             </button>
-            <div id="swap-to-amount" class="swap-big-input" style="display: flex; align-items: center; justify-content: flex-end;">0</div>
+            <div id="swap-to-amount" class="swap-big-input num-rounded" style="display: flex; align-items: center; justify-content: flex-end;">0</div>
           </div>
         </div>
 
@@ -1392,7 +1524,7 @@
     <div id="tab-p2p" class="tab-view">
       <div class="p2p-top-hero">
         <div class="p2p-hero-icon">
-          <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#fff" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="9" cy="9" r="2" fill="#fff"/><circle cx="15" cy="15" r="2" fill="#fff"/></svg>
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#fff" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="8.5" cy="8.5" r="1.5" fill="#fff"/><circle cx="15.5" cy="15.5" r="1.5" fill="#fff"/><path d="M15.5 8.5v3a4 4 0 0 1-4 4H8.5"/></svg>
         </div>
         <div class="p2p-hero-title">P2P Маркет</div>
         <div class="p2p-hero-desc">
@@ -1430,7 +1562,7 @@
           <div class="p2p-select-chip">Монета ▾</div>
         </div>
         <div class="empty-state-card">
-          <svg class="empty-doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <svg class="empty-doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
           <div>Сделок пока нет.</div>
         </div>
       </div>
@@ -1442,7 +1574,7 @@
           <div class="filter-chip">Неактивные</div>
         </div>
         <div class="empty-state-card">
-          <svg class="empty-doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <svg class="empty-doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
           <div>Объявлений пока нет.</div>
         </div>
       </div>
@@ -1484,7 +1616,7 @@
             <span class="more-grid-label">История</span>
           </div>
           <div class="more-grid-item" onclick="showToast('Crypto Pay', 'Платежная система активна')">
-            <div class="more-squircle-icon" style="background: #30b0c7; font-weight: 700; font-size: 15px;">Pay</div>
+            <div class="more-squircle-icon" style="background: var(--accent-cyan); font-weight: 700; font-size: 15px;">Pay</div>
             <span class="more-grid-label">Crypto Pay</span>
           </div>
           <div class="more-grid-item" onclick="openAddressBookModal()">
@@ -1521,7 +1653,7 @@
           </div>
           <div class="more-grid-item" onclick="switchTab('p2p')">
             <div class="more-squircle-icon" style="background: var(--accent-blue);">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="9" cy="9" r="2" fill="#fff"/><circle cx="15" cy="15" r="2" fill="#fff"/></svg>
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="8.5" cy="8.5" r="1.5" fill="#fff"/><circle cx="15.5" cy="15.5" r="1.5" fill="#fff"/><path d="M15.5 8.5v3a4 4 0 0 1-4 4H8.5"/></svg>
             </div>
             <span class="more-grid-label">P2P Маркет</span>
           </div>
@@ -1554,7 +1686,7 @@
             <span class="more-grid-label">Безопасность</span>
           </div>
           <div class="more-grid-item" onclick="openVerificationModal()">
-            <div class="more-squircle-icon" style="background: #30b0c7;">
+            <div class="more-squircle-icon" style="background: var(--accent-cyan);">
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </div>
             <span class="more-grid-label">Верификация</span>
@@ -1589,21 +1721,21 @@
         <div class="more-list-card">
           <div class="more-list-row" onclick="openHelpModal()">
             <div class="more-list-left">
-              <div class="more-list-icon">ℹ</div>
+              <div class="more-squircle-icon" style="background: var(--accent-blue); width: 28px; height: 28px; border-radius: 8px;"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.9237 4.07522C14.8234 -0.0250747 8.17534 -0.0250738 4.07504 4.07522C-0.0252573 8.17552 -0.0252573 14.8236 4.07504 18.9239L4.1766 19.0244C7.44938 22.2103 12.3719 22.8883 16.3495 20.8145L16.3748 20.8008L19.2704 21.418C19.5285 21.473 19.7958 21.4712 20.0536 21.4141C21.0473 21.1937 21.6743 20.2096 21.4539 19.2158L20.8172 16.3438L20.8289 16.3223C22.9071 12.3072 22.1874 7.33901 18.9237 4.07522ZM5.49594 5.4971C8.81107 2.18196 14.1867 2.18196 17.5018 5.4971C20.222 8.21746 20.7565 12.4034 18.8807 15.6973L18.6883 16.0332L19.4344 19.3975L16.0526 18.6768L15.7186 18.8682C12.4221 20.759 8.22302 20.2291 5.49594 17.502C2.18114 14.1869 2.18103 8.81215 5.49594 5.4971ZM11.7088 14.6221C11.0658 14.6221 10.5448 15.1422 10.5448 15.7852C10.5448 16.4282 11.0658 16.9483 11.7088 16.9483C12.3518 16.9482 12.8719 16.4282 12.8719 15.7852C12.8719 15.1422 12.3518 14.6221 11.7088 14.6221ZM11.742 6.08889C10.6574 6.08891 9.80098 6.36101 9.17465 6.90042C8.58094 7.41192 8.26524 8.11394 8.22641 8.99807H8.2186V9.1387C8.21878 9.59658 8.58978 9.9678 9.0477 9.9678H9.72055C10.1697 9.96768 10.535 9.61015 10.5487 9.16409L10.5497 9.14261C10.5594 8.74274 10.9332 8.02835 11.7088 8.02835C12.4657 8.02838 12.8717 8.46182 12.8719 9.19143C12.8719 9.47145 12.7968 9.73953 12.6405 9.99124C12.4903 10.237 12.1899 10.554 11.742 10.9434L11.7079 10.9737C11.2405 11.3751 10.9187 11.7846 10.743 12.1992C10.6396 12.4415 10.5694 12.6985 10.5457 13.0244C10.5138 13.4687 10.8752 13.8457 11.3211 13.8457H12.0965C12.5182 13.8457 12.861 13.5099 12.8719 13.0908V13.0703C12.8719 11.9068 15.1991 11.2072 15.1991 9.0303C15.1959 8.09535 14.8947 7.37188 14.2909 6.85843C13.6855 6.34503 12.8364 6.08889 11.742 6.08889Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg></div>
               <span>Справка Crypto Bot</span>
             </div>
             <span class="more-list-arrow">↗</span>
           </div>
           <div class="more-list-row" onclick="openSupportLink()">
             <div class="more-list-left">
-              <div class="more-list-icon">💬</div>
+              <div class="more-squircle-icon" style="background: var(--accent-green); width: 28px; height: 28px; border-radius: 8px;"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.07632 4.07522C9.17662 -0.0250747 15.8247 -0.0250738 19.925 4.07522C24.0253 8.17552 24.0253 14.8236 19.925 18.9239L19.8234 19.0244C16.5506 22.2103 11.6281 22.8883 7.65054 20.8145L7.62515 20.8008L4.72964 21.418C4.47153 21.473 4.20417 21.4712 3.94644 21.4141C2.95273 21.1937 2.32567 20.2096 2.54605 19.2158L3.18277 16.3438L3.17105 16.3223C1.09286 12.3072 1.81257 7.33901 5.07632 4.07522ZM18.5031 5.4971C15.1879 2.18215 9.81327 2.18203 6.4982 5.4971C3.77789 8.21746 3.24351 12.4034 5.11929 15.6973L5.3107 16.0332L4.56558 19.3975L7.94742 18.6768L8.2814 18.8682C11.5779 20.7588 15.7761 20.229 18.5031 17.502C21.8182 14.1868 21.8182 8.81223 18.5031 5.4971ZM8.38101 10.0332C9.1906 10.0332 9.84673 10.6895 9.84683 11.4991C9.84683 12.3087 9.19067 12.9649 8.38101 12.9649C7.57144 12.9648 6.91519 12.3086 6.91519 11.4991C6.9153 10.6895 7.57151 10.0333 8.38101 10.0332ZM12.5705 10.0332C13.3801 10.0332 14.0362 10.6895 14.0363 11.4991C14.0363 12.3087 13.3801 12.9649 12.5705 12.9649C11.7609 12.9648 11.1046 12.3086 11.1046 11.4991C11.1048 10.6895 11.761 10.0333 12.5705 10.0332ZM16.7589 10.0332C17.5685 10.0332 18.2247 10.6895 18.2248 11.4991C18.2248 12.3087 17.5686 12.9649 16.7589 12.9649C15.9494 12.9648 15.2931 12.3086 15.2931 11.4991C15.2932 10.6895 15.9494 10.0333 16.7589 10.0332Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg></div>
               <span>Написать в поддержку</span>
             </div>
             <span class="more-list-arrow">↗</span>
           </div>
           <div class="more-list-row" onclick="openSupportLink()">
             <div class="more-list-left">
-              <div class="more-list-icon">✉</div>
+              <div class="more-squircle-icon" style="background: var(--accent-purple); width: 28px; height: 28px; border-radius: 8px;"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.7587 2L12 2C13.5458 2 15.0283 2.61407 16.1213 3.70711L19.2929 6.87868C20.3859 7.97172 21 9.45421 21 11V16.2413C21 17.0463 21 17.7106 20.9558 18.2518C20.9099 18.8139 20.8113 19.3306 20.564 19.816C20.1805 20.5686 19.5686 21.1805 18.816 21.564C18.3306 21.8113 17.8139 21.9099 17.2518 21.9558C16.7106 22 16.0463 22 15.2413 22H8.75868C7.95372 22 7.28936 22 6.74817 21.9558C6.18608 21.9099 5.66937 21.8113 5.18404 21.564C4.43139 21.1805 3.81947 20.5686 3.43597 19.816C3.18868 19.3306 3.09012 18.8139 3.04419 18.2518C2.99998 17.7106 2.99999 17.0463 3 16.2413V7.7587C2.99999 6.95373 2.99998 6.28937 3.04419 5.74817C3.09012 5.18608 3.18868 4.66937 3.43597 4.18404C3.81947 3.43139 4.43139 2.81947 5.18404 2.43597C5.66937 2.18868 6.18608 2.09012 6.74817 2.04419C7.28937 1.99998 7.95373 1.99999 8.7587 2ZM6.91104 4.03755C6.47262 4.07337 6.24842 4.1383 6.09202 4.21799C5.7157 4.40973 5.40973 4.7157 5.21799 5.09202C5.1383 5.24842 5.07337 5.47262 5.03755 5.91104C5.00078 6.36113 5 6.94342 5 7.8V16.2C5 17.0566 5.00078 17.6389 5.03755 18.089C5.07337 18.5274 5.1383 18.7516 5.21799 18.908C5.40973 19.2843 5.7157 19.5903 6.09202 19.782C6.24842 19.8617 6.47262 19.9266 6.91104 19.9624C7.36113 19.9992 7.94342 20 8.8 20H15.2C16.0566 20 16.6389 19.9992 17.089 19.9624C17.5274 19.9266 17.7516 19.8617 17.908 19.782C18.2843 19.5903 18.5903 19.2843 18.782 18.908C18.8617 18.7516 18.9266 18.5274 18.9624 18.089C18.9992 17.6389 19 17.0566 19 16.2V12H15.1615C14.6343 12 14.1796 12 13.805 11.9694C13.4096 11.9371 13.0164 11.8658 12.638 11.673C12.0735 11.3854 11.6146 10.9265 11.327 10.362C11.1342 9.98359 11.0629 9.59037 11.0306 9.19503C11 8.82046 11 8.36569 11 7.83855L11 4H8.8C7.94342 4 7.36113 4.00078 6.91104 4.03755ZM13 4.1329V7.8C13 8.37655 13.0008 8.74883 13.0239 9.03217C13.0461 9.30383 13.0838 9.40455 13.109 9.45399C13.2049 9.64215 13.3578 9.79513 13.546 9.89101C13.5955 9.9162 13.6962 9.95388 13.9678 9.97607C14.2512 9.99922 14.6234 10 15.2 10H18.8671C18.6939 9.35992 18.3557 8.76994 17.8787 8.29289L14.7071 5.12132C14.2301 4.64427 13.6401 4.30612 13 4.1329Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg></div>
               <span>Обратная связь</span>
             </div>
             <span class="more-list-arrow">↗</span>
@@ -1620,14 +1752,14 @@
         <div class="more-list-card">
           <div class="more-list-row" onclick="openDocumentModal('privacy')">
             <div class="more-list-left">
-              <div class="more-list-icon">🛡</div>
+              <div class="more-squircle-icon" style="background: #2c2c2e; width: 28px; height: 28px; border-radius: 8px; color: #8e8e93;"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.5 9.16671C17.5 13.7917 14.3 18.1167 10 19.1667C5.7 18.1167 2.5 13.7917 2.5 9.16671V4.16671L10 0.833374L17.5 4.16671V9.16671ZM10 17.5C13.125 16.6667 15.8333 12.95 15.8333 9.35004V5.25004L10 2.65004L4.16667 5.25004V9.35004C4.16667 12.95 6.875 16.6667 10 17.5Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M12.4162 7.15092C12.7028 6.8269 13.1981 6.79678 13.5221 7.08337C13.846 7.37005 13.8763 7.86537 13.5897 8.18933L10.5257 11.6529C9.97872 12.271 9.01699 12.2812 8.45703 11.6748L7.08333 10.1864C6.78997 9.86859 6.80963 9.3731 7.12728 9.07963C7.44507 8.78628 7.94058 8.80597 8.23405 9.12358L9.47835 10.4712L12.4162 7.15092Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg></div>
               <span>Политика конфиденциальности</span>
             </div>
             <span class="more-list-arrow">↗</span>
           </div>
           <div class="more-list-row" onclick="openDocumentModal('aml')">
             <div class="more-list-left">
-              <div class="more-list-icon">🔍</div>
+              <div class="more-squircle-icon" style="background: #2c2c2e; width: 28px; height: 28px; border-radius: 8px; color: #8e8e93;"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.7587 2L12 2C13.5458 2 15.0283 2.61407 16.1213 3.70711L19.2929 6.87868C20.3859 7.97172 21 9.45421 21 11V16.2413C21 17.0463 21 17.7106 20.9558 18.2518C20.9099 18.8139 20.8113 19.3306 20.564 19.816C20.1805 20.5686 19.5686 21.1805 18.816 21.564C18.3306 21.8113 17.8139 21.9099 17.2518 21.9558C16.7106 22 16.0463 22 15.2413 22H8.75868C7.95372 22 7.28936 22 6.74817 21.9558C6.18608 21.9099 5.66937 21.8113 5.18404 21.564C4.43139 21.1805 3.81947 20.5686 3.43597 19.816C3.18868 19.3306 3.09012 18.8139 3.04419 18.2518C2.99998 17.7106 2.99999 17.0463 3 16.2413V7.7587C2.99999 6.95373 2.99998 6.28937 3.04419 5.74817C3.09012 5.18608 3.18868 4.66937 3.43597 4.18404C3.81947 3.43139 4.43139 2.81947 5.18404 2.43597C5.66937 2.18868 6.18608 2.09012 6.74817 2.04419C7.28937 1.99998 7.95373 1.99999 8.7587 2ZM6.91104 4.03755C6.47262 4.07337 6.24842 4.1383 6.09202 4.21799C5.7157 4.40973 5.40973 4.7157 5.21799 5.09202C5.1383 5.24842 5.07337 5.47262 5.03755 5.91104C5.00078 6.36113 5 6.94342 5 7.8V16.2C5 17.0566 5.00078 17.6389 5.03755 18.089C5.07337 18.5274 5.1383 18.7516 5.21799 18.908C5.40973 19.2843 5.7157 19.5903 6.09202 19.782C6.24842 19.8617 6.47262 19.9266 6.91104 19.9624C7.36113 19.9992 7.94342 20 8.8 20H15.2C16.0566 20 16.6389 19.9992 17.089 19.9624C17.5274 19.9266 17.7516 19.8617 17.908 19.782C18.2843 19.5903 18.5903 19.2843 18.782 18.908C18.8617 18.7516 18.9266 18.5274 18.9624 18.089C18.9992 17.6389 19 17.0566 19 16.2V12H15.1615C14.6343 12 14.1796 12 13.805 11.9694C13.4096 11.9371 13.0164 11.8658 12.638 11.673C12.0735 11.3854 11.6146 10.9265 11.327 10.362C11.1342 9.98359 11.0629 9.59037 11.0306 9.19503C11 8.82046 11 8.36569 11 7.83855L11 4H8.8C7.94342 4 7.36113 4.00078 6.91104 4.03755ZM13 4.1329V7.8C13 8.37655 13.0008 8.74883 13.0239 9.03217C13.0461 9.30383 13.0838 9.40455 13.109 9.45399C13.2049 9.64215 13.3578 9.79513 13.546 9.89101C13.5955 9.9162 13.6962 9.95388 13.9678 9.97607C14.2512 9.99922 14.6234 10 15.2 10H18.8671C18.6939 9.35992 18.3557 8.76994 17.8787 8.29289L14.7071 5.12132C14.2301 4.64427 13.6401 4.30612 13 4.1329Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg></div>
               <span>Политика AML</span>
             </div>
             <span class="more-list-arrow">↗</span>
@@ -1642,35 +1774,35 @@
     <div class="dock-pill-bar">
       <button class="dock-pill-item active" onclick="switchTab('wallet')" id="nav-wallet">
         <div class="dock-pill-icon-box">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="3"/><circle cx="16" cy="12" r="2"/></svg>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 14h.01"/><path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/></svg>
         </div>
         <span class="dock-pill-label">Кошелёк</span>
       </button>
 
       <button class="dock-pill-item" onclick="switchTab('exchange')" id="nav-exchange">
         <div class="dock-pill-icon-box">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/><line x1="6" y1="2" x2="6" y2="6"/><line x1="6" y1="18" x2="6" y2="22"/><line x1="18" y1="2" x2="18" y2="4"/><line x1="18" y1="20" x2="18" y2="22"/></svg>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 3a1 1 0 0 1 1 1v2h2a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H7v3a1 1 0 1 1-2 0v-3H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h2V4a1 1 0 0 1 1-1zm12 2a1 1 0 0 1 1 1v4h2a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2v3a1 1 0 1 1-2 0v-3h-2a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h2V6a1 1 0 0 1 1-1z"/></svg>
         </div>
         <span class="dock-pill-label">Биржа</span>
       </button>
 
       <button class="dock-pill-item" onclick="switchTab('swap')" id="nav-swap">
         <div class="dock-pill-icon-box">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l4-4m-4 4l-4-4"/></svg>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm3.707 6.293a1 1 0 0 1 0 1.414L14.414 11H8a1 1 0 1 1 0-2h6.414l1.293-1.293a1 1 0 0 1 1.414 0zm-7.414 6a1 1 0 0 1 1.414 0l1.293 1.293H16a1 1 0 1 1 0 2H9.586l-1.293 1.293a1 1 0 0 1-1.414-1.414L8.172 16l-1.293-1.293a1 1 0 0 1 0-1.414z"/></svg>
         </div>
         <span class="dock-pill-label">Обмен</span>
       </button>
 
       <button class="dock-pill-item" onclick="switchTab('p2p')" id="nav-p2p">
         <div class="dock-pill-icon-box">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="9" cy="9" r="2" fill="currentColor"/><circle cx="15" cy="15" r="2" fill="currentColor"/></svg>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"/><path d="M15.5 8.5v3a4 4 0 0 1-4 4H8.5"/></svg>
         </div>
         <span class="dock-pill-label">P2P</span>
       </button>
 
       <button class="dock-pill-item" onclick="switchTab('more')" id="nav-more">
         <div class="dock-pill-icon-box">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><rect x="3.5" y="3.5" width="6.5" height="6.5" rx="2.5"/><rect x="14" y="3.5" width="6.5" height="6.5" rx="2.5"/><rect x="3.5" y="14" width="6.5" height="6.5" rx="2.5"/><rect x="14" y="14" width="6.5" height="6.5" rx="2.5"/></svg>
         </div>
         <span class="dock-pill-label">Ещё</span>
       </button>
@@ -1681,7 +1813,7 @@
          ========================================== -->
     <div id="passcode-view" class="passcode-modal">
       <div style="display: flex; justify-content: flex-end;">
-        <button class="modal-close-btn" onclick="closePasscodeView()">✕</button>
+        <button class="modal-close-btn" onclick="closePasscodeView()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8e8e93" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>
 
       <div class="passcode-top-card">
@@ -1696,17 +1828,17 @@
 
       <div>
         <div class="passcode-keypad">
-          <button class="keypad-btn" onclick="typePassDigit('1')">1</button>
-          <button class="keypad-btn" onclick="typePassDigit('2')">2</button>
-          <button class="keypad-btn" onclick="typePassDigit('3')">3</button>
-          <button class="keypad-btn" onclick="typePassDigit('4')">4</button>
-          <button class="keypad-btn" onclick="typePassDigit('5')">5</button>
-          <button class="keypad-btn" onclick="typePassDigit('6')">6</button>
-          <button class="keypad-btn" onclick="typePassDigit('7')">7</button>
-          <button class="keypad-btn" onclick="typePassDigit('8')">8</button>
-          <button class="keypad-btn" onclick="typePassDigit('9')">9</button>
+          <button class="keypad-btn num-rounded" onclick="typePassDigit('1')">1</button>
+          <button class="keypad-btn num-rounded" onclick="typePassDigit('2')">2</button>
+          <button class="keypad-btn num-rounded" onclick="typePassDigit('3')">3</button>
+          <button class="keypad-btn num-rounded" onclick="typePassDigit('4')">4</button>
+          <button class="keypad-btn num-rounded" onclick="typePassDigit('5')">5</button>
+          <button class="keypad-btn num-rounded" onclick="typePassDigit('6')">6</button>
+          <button class="keypad-btn num-rounded" onclick="typePassDigit('7')">7</button>
+          <button class="keypad-btn num-rounded" onclick="typePassDigit('8')">8</button>
+          <button class="keypad-btn num-rounded" onclick="typePassDigit('9')">9</button>
           <div></div>
-          <button class="keypad-btn" onclick="typePassDigit('0')">0</button>
+          <button class="keypad-btn num-rounded" onclick="typePassDigit('0')">0</button>
           <button class="keypad-btn" onclick="deletePassDigit()">
             <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
           </button>
@@ -1721,9 +1853,10 @@
     <!-- GENERAL MODAL SHEET -->
     <div id="general-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
       <div class="modal-sheet">
+        <div class="modal-sheet-handle"></div>
         <div class="modal-header">
           <h3 class="modal-title" id="modal-title-text">Детали</h3>
-          <button class="modal-close-btn" onclick="closeModal()">✕</button>
+          <button class="modal-close-btn" onclick="closeModal()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8e8e93" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
         <div id="modal-dynamic-content"></div>
       </div>
@@ -1732,7 +1865,7 @@
     <!-- TOAST NOTIFICATION -->
     <div class="toast-container">
       <div id="app-toast" class="toast-box">
-        <div id="toast-check-icon" style="width: 24px; height: 24px; border-radius: 50%; background: var(--accent-green); color: #000; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;">✓</div>
+        <div id="toast-check-icon" style="width: 24px; height: 24px; border-radius: 50%; background: var(--accent-green); display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
         <div>
           <div id="toast-title" style="font-weight: 600; font-size: 14px;">Успешно</div>
           <div id="toast-desc" style="font-size: 12px; color: var(--text-secondary); margin-top: 1px;">Операция выполнена</div>
@@ -1834,7 +1967,6 @@
     let isBalanceHidden = localStorage.getItem('hide_balance') === 'true';
     let hideSmallBalances = localStorage.getItem('hide_small') === 'true';
 
-    // Format Money
     function formatMoney(amount, decimals = 2) {
       if (amount === undefined || amount === null || isNaN(amount)) return '0';
       const parts = amount.toFixed(decimals).split('.');
@@ -1877,7 +2009,6 @@
       }
     }
 
-    // Render Assets List & Total Wallet Balance
     function renderAssetsList() {
       const selectedFiat = localStorage.getItem('selected_fiat') || 'RUB';
       const fiatCfg = FIAT_CONFIG[selectedFiat] || FIAT_CONFIG.RUB;
@@ -1915,14 +2046,14 @@
               <div>
                 <div class="asset-row-name">${coin.name}</div>
                 <div class="asset-row-price-sub">
-                  $${formatMoney(coin.usdPrice, coin.usdPrice > 10 ? 2 : 4)}
-                  <span style="color: ${changeColor}; font-weight: 600;">${coin.change}</span>
+                  <span class="num-rounded">$${formatMoney(coin.usdPrice, coin.usdPrice > 10 ? 2 : 4)}</span>
+                  <span class="num-rounded" style="color: ${changeColor}; font-weight: 600;">${coin.change}</span>
                 </div>
               </div>
             </div>
             <div class="asset-row-right">
-              <div class="asset-row-crypto">${displayCrypto}</div>
-              <div class="asset-row-fiat">${displayFiat}</div>
+              <div class="asset-row-crypto num-rounded">${displayCrypto}</div>
+              <div class="asset-row-fiat num-rounded">${displayFiat}</div>
             </div>
           </div>
         `;
@@ -1964,11 +2095,9 @@
     function handleWithdrawClick() {
       const savedPass = localStorage.getItem('cb_passcode');
       if (!savedPass) {
-        // Need to create
         isCreatingPasscode = true;
         openPasscodeView('create');
       } else {
-        // Need to verify
         isCreatingPasscode = false;
         openPasscodeView('verify');
       }
@@ -2045,7 +2174,6 @@
 
     function handlePasscodeSubmit() {
       if (isCreatingPasscode) {
-        // Save passcode
         localStorage.setItem('cb_passcode', currentPasscodeInput);
         closePasscodeView();
         if (window.Telegram?.WebApp?.HapticFeedback) {
@@ -2062,7 +2190,11 @@
           }
           openWithdrawModal();
         } else {
-          // Wrong passcode
+          const cells = document.getElementById('passcode-cells-row');
+          if (cells) {
+            cells.classList.add('shake');
+            setTimeout(() => { cells.classList.remove('shake'); }, 400);
+          }
           if (window.Telegram?.WebApp?.HapticFeedback) {
             window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
           }
@@ -2074,7 +2206,7 @@
     }
 
     // ==========================================
-    // WITHDRAWAL MODALS (ВЫВОД СРЕДСТВ)
+    // WITHDRAWAL MODALS (ВЫВОД СРЕДСТВ 1-В-1 С ИСПРАВЛЕННЫМ СЛОЕМ)
     // ==========================================
     const COIN_NETWORKS = {
       USDT: [
@@ -2117,12 +2249,12 @@
               </div>
             </div>
             <div class="asset-row-right">
-              <div class="asset-row-crypto">${formatMoney(userBalances[c.id] || 0, c.id === 'BTC' ? 6 : 2)} ${c.symbol}</div>
+              <div class="asset-row-crypto num-rounded">${formatMoney(userBalances[c.id] || 0, c.id === 'BTC' ? 6 : 2)} ${c.symbol}</div>
             </div>
           </div>
         `).join('');
 
-        openModal('Выбрать монету для вывода', `<div class="assets-list">${listHtml}</div>`);
+        openModal('Выбрать монету', `<div class="assets-list">${listHtml}</div>`);
         return;
       }
 
@@ -2132,30 +2264,28 @@
       selectedWithdrawNetwork = networks[0];
 
       const netsHtml = networks.map((n, i) => `
-        <div class="filter-chip ${i === 0 ? 'active' : ''}" onclick="selectWithdrawNet('${coin.id}', '${n.id}')" id="net-chip-${n.id}">
+        <div class="net-pill-chip ${i === 0 ? 'active' : ''}" onclick="selectWithdrawNet('${coin.id}', '${n.id}')" id="net-chip-${n.id}">
           ${n.name}
         </div>
       `).join('');
 
       const content = `
-        <div style="text-align: center; margin-bottom: 20px;">
-          <img src="./images/coins/${coin.id}.webp" onerror="this.src='./images/coins/USDT.webp'" style="width: 52px; height: 52px; border-radius: 50%; margin-bottom: 8px;">
-          <div style="font-size: 18px; font-weight: 700;">Вывод ${coin.name}</div>
-          <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
-            Доступно: <b style="color: #fff;">${formatMoney(bal, coin.id === 'BTC' ? 6 : 2)} ${coin.symbol}</b>
+        <div style="text-align: center; margin-bottom: 16px;">
+          <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 2px;">
+            Доступно: <b style="color: #ffffff;" class="num-rounded">${formatMoney(bal, coin.id === 'BTC' ? 6 : 2)} ${coin.symbol}</b>
           </div>
         </div>
 
-        <div style="margin-bottom: 14px;">
+        <div style="margin-bottom: 16px;">
           <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">Сеть перевода:</div>
-          <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;">${netsHtml}</div>
+          <div class="network-chips-scroll">${netsHtml}</div>
         </div>
 
-        <div style="margin-bottom: 14px;">
+        <div style="margin-bottom: 16px;">
           <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">Адрес получателя:</div>
           <div class="search-input-box" style="margin-bottom: 0;">
             <input type="text" id="withdraw-addr-input" class="search-input-field" placeholder="Введите или вставьте адрес...">
-            <span style="color: var(--accent-blue); font-weight: 600; font-size: 13px; cursor: pointer;" onclick="pasteAddress('withdraw-addr-input')">Вставить</span>
+            <span style="color: var(--accent-blue); font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap;" onclick="pasteAddress('withdraw-addr-input')">Вставить</span>
           </div>
         </div>
 
@@ -2165,31 +2295,31 @@
             <span id="withdraw-min-label">Мин: ${selectedWithdrawNetwork.min} ${coin.symbol}</span>
           </div>
           <div class="search-input-box" style="margin-bottom: 0;">
-            <input type="number" step="any" id="withdraw-amt-input" class="search-input-field" placeholder="0.00" oninput="updateWithdrawCalc('${coin.id}')">
-            <span style="color: var(--accent-blue); font-weight: 600; font-size: 13px; cursor: pointer;" onclick="document.getElementById('withdraw-amt-input').value = ${bal}; updateWithdrawCalc('${coin.id}');">МАКС</span>
+            <input type="number" step="any" id="withdraw-amt-input" class="search-input-field num-rounded" placeholder="0.00" oninput="updateWithdrawCalc('${coin.id}')">
+            <span style="color: var(--accent-blue); font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap;" onclick="document.getElementById('withdraw-amt-input').value = ${bal}; updateWithdrawCalc('${coin.id}');">МАКС</span>
           </div>
         </div>
 
-        <div style="background: var(--bg-card-secondary); border-radius: 14px; padding: 12px 14px; font-size: 13px; margin-bottom: 18px;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+        <div style="background: var(--bg-card-secondary); border-radius: 14px; padding: 14px; font-size: 13px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
             <span style="color: var(--text-secondary);">Комиссия сети:</span>
-            <span id="withdraw-fee-text">${selectedWithdrawNetwork.fee} ${coin.symbol}</span>
+            <span id="withdraw-fee-text" class="num-rounded" style="font-weight: 600;">${selectedWithdrawNetwork.fee} ${coin.symbol}</span>
           </div>
           <div style="display: flex; justify-content: space-between; font-weight: 600;">
             <span style="color: var(--text-secondary);">Получатель получит:</span>
-            <span id="withdraw-receive-text" style="color: var(--accent-green);">0.00 ${coin.symbol}</span>
+            <span id="withdraw-receive-text" class="num-rounded" style="color: var(--accent-green);">0.00 ${coin.symbol}</span>
           </div>
         </div>
 
         <button class="swap-submit-btn" style="margin-top: 0;" onclick="submitWithdrawal('${coin.id}')">
           Подтвердить вывод
         </button>
-        <button style="width: 100%; margin-top: 8px; background: transparent; border: none; color: var(--text-secondary); padding: 10px; font-size: 14px; cursor: pointer;" onclick="openWithdrawModal()">
+        <button style="width: 100%; margin-top: 10px; background: transparent; border: none; color: var(--text-secondary); padding: 10px; font-size: 14px; cursor: pointer;" onclick="openWithdrawModal()">
           ‹ Выбрать другую валюту
         </button>
       `;
 
-      openModal(`Вывод ${coin.symbol}`, content);
+      openModal(`Вывод ${coin.name}`, content);
     }
 
     function selectWithdrawNet(coinId, netId) {
@@ -2197,7 +2327,7 @@
       const found = networks.find(n => n.id === netId);
       if (found) {
         selectedWithdrawNetwork = found;
-        document.querySelectorAll('.filter-chip').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.net-pill-chip').forEach(el => el.classList.remove('active'));
         const chip = document.getElementById(`net-chip-${netId}`);
         if (chip) chip.classList.add('active');
         const minLabel = document.getElementById('withdraw-min-label');
@@ -2282,7 +2412,7 @@
               </div>
             </div>
             <div class="asset-row-right">
-              <div class="asset-row-crypto">${formatMoney(userBalances[c.id] || 0, c.id === 'BTC' ? 6 : 2)} ${c.symbol}</div>
+              <div class="asset-row-crypto num-rounded">${formatMoney(userBalances[c.id] || 0, c.id === 'BTC' ? 6 : 2)} ${c.symbol}</div>
             </div>
           </div>
         `).join('');
@@ -2330,10 +2460,10 @@
           <img src="./images/coins/${coin.id}.webp" onerror="this.src='./images/coins/USDT.webp'" style="width: 56px; height: 56px; border-radius: 50%; margin-bottom: 10px;">
           <div style="font-size: 20px; font-weight: 700;">${coin.name}</div>
           <div style="font-size: 26px; font-weight: 700; margin-top: 6px;">
-            ${formatMoney(bal, coin.id === 'BTC' ? 6 : 2)} <span style="font-size: 16px; color: var(--text-secondary);">${coin.symbol}</span>
+            <span class="num-rounded">${formatMoney(bal, coin.id === 'BTC' ? 6 : 2)}</span> <span style="font-size: 16px; color: var(--text-secondary);">${coin.symbol}</span>
           </div>
           <div style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">
-            ≈ ${fiatCfg.symbol} ${formatMoney(fiatTotal, 2)}
+            ≈ <span class="num-rounded">${fiatCfg.symbol} ${formatMoney(fiatTotal, 2)}</span>
           </div>
         </div>
 
@@ -2346,7 +2476,7 @@
           </div>
           <div style="background: var(--bg-card-secondary); border-radius: 16px; padding: 14px 10px; text-align: center; cursor: pointer;" onclick="closeModal(); handleWithdrawClick();">
             <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="7" y2="17"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
             </div>
             <div style="font-size: 13px; font-weight: 600;">Вывести</div>
           </div>
@@ -2394,7 +2524,7 @@
               </div>
             </div>
             <div class="asset-row-right">
-              <div class="asset-row-crypto" style="color: ${color}; font-weight: 600;">${sign}${formatMoney(t.amount, 2)} ${t.asset || ''}</div>
+              <div class="asset-row-crypto num-rounded" style="color: ${color}; font-weight: 600;">${sign}${formatMoney(t.amount, 2)} ${t.asset || ''}</div>
             </div>
           </div>
         `;
@@ -2451,12 +2581,12 @@
               </div>
               <div>
                 <div class="asset-row-name">${p.base} <span style="color: var(--text-secondary); font-size: 13px;">/ ${p.quote}</span></div>
-                <div class="asset-row-price-sub">${p.vol}</div>
+                <div class="asset-row-price-sub num-rounded">${p.vol}</div>
               </div>
             </div>
             <div class="asset-row-right">
-              <div class="asset-row-crypto" style="font-size: 15px;">${p.price}</div>
-              <div style="color: ${color}; font-size: 12px; font-weight: 600; margin-top: 2px;">${p.change}</div>
+              <div class="asset-row-crypto num-rounded" style="font-size: 15px;">${p.price}</div>
+              <div class="num-rounded" style="color: ${color}; font-size: 12px; font-weight: 600; margin-top: 2px;">${p.change}</div>
             </div>
           </div>
         `;
@@ -2464,7 +2594,7 @@
 
       const content = `
         <div class="search-input-box">
-          <span>🔍</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           <input type="text" class="search-input-field" placeholder="Поиск пары" oninput="filterPairPicker(this.value)">
         </div>
         <div id="pair-picker-list" class="assets-list">${listHtml}</div>
@@ -2481,7 +2611,7 @@
         document.getElementById('ex-base-icon').src = `./images/coins/${base}.webp`;
         document.getElementById('ex-quote-icon').src = `./images/coins/${quote}.webp`;
         document.getElementById('ex-24h-change').innerText = `${found.change}`;
-        document.getElementById('ex-24h-change').className = `ex-sub-val ${found.change.startsWith('+') ? 'green' : (found.change.startsWith('-') ? 'red' : '')}`;
+        document.getElementById('ex-24h-change').className = `ex-sub-val num-rounded ${found.change.startsWith('+') ? 'green' : (found.change.startsWith('-') ? 'red' : '')}`;
         document.getElementById('trade-price-input').value = found.price;
         document.getElementById('ob-current-price').innerText = found.price;
         document.getElementById('ob-current-sub').innerText = found.sub;
@@ -2500,7 +2630,6 @@
       });
     }
 
-    // Trade mode
     let currentTradeMode = 'buy';
     function setTradeMode(mode) {
       currentTradeMode = mode;
@@ -2601,7 +2730,6 @@
       showToast('Ордер исполнен!', `${currentTradeMode === 'buy' ? 'Куплено' : 'Продано'} ${formatMoney(amt, 2)} ${base} по ${p} ${quote}`);
     }
 
-    // Render Real-Time Order Book
     function renderOrderBook() {
       const mid = currentExchangePair.price;
       const asksContainer = document.getElementById('orderbook-asks-list');
@@ -2614,8 +2742,8 @@
         asksHtml += `
           <div class="ob-row ask">
             <div class="ob-depth-bar" style="width: ${i * 18}%;"></div>
-            <span class="ob-price">${pr}</span>
-            <span>${vol}</span>
+            <span class="ob-price num-rounded">${pr}</span>
+            <span class="num-rounded">${vol}</span>
           </div>
         `;
       }
@@ -2628,8 +2756,8 @@
         bidsHtml += `
           <div class="ob-row bid">
             <div class="ob-depth-bar" style="width: ${100 - i * 14}%;"></div>
-            <span class="ob-price">${pr}</span>
-            <span>${vol}</span>
+            <span class="ob-price num-rounded">${pr}</span>
+            <span class="num-rounded">${vol}</span>
           </div>
         `;
       }
@@ -2670,9 +2798,9 @@
         const t = new Date(now.getTime() - i * 18000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         html += `
           <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.03);">
-            <span style="color: ${color};">${pr}</span>
-            <span>${amt}</span>
-            <span style="color: var(--text-secondary);">${t}</span>
+            <span class="num-rounded" style="color: ${color}; font-weight: 600;">${pr}</span>
+            <span class="num-rounded">${amt}</span>
+            <span class="num-rounded" style="color: var(--text-secondary);">${t}</span>
           </div>
         `;
       }
@@ -2742,8 +2870,8 @@
               </div>
             </div>
             <div class="asset-row-right">
-              <div class="asset-row-crypto">${formatMoney(bal, c.id === 'BTC' ? 6 : 2)}</div>
-              <div class="asset-row-fiat">${formatMoney(fiatVal, 0)} ${fiatCfg.symbol}</div>
+              <div class="asset-row-crypto num-rounded">${formatMoney(bal, c.id === 'BTC' ? 6 : 2)}</div>
+              <div class="asset-row-fiat num-rounded">${formatMoney(fiatVal, 0)} ${fiatCfg.symbol}</div>
             </div>
           </div>
         `;
@@ -2751,7 +2879,7 @@
 
       openModal(title, `
         <div class="search-input-box">
-          <span>🔍</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           <input type="text" class="search-input-field" placeholder="Поиск монеты" oninput="filterSwapPicker(this.value)">
         </div>
         <div id="swap-picker-list" class="assets-list">${listHtml}</div>
@@ -2858,16 +2986,16 @@
         <div style="margin-bottom: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <span style="font-size: 15px; font-weight: 600;">Статистика</span>
-            <span style="color: var(--accent-blue); font-size: 13px; font-weight: 600; cursor: pointer;">За 30 дней 📅</span>
+            <span style="color: var(--accent-blue); font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">За 30 дней <span style="display: inline-flex; width: 14px; height: 14px;"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span></span>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div style="background: var(--bg-card-secondary); border-radius: 14px; padding: 14px;">
               <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Сделки</div>
-              <div style="font-size: 16px; font-weight: 700;">0 · 0.00%</div>
+              <div class="num-rounded" style="font-size: 16px; font-weight: 700;">0 · 0.00%</div>
             </div>
             <div style="background: var(--bg-card-secondary); border-radius: 14px; padding: 14px;">
               <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Объём торговли</div>
-              <div style="font-size: 16px; font-weight: 700;">$0</div>
+              <div class="num-rounded" style="font-size: 16px; font-weight: 700;">$0</div>
             </div>
           </div>
         </div>
@@ -2877,42 +3005,42 @@
           <div class="more-list-card">
             <div class="more-list-row" onclick="showToast('Мерчант', 'Подайте заявку на статус мерчанта')">
               <div class="more-list-left">
-                <div class="more-list-icon">🛡</div>
+                <div class="more-squircle-icon" style="background: #2c2c2e; width: 28px; height: 28px; border-radius: 8px; color: #8e8e93;"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.5 9.16671C17.5 13.7917 14.3 18.1167 10 19.1667C5.7 18.1167 2.5 13.7917 2.5 9.16671V4.16671L10 0.833374L17.5 4.16671V9.16671ZM10 17.5C13.125 16.6667 15.8333 12.95 15.8333 9.35004V5.25004L10 2.65004L4.16667 5.25004V9.35004C4.16667 12.95 6.875 16.6667 10 17.5Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M12.4162 7.15092C12.7028 6.8269 13.1981 6.79678 13.5221 7.08337C13.846 7.37005 13.8763 7.86537 13.5897 8.18933L10.5257 11.6529C9.97872 12.271 9.01699 12.2812 8.45703 11.6748L7.08333 10.1864C6.78997 9.86859 6.80963 9.3731 7.12728 9.07963C7.44507 8.78628 7.94058 8.80597 8.23405 9.12358L9.47835 10.4712L12.4162 7.15092Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg></div>
                 <span>P2P Мерчант</span>
               </div>
               <span class="more-list-arrow">›</span>
             </div>
             <div class="more-list-row" onclick="showToast('Способы оплаты', 'Добавьте карту или кошелек')">
               <div class="more-list-left">
-                <div class="more-list-icon">💳</div>
+                <div class="more-squircle-icon" style="background: var(--accent-orange); width: 28px; height: 28px; border-radius: 8px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg></div>
                 <span>Способы оплаты</span>
               </div>
               <span style="color: var(--accent-blue); font-size: 13px;">Добавить ›</span>
             </div>
             <div class="more-list-row" onclick="closeModal(); openCurrencySelectorModal();">
               <div class="more-list-left">
-                <div class="more-list-icon">💲</div>
+                <div class="more-squircle-icon" style="background: var(--accent-green); width: 28px; height: 28px; border-radius: 8px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div>
                 <span>Валюта маркета</span>
               </div>
               <span style="color: var(--text-secondary); font-size: 13px;">RUB ›</span>
             </div>
             <div class="more-list-row" onclick="showToast('Тихие часы', 'Настройка уведомлений')">
               <div class="more-list-left">
-                <div class="more-list-icon">📅</div>
+                <div class="more-squircle-icon" style="background: var(--accent-blue); width: 28px; height: 28px; border-radius: 8px;"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
                 <span>Тихие часы</span>
               </div>
               <span style="color: var(--accent-blue); font-size: 13px;">Установить ›</span>
             </div>
             <div class="more-list-row" onclick="showToast('Избранное', 'Список пуст')">
               <div class="more-list-left">
-                <div class="more-list-icon">🔖</div>
+                <div class="more-squircle-icon" style="background: var(--accent-purple); width: 28px; height: 28px; border-radius: 8px;"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M10.7147 14.7572C11.4581 14.1336 12.5419 14.1336 13.2853 14.7572L16.0288 17.0585C16.8973 17.7869 17.444 18.2429 17.8593 18.5318C17.8891 18.5525 17.9167 18.5713 17.9424 18.5883C17.9458 18.5578 17.9492 18.5245 17.9524 18.4884C17.998 17.9845 18 17.2726 18 16.1391V9.4C18 8.24689 17.9984 7.50235 17.9521 6.93567C17.9078 6.39235 17.8324 6.19091 17.782 6.09202C17.5903 5.71569 17.2843 5.40973 16.908 5.21799C16.8091 5.1676 16.6077 5.09225 16.0643 5.04785C15.4977 5.00156 14.7531 5 13.6 5H10.4C9.24689 5 8.50235 5.00156 7.93567 5.04785C7.39235 5.09225 7.19091 5.1676 7.09202 5.21799C6.71569 5.40973 6.40973 5.71569 6.21799 6.09202C6.1676 6.19091 6.09225 6.39235 6.04785 6.93567C6.00156 7.50235 6 8.24689 6 9.4V16.1391C6 17.2726 6.00198 17.9845 6.04757 18.4884C6.05084 18.5245 6.05422 18.5578 6.05765 18.5883C6.08326 18.5713 6.11091 18.5525 6.14067 18.5318C6.55602 18.2429 7.10272 17.7869 7.97119 17.0585L10.7147 14.7572ZM12 16.2895L14.7435 18.5908C16.4193 19.9965 17.2573 20.6993 17.9653 20.7116C18.5808 20.7223 19.167 20.4489 19.5544 19.9705C20 19.4201 20 18.3264 20 16.1391V9.4C20 7.15979 20 6.03969 19.564 5.18404C19.1805 4.43139 18.5686 3.81947 17.816 3.43597C16.9603 3 15.8402 3 13.6 3H10.4C8.15979 3 7.03969 3 6.18404 3.43597C5.43139 3.81947 4.81947 4.43139 4.43597 5.18404C4 6.03969 4 7.15979 4 9.4V16.1391C4 18.3264 4 19.4201 4.44565 19.9705C4.83303 20.4489 5.41916 20.7223 6.03467 20.7116C6.74275 20.6993 7.58067 19.9965 9.25651 18.5908L12 16.2895Z" fill-rule="evenodd" clip-rule="evenodd"/></svg></div>
                 <span>Избранное</span>
               </div>
               <span class="more-list-arrow">›</span>
             </div>
             <div class="more-list-row" onclick="showToast('Чёрный список', 'Список пуст')">
               <div class="more-list-left">
-                <div class="more-list-icon">⛔</div>
+                <div class="more-squircle-icon" style="background: var(--accent-red); width: 28px; height: 28px; border-radius: 8px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg></div>
                 <span>Чёрный список</span>
               </div>
               <span class="more-list-arrow">›</span>
@@ -2924,8 +3052,8 @@
           <div style="font-size: 15px; font-weight: 600; margin-bottom: 10px;">Мои отзывы</div>
           <div class="filter-chips-row">
             <div class="filter-chip active">Все 0</div>
-            <div class="filter-chip">👍 0</div>
-            <div class="filter-chip">👎 0</div>
+            <div class="filter-chip"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="vertical-align: -2px; margin-right: 4px;"><path d="M2 20h2c.55 0 1-.45 1-1v-9c0-.55-.45-1-1-1H2v11zm19.83-7.12c.11-.25.17-.52.17-.8V11c0-1.1-.9-2-2-2h-5.5l.92-4.65c.05-.22.02-.46-.08-.66-.23-.45-.7-.73-1.21-.73-.32 0-.64.12-.88.35L8.41 8H7v12h11.13c.87 0 1.63-.58 1.85-1.42l1.85-6.7z"/></svg> 0</div>
+            <div class="filter-chip"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="vertical-align: -2px; margin-right: 4px; transform: rotate(180deg);"><path d="M2 20h2c.55 0 1-.45 1-1v-9c0-.55-.45-1-1-1H2v11zm19.83-7.12c.11-.25.17-.52.17-.8V11c0-1.1-.9-2-2-2h-5.5l.92-4.65c.05-.22.02-.46-.08-.66-.23-.45-.7-.73-1.21-.73-.32 0-.64.12-.88.35L8.41 8H7v12h11.13c.87 0 1.63-.58 1.85-1.42l1.85-6.7z"/></svg> 0</div>
           </div>
           <div class="empty-state-card" style="padding: 20px 0;">
             <svg class="empty-doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
@@ -2955,7 +3083,7 @@
               </div>
             </div>
             <div class="asset-row-right">
-              ${isSel ? '<span style="color: var(--accent-blue); font-size: 18px; font-weight: 700;">✓</span>' : ''}
+              ${isSel ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent-blue)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
             </div>
           </div>
         `;
@@ -2963,7 +3091,7 @@
 
       openModal('Основная валюта', `
         <div class="search-input-box">
-          <span>🔍</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           <input type="text" class="search-input-field" placeholder="Поиск валюты" oninput="filterFiatList(this.value)">
         </div>
         <div id="fiat-modal-list" class="assets-list">${listHtml}</div>
@@ -3012,7 +3140,7 @@
           </div>
           <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
             <span style="color: var(--text-secondary);">Торговля на бирже:</span>
-            <span style="font-weight: 600;">0.1%</span>
+            <span class="num-rounded" style="font-weight: 600;">0.1%</span>
           </div>
           <div style="display: flex; justify-content: space-between; padding: 10px 0;">
             <span style="color: var(--text-secondary);">Вывод:</span>
@@ -3060,7 +3188,7 @@
           <div style="background: var(--bg-card-secondary); border-radius: 14px; padding: 14px; text-align: left; font-size: 13px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
               <span style="color: var(--text-secondary);">Лимит вывода:</span>
-              <span style="font-weight: 600;">$50,000 / день</span>
+              <span class="num-rounded" style="font-weight: 600;">$50,000 / день</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
               <span style="color: var(--text-secondary);">P2P Торговля:</span>
@@ -3095,7 +3223,7 @@
         <div style="padding: 10px 0;">
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px; background: var(--bg-card-secondary); border-radius: 14px;">
             <span>Crypto Bot Dark (Официальная)</span>
-            <span style="color: var(--accent-blue); font-weight: 700;">✓</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent-blue)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
           </div>
         </div>
       `);
@@ -3166,7 +3294,6 @@
       }
     }
 
-    // Modal base controls
     function openModal(title, contentHtml) {
       document.getElementById('modal-title-text').innerText = title;
       document.getElementById('modal-dynamic-content').innerHTML = contentHtml;
@@ -3181,7 +3308,6 @@
       if (e.target.id === 'general-modal') closeModal();
     }
 
-    // Toast
     let toastTimeout = null;
     function showToast(title, desc, isSuccess = true) {
       const toast = document.getElementById('app-toast');
@@ -3194,7 +3320,7 @@
         icon.innerText = '!';
       } else {
         icon.style.background = 'var(--accent-green)';
-        icon.innerText = '✓';
+        icon.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
       }
 
       toast.classList.add('show');
@@ -3204,7 +3330,6 @@
       }, 2500);
     }
 
-    // Tab Navigation
     function switchTab(tabId) {
       document.querySelectorAll('.tab-view').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.dock-pill-item').forEach(el => el.classList.remove('active'));
@@ -3252,12 +3377,19 @@
       handleInitialRoute();
     }
 
-    // Run IMMEDIATELY (solves the "0 balance on entry until clicked" bug!)
     initApp();
 
     if (document.readyState === 'loading') {
       window.addEventListener('DOMContentLoaded', initApp);
     }
+
+    // Live orderbook subtle simulation
+    setInterval(() => {
+      const exTab = document.getElementById('tab-exchange');
+      if (exTab && exTab.classList.contains('active')) {
+        renderOrderBook();
+      }
+    }, 3500);
   </script>
 </body>
 </html>
