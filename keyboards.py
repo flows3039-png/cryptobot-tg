@@ -257,8 +257,7 @@ def referral_kb(ref_link: str, current_period: str = "all") -> InlineKeyboardMar
 # --- АДМИН-ПАНЕЛЬ ---
 def admin_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [btn("Выдать баланс", "dollar", "admin:bal")],
-        [btn("Фейк-чек", "fake", "admin:fake")],
-        [btn("Все балансы", "message", "admin:all")],
-        [btn("Добавить админа", "plus", "admin:add")]
+        [btn("✏️ Изменить баланс", "settings", "admin:set_bal"), btn("➕ Добавить баланс", "dollar", "admin:bal")],
+        [btn("🧾 Фейк-чек", "fake", "admin:fake"), btn("📊 Мои балансы", "message", "admin:all")],
+        [btn("👑 Добавить админа", "plus", "admin:add")]
     ])

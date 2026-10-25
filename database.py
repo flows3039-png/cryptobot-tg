@@ -189,6 +189,13 @@ async def update_balance(uid: int, asset: str, amt: float):
             ON CONFLICT(user_id, asset) DO UPDATE SET amount = amount + excluded.amount
         """, (uid, asset, amt))
 
+async def set_balance(uid: int, asset: str, amt: float):
+    async with db_conn.tx() as c:
+        await c.execute("""
+            INSERT INTO balances (user_id, asset, amount) VALUES (?, ?, ?)
+            ON CONFLICT(user_id, asset) DO UPDATE SET amount = excluded.amount
+        """, (uid, asset, amt))
+
 # --- ЖУРНАЛ ---
 async def log_tx(uid: int, kind: str, asset: str, amt: float, status: str = "success", details: str = ""):
     async with db_conn.tx() as c:
