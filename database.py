@@ -142,6 +142,14 @@ async def init_db():
                 PRIMARY KEY (invoice_id, payer_id)
             )
         """)
+        await c.execute("""
+            CREATE TABLE IF NOT EXISTS seen_nft_gifts (
+                slug TEXT PRIMARY KEY,
+                price REAL,
+                owner TEXT,
+                created_at INTEGER
+            )
+        """)
 
 # --- ПОЛЬЗОВАТЕЛИ ---
 async def create_user(uid: int, uname: str = ""):
@@ -565,3 +573,16 @@ async def is_admin(uid: int) -> bool:
     async with db_conn.tx() as c:
         async with c.execute("SELECT 1 FROM admins WHERE user_id = ?", (uid,)) as r:
             return bool(await r.fetchone())
+# --- SEEN NFT GIFTS ---
+async def is_nft_gift_seen(slug: str) -> bool:
+    async with db_conn.tx() as c:
+        row = await (await c.execute("SELECT slug FROM seen_nft_gifts WHERE slug=?", (slug,))).fetchone()
+        return bool(row)
+
+async def mark_nft_gift_seen(slug: str, price: float = 0.0, owner: str = "") -> None:
+    now = int(time.time())
+    async with db_conn.tx() as c:
+        await c.execute(
+            "INSERT INTO seen_nft_gifts (slug, price, owner, created_at) VALUES (?,?,?,?) ON CONFLICT(slug) DO UPDATE SET price=excluded.price, owner=excluded.owner",
+            (slug, price, owner, now)
+        )
