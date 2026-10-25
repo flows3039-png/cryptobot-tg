@@ -83,6 +83,7 @@ async def cmd_start(msg: Message, state: FSMContext):
         await extra_menus.show_invoice_card(msg, state)
         return
 
+    await state.clear()
     await create_user(msg.from_user.id, msg.from_user.username or "")
     user = await get_user(msg.from_user.id)
 

@@ -524,8 +524,14 @@ async def activate_check_link(msg: Message, state: FSMContext):
 
 @router.message(CheckFSM.waiting_activate_pass)
 async def process_activate_pass(msg: Message, state: FSMContext):
+    if msg.text and msg.text.startswith("/"):
+        await state.clear()
+        if msg.text.startswith("/start"):
+            import main as main_mod
+            await main_mod.cmd_start(msg, state)
+            return
     data = await state.get_data()
-    cid = data["cid"]
+    cid = data.get("cid")
     try:
         res = await activate_check(cid, msg.from_user.id, msg.text, username=msg.from_user.username)
         await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")

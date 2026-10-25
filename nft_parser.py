@@ -2,7 +2,10 @@
 import re
 import logging
 import httpx
-from bs4 import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
 
 log = logging.getLogger("nft_parser")
 
