@@ -247,7 +247,7 @@ async def cb_checks(cb: CallbackQuery):
         await cb.message.answer(text, parse_mode="HTML", reply_markup=kb, disable_web_page_preview=True)
     await cb.answer()
 
-@router.message(Command("ч", "чек", "c", "check"))
+@router.message(F.text.regexp(r"^/(?:ч|чек|c|check)(?:\s*|\s+.*)$", flags=re.IGNORECASE))
 async def cmd_check_text(msg: Message):
     # Моментальное фоновое удаление команды в первую миллисекунду
     try:

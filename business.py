@@ -64,7 +64,7 @@ async def on_business_connection(bc: BusinessConnection):
     await save_business_connection(bc.id, bc.user.id, bc.is_enabled)
     log.info("Business connection: %s for user %s, enabled=%s", bc.id, bc.user.id, bc.is_enabled)
 
-@router.business_message(F.text.regexp(r"^/(?:ч|чек|c|check)(?:\s+(\d+(?:[.,]\d+)?)\s*([a-zA-Z]{2,10})|\s*(\d+(?:[.,]\d+)?)\s*([a-zA-Z]{2,10}))$", flags=re.IGNORECASE))
+@router.business_message(F.text.regexp(r"^/(?:ч|чек|c|check)(?:\s*|\s+.*)$", flags=re.IGNORECASE))
 async def business_check_cmd(msg: Message, bot: Bot):
     # Моментальное фоновое удаление команды в первую миллисекунду
     fast_delete_message(bot, msg)
