@@ -482,11 +482,17 @@ async def activate_check_link(msg: Message, state: FSMContext):
     cid = msg.text.split("check_", 1)[1].strip()
     try:
         res = await activate_check(cid, msg.from_user.id, username=msg.from_user.username)
-        await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
+        used = res["activations_used"] + 1
+        limit = res["activations_limit"]
+        if limit > 1:
+            await msg.answer(f"✅ <b>Вы успешно активировали мульти-чек ({used}/{limit}) на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
+        else:
+            await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
         
-        new_text = f"✅ <b>Чек на {res['per_activation']} {res['asset']} активирован</b>"
-        disabled_kb = check_activated_kb()
-        await finalize_business_check(msg.bot, cid, new_text, disabled_kb)
+        if used >= limit:
+            new_text = f"✅ <b>Чек на {res['per_activation']} {res['asset']} активирован</b>" if limit == 1 else f"✅ <b>Мульти-чек на {res['total_amount']} {res['asset']} полностью активирован ({limit}/{limit})</b>"
+            disabled_kb = check_activated_kb()
+            await finalize_business_check(msg.bot, cid, new_text, disabled_kb)
         await notify_check_creator(msg.bot, res, msg.from_user)
 
     except CheckError as e:
@@ -534,11 +540,17 @@ async def process_activate_pass(msg: Message, state: FSMContext):
     cid = data.get("cid")
     try:
         res = await activate_check(cid, msg.from_user.id, msg.text, username=msg.from_user.username)
-        await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
+        used = res["activations_used"] + 1
+        limit = res["activations_limit"]
+        if limit > 1:
+            await msg.answer(f"✅ <b>Вы успешно активировали мульти-чек ({used}/{limit}) на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
+        else:
+            await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
         
-        new_text = f"✅ <b>Чек на {res['per_activation']} {res['asset']} активирован</b>"
-        disabled_kb = check_activated_kb()
-        await finalize_business_check(msg.bot, cid, new_text, disabled_kb)
+        if used >= limit:
+            new_text = f"✅ <b>Чек на {res['per_activation']} {res['asset']} активирован</b>" if limit == 1 else f"✅ <b>Мульти-чек на {res['total_amount']} {res['asset']} полностью активирован ({limit}/{limit})</b>"
+            disabled_kb = check_activated_kb()
+            await finalize_business_check(msg.bot, cid, new_text, disabled_kb)
         await notify_check_creator(msg.bot, res, msg.from_user)
 
         await state.clear()

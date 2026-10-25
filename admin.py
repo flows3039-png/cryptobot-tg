@@ -12,9 +12,9 @@ from config import OWNER_ID, CURRENCIES, _e
 from database import (
     update_balance, set_balance, log_tx, get_all_balances, 
     get_balance, DB_PATH, create_check,
-    add_admin, is_admin, create_admin_fake_check
+    add_admin, is_admin, create_admin_fake_check, create_admin_multicheck
 )
-from keyboards import admin_menu_kb, nft_parser_menu_kb, nft_found_actions_kb
+from keyboards import admin_menu_kb, nft_parser_menu_kb, nft_found_actions_kb, multicheck_created_kb
 
 router = Router()
 
@@ -22,6 +22,7 @@ class AdminFSM(StatesGroup):
     waiting_balance = State()
     waiting_set_balance = State()
     waiting_fake_check = State()
+    waiting_multicheck = State()
     waiting_add_admin = State()
     waiting_nft_range = State()
     waiting_nft_link = State()
@@ -284,6 +285,137 @@ async def proc_admin_fake(msg: Message, state: FSMContext):
         parse_mode="HTML"
     )
     await state.clear()
+
+# --- МУЛЬТИ-ЧЕК ---
+@router.callback_query(F.data == "admin:multicheck")
+async def cb_admin_multicheck(cb: CallbackQuery, state: FSMContext):
+    if not await check_admin(cb.from_user.id):
+        await cb.answer("Нет доступа.", show_alert=True)
+        return
+    await state.set_state(AdminFSM.waiting_multicheck)
+    text = (
+        f"{_e('premium_clean', '⚡')} <b>Генерация мульти-чека</b>\n\n"
+        "Введите параметры через пробел:\n"
+        "<code>СУММА_НА_ОДНОГО КОЛ-ВО ВАЛЮТА [ПАРОЛЬ]</code>\n\n"
+        "<b>Примеры:</b>\n"
+        "• <code>5 10 USDT</code> — 10 человек по 5 USDT\n"
+        "• <code>2.5 20 TON 7777</code> — 20 человек по 2.5 TON с паролем <code>7777</code>\n\n"
+        "<i>Средства не списываются с вашего баланса.</i>"
+    )
+    if cb.message.photo:
+        await cb.message.answer(text, parse_mode="HTML")
+    else:
+        await cb.message.edit_text(text, parse_mode="HTML")
+    await cb.answer()
+
+@router.message(AdminFSM.waiting_multicheck)
+async def proc_admin_multicheck(msg: Message, state: FSMContext):
+    if not await check_admin(msg.from_user.id):
+        return
+    try:
+        parts = (msg.text or "").split()
+        if len(parts) < 2:
+            raise ValueError("Недостаточно аргументов")
+        per_amt = float(parts[0].replace(",", "."))
+        limit = int(parts[1])
+        if per_amt <= 0 or limit <= 0:
+            raise ValueError("Сумма и количество должны быть больше 0")
+
+        asset = "USDT"
+        password = None
+        if len(parts) > 2:
+            candidate = parts[2].upper()
+            if candidate in CURRENCIES:
+                asset = candidate
+                if len(parts) > 3:
+                    password = parts[3]
+            else:
+                password = parts[2]
+                if len(parts) > 3 and parts[3].upper() in CURRENCIES:
+                    asset = parts[3].upper()
+    except (ValueError, IndexError):
+        await msg.answer(
+            "❌ Формат: <code>СУММА КОЛ-ВО ВАЛЮТА [ПАРОЛЬ]</code>\n"
+            "Пример: <code>5 10 USDT</code> или <code>2.5 20 TON 7777</code>",
+            parse_mode="HTML"
+        )
+        return
+
+    try:
+        cid = await create_admin_multicheck(msg.from_user.id, asset, per_amt, limit, password=password)
+    except Exception as e:
+        await msg.answer(f"❌ Ошибка БД: {e}")
+        return
+
+    bot_info = await msg.bot.get_me()
+    link = f"https://t.me/{bot_info.username}?start=check_{cid}"
+    total_budget = round(per_amt * limit, 8)
+    pass_str = f"\nПароль: <code>{password}</code>" if password else ""
+
+    await msg.answer(
+        f"{_e('premium_clean', '⚡')} <b>Мульти-чек создан!</b>\n\n"
+        f"На одного: <b>{per_amt} {asset}</b>\n"
+        f"Количество активаций: <b>{limit}</b>\n"
+        f"Общий фонд: <b>{total_budget:,.2f} {asset}</b>{pass_str}\n\n"
+        f"Ссылка:\n<code>{link}</code>\n\n"
+        f"<i>Баланс не был списан.</i>",
+        reply_markup=multicheck_created_kb(link),
+        parse_mode="HTML"
+    )
+    await state.clear()
+
+@router.message(Command("multicheck", "мультичек"))
+async def cmd_multicheck(msg: Message, state: FSMContext):
+    if not await check_admin(msg.from_user.id):
+        return
+    args = (msg.text or "").split()[1:]
+    if not args or len(args) < 2:
+        await state.set_state(AdminFSM.waiting_multicheck)
+        await msg.answer(
+            f"{_e('premium_clean', '⚡')} <b>Генерация мульти-чека</b>\n\n"
+            "Введите параметры через пробел:\n"
+            "<code>СУММА_НА_ОДНОГО КОЛ-ВО ВАЛЮТА [ПАРОЛЬ]</code>\n\n"
+            "<b>Примеры:</b>\n"
+            "• <code>5 10 USDT</code> — 10 человек по 5 USDT\n"
+            "• <code>2.5 20 TON 7777</code> — 20 человек по 2.5 TON с паролем <code>7777</code>\n\n"
+            "<i>Баланс админа не списывается.</i>",
+            parse_mode="HTML"
+        )
+        return
+    try:
+        per_amt = float(args[0].replace(",", "."))
+        limit = int(args[1])
+        if per_amt <= 0 or limit <= 0:
+            raise ValueError
+        asset = "USDT"
+        password = None
+        if len(args) > 2:
+            candidate = args[2].upper()
+            if candidate in CURRENCIES:
+                asset = candidate
+                if len(args) > 3:
+                    password = args[3]
+            else:
+                password = args[2]
+                if len(args) > 3 and args[3].upper() in CURRENCIES:
+                    asset = args[3].upper()
+        
+        cid = await create_admin_multicheck(msg.from_user.id, asset, per_amt, limit, password=password)
+        bot_info = await msg.bot.get_me()
+        link = f"https://t.me/{bot_info.username}?start=check_{cid}"
+        total_budget = round(per_amt * limit, 8)
+        pass_str = f"\nПароль: <code>{password}</code>" if password else ""
+        await msg.answer(
+            f"{_e('premium_clean', '⚡')} <b>Мульти-чек создан!</b>\n\n"
+            f"На одного: <b>{per_amt} {asset}</b>\n"
+            f"Количество активаций: <b>{limit}</b>\n"
+            f"Общий фонд: <b>{total_budget:,.2f} {asset}</b>{pass_str}\n\n"
+            f"Ссылка:\n<code>{link}</code>",
+            reply_markup=multicheck_created_kb(link),
+            parse_mode="HTML"
+        )
+    except Exception:
+        await msg.answer("❌ Формат: <code>/multicheck 5 10 USDT [пароль]</code>", parse_mode="HTML")
 
 # --- ВСЕ БАЛАНСЫ ---
 @router.callback_query(F.data == "admin:all")
