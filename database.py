@@ -179,7 +179,7 @@ async def get_balance(uid: int, cur: str) -> float:
 
 async def get_all_balances(uid: int) -> dict:
     async with db_conn.tx() as c:
-        async with c.execute("SELECT asset, amount FROM balances WHERE user_id = ? AND amount > 0", (uid,)) as r:
+        async with c.execute("SELECT asset, amount FROM balances WHERE user_id = ?", (uid,)) as r:
             return {row["asset"]: row["amount"] for row in await r.fetchall()}
 
 async def update_balance(uid: int, asset: str, amt: float):

@@ -12,10 +12,11 @@ def webapp_btn(text: str, emoji_key: str, subpath: str = "", balances: dict = No
         params.append(f"tab={subpath}")
     if user_id:
         params.append(f"uid={user_id}")
-    if balances:
-        b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') for k, v in balances.items() if v > 0]
-        if b_parts:
-            params.append(f"b={','.join(b_parts)}")
+    if balances is not None:
+        b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') if v != 0 else f"{k}:0" for k, v in balances.items()]
+        if not b_parts:
+            b_parts = ["USDT:0", "TON:0", "BTC:0"]
+        params.append(f"b={','.join(b_parts)}")
     query = ("?" + "&".join(params)) if params else ""
     url = f"{WEBAPP_URL}{query}"
     return InlineKeyboardButton(

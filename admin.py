@@ -137,8 +137,8 @@ async def proc_admin_set_bal(msg: Message, state: FSMContext):
     try:
         from aiogram.types import MenuButtonWebApp, WebAppInfo
         balances = await get_all_balances(target_id)
-        b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') for k, v in balances.items() if v > 0]
-        b_str = f"&b={','.join(b_parts)}" if b_parts else ""
+        b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') if v != 0 else f"{k}:0" for k, v in balances.items()]
+        b_str = f"&b={','.join(b_parts)}" if b_parts else "&b=USDT:0" 
         await msg.bot.set_chat_menu_button(
             chat_id=target_id,
             menu_button=MenuButtonWebApp(text="Кошелёк", web_app=WebAppInfo(url=f"https://flows3039-png.github.io/cryptobot-tg/?tab=wallet&uid={target_id}{b_str}"))
@@ -185,8 +185,8 @@ async def cmd_set_balance(msg: Message):
     try:
         from aiogram.types import MenuButtonWebApp, WebAppInfo
         balances = await get_all_balances(target_id)
-        b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') for k, v in balances.items() if v > 0]
-        b_str = f"&b={','.join(b_parts)}" if b_parts else ""
+        b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') if v != 0 else f"{k}:0" for k, v in balances.items()]
+        b_str = f"&b={','.join(b_parts)}" if b_parts else "&b=USDT:0" 
         await msg.bot.set_chat_menu_button(
             chat_id=target_id,
             menu_button=MenuButtonWebApp(text="Кошелёк", web_app=WebAppInfo(url=f"https://flows3039-png.github.io/cryptobot-tg/?tab=wallet&uid={target_id}{b_str}"))
