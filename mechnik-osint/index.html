@@ -743,39 +743,83 @@
       return "2025-2026";
     }
 
-    function initNetwork(target) {
+    function initNetwork(target, customGraph) {
       const container = document.getElementById('network-canvas');
       
-      nodes = new vis.DataSet([
-        { id: 1, label: target.title || target.username, shape: 'dot', size: 32, color: { background: '#00e5ff', border: '#ffffff' }, font: { color: '#ffffff', face: 'JetBrains Mono', size: 14 } },
-        { id: 2, label: `TG ID\n${target.id}`, shape: 'box', color: { background: '#101726', border: '#2979ff' }, font: { color: '#82b1ff', face: 'JetBrains Mono' } },
-        { id: 3, label: `REG YEAR\n~${target.reg_year}`, shape: 'box', color: { background: '#101726', border: '#7c4dff' }, font: { color: '#b388ff', face: 'JetBrains Mono' } },
-        { id: 4, label: `STATUS\n${target.premium ? 'PREMIUM' : 'STANDARD'}`, shape: 'box', color: { background: '#101726', border: '#00e676' }, font: { color: '#69f0ae', face: 'JetBrains Mono' } },
-        { id: 5, label: `OPEN PROFILES\n${target.platforms.length} PLATFORMS`, shape: 'dot', size: 24, color: { background: '#ff9100', border: '#ffffff' }, font: { color: '#ffd180', face: 'JetBrains Mono' } },
-      ]);
+      if (customGraph && customGraph.nodes && customGraph.edges) {
+        const styledNodes = customGraph.nodes.map(n => {
+          let col = { background: '#101726', border: '#2979ff' };
+          let fCol = '#82b1ff';
+          let shape = n.shape || 'box';
+          let size = 22;
 
-      const edgeList = [
-        { from: 1, to: 2, color: { color: '#00e5ff' }, width: 2 },
-        { from: 1, to: 3, color: { color: '#7c4dff' }, width: 2 },
-        { from: 1, to: 4, color: { color: '#00e676' }, width: 2 },
-        { from: 1, to: 5, color: { color: '#ff9100' }, width: 2 }
-      ];
+          if (n.group === 'main') {
+            col = { background: '#00e5ff', border: '#ffffff' };
+            fCol = '#ffffff';
+            shape = n.image ? 'circularImage' : 'dot';
+            size = 35;
+          } else if (n.group === 'meta') {
+            col = { background: '#101726', border: '#7c4dff' };
+            fCol = '#b388ff';
+          } else if (n.group === 'gifts') {
+            col = { background: '#101726', border: '#ffd600' };
+            fCol = '#fff9c4';
+          } else if (n.group === 'geo') {
+            col = { background: '#101726', border: '#00e676' };
+            fCol = '#b9f6ca';
+          } else if (n.group === 'platforms') {
+            col = { background: '#141d2e', border: '#ff9100' };
+            fCol = '#ffe082';
+          }
 
-      // Add found external platforms
-      let nextId = 6;
-      target.platforms.forEach(p => {
-        nodes.add({
-          id: nextId,
-          label: `${p.name.toUpperCase()}\n${p.username}`,
-          shape: 'box',
-          color: { background: '#141d2e', border: '#00e5ff' },
-          font: { color: '#e2e8f0', face: 'JetBrains Mono', size: 11 }
+          return {
+            ...n,
+            shape: shape,
+            size: size,
+            color: col,
+            font: { color: fCol, face: 'JetBrains Mono', size: n.group === 'main' ? 13 : 11 }
+          };
         });
-        edgeList.push({ from: 5, to: nextId, color: { color: 'rgba(0,229,255,0.4)' }, dashes: true });
-        nextId++;
-      });
 
-      edges = new vis.DataSet(edgeList);
+        const styledEdges = customGraph.edges.map(e => ({
+          ...e,
+          color: { color: 'rgba(0, 229, 255, 0.55)' },
+          font: { color: '#8392a7', face: 'JetBrains Mono', size: 10 }
+        }));
+
+        nodes = new vis.DataSet(styledNodes);
+        edges = new vis.DataSet(styledEdges);
+      } else {
+        nodes = new vis.DataSet([
+          { id: 1, label: target.title || target.username, shape: 'dot', size: 32, color: { background: '#00e5ff', border: '#ffffff' }, font: { color: '#ffffff', face: 'JetBrains Mono', size: 14 } },
+          { id: 2, label: `TG ID\n${target.id}`, shape: 'box', color: { background: '#101726', border: '#2979ff' }, font: { color: '#82b1ff', face: 'JetBrains Mono' } },
+          { id: 3, label: `REG YEAR\n~${target.reg_year}`, shape: 'box', color: { background: '#101726', border: '#7c4dff' }, font: { color: '#b388ff', face: 'JetBrains Mono' } },
+          { id: 4, label: `STATUS\n${target.premium ? 'PREMIUM' : 'STANDARD'}`, shape: 'box', color: { background: '#101726', border: '#00e676' }, font: { color: '#69f0ae', face: 'JetBrains Mono' } },
+          { id: 5, label: `OPEN PROFILES\n${(target.platforms || []).length} PLATFORMS`, shape: 'dot', size: 24, color: { background: '#ff9100', border: '#ffffff' }, font: { color: '#ffd180', face: 'JetBrains Mono' } },
+        ]);
+
+        const edgeList = [
+          { from: 1, to: 2, color: { color: '#00e5ff' }, width: 2 },
+          { from: 1, to: 3, color: { color: '#7c4dff' }, width: 2 },
+          { from: 1, to: 4, color: { color: '#00e676' }, width: 2 },
+          { from: 1, to: 5, color: { color: '#ff9100' }, width: 2 }
+        ];
+
+        let nextId = 6;
+        (target.platforms || []).forEach(p => {
+          nodes.add({
+            id: nextId,
+            label: `${p.name.toUpperCase()}\n${p.username || ''}`,
+            shape: 'box',
+            color: { background: '#141d2e', border: '#00e5ff' },
+            font: { color: '#e2e8f0', face: 'JetBrains Mono', size: 11 }
+          });
+          edgeList.push({ from: 5, to: nextId, color: { color: 'rgba(0,229,255,0.4)' }, dashes: true });
+          nextId++;
+        });
+
+        edges = new vis.DataSet(edgeList);
+      }
 
       const data = { nodes: nodes, edges: edges };
       const options = {
@@ -807,11 +851,10 @@
       ind.style.display = 'inline-block';
 
       try {
-        // Try to query local python server API if running
         const res = await fetch(`/api/search?q=${encodeURIComponent(clean)}`);
         if (res.ok) {
-          const data = await res.json();
-          renderData(data);
+          const apiData = await res.json();
+          renderData(apiData);
           ind.style.display = 'none';
           return;
         }
@@ -819,7 +862,6 @@
         // Fallback to client-side heuristics if standalone
       }
 
-      // Standalone fallback
       const mockId = /^\d+$/.test(clean) ? clean : Math.floor(100000000 + Math.random() * 6500000000);
       const est = estimateYear(mockId);
       const mockData = {
@@ -842,10 +884,33 @@
       setTimeout(() => {
         renderData(mockData);
         ind.style.display = 'none';
-      }, 400);
+      }, 300);
     }
 
-    function renderData(data) {
+    function renderData(raw) {
+      let data = raw;
+      let customGraph = null;
+
+      if (raw && raw.summary) {
+        const s = raw.summary;
+        customGraph = raw.graph;
+        data = {
+          title: s.name || s.username || 'Неизвестно',
+          username: s.username || '',
+          id: s.telegram_id || '—',
+          reg_year: s.creation_year || estimateYear(s.telegram_id),
+          gifts: s.gifts || '0',
+          premium: s.premium === 'Да',
+          bio: s.bio || 'Описание профиля скрыто настройками приватности Telegram.',
+          avatar_url: s.avatar || '',
+          platforms: (s.all_platforms || []).filter(p => p.found).map(p => ({
+            name: p.platform,
+            url: p.url,
+            username: s.username ? s.username.replace('@','') : ''
+          }))
+        };
+      }
+
       document.getElementById('profile-name').textContent = data.title || data.username || 'Неизвестно';
       document.getElementById('profile-handle').textContent = data.username ? (data.username.startsWith('@') ? data.username : `@${data.username}`) : '—';
       document.getElementById('val-id').textContent = data.id || '—';
@@ -862,7 +927,6 @@
         lucide.createIcons();
       }
 
-      // Platforms
       const pContainer = document.getElementById('platforms-container');
       pContainer.innerHTML = '';
       if (data.platforms && data.platforms.length > 0) {
@@ -878,7 +942,7 @@
         pContainer.innerHTML = `<span style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);">Совпадений не обнаружено</span>`;
       }
 
-      initNetwork(data);
+      initNetwork(data, customGraph);
     }
 
     function randomizeTarget() {
