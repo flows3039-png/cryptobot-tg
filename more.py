@@ -256,15 +256,16 @@ async def cmd_check_text(msg: Message):
         pass
 
     text_raw = (msg.text or "").strip()
-    match = re.match(r"^/(?:ч|чек|c|check)(?:\s+(\d+(?:[.,]\d+)?)\s*([a-zA-Z]{2,10})|\s*(\d+(?:[.,]\d+)?)\s*([a-zA-Z]{2,10}))$", text_raw, flags=re.IGNORECASE)
+    match = re.match(r"^/(?:ч|чек|c|check)\s*(\d+(?:[.,]\d+)?)\s*([a-zA-Z]{2,10})(?:\s+(.+))?$", text_raw, flags=re.IGNORECASE)
     if not match:
-        await msg.answer("❌ Формат: <code>/ч 10 USDT</code>", parse_mode="HTML")
+        await msg.answer("❌ Формат: <code>/ч 10 USDT [пароль]</code>", parse_mode="HTML")
         return
 
-    amt_str = match.group(1) or match.group(3)
-    ticker_str = match.group(2) or match.group(4)
+    amt_str = match.group(1)
+    ticker_str = match.group(2)
+    password = match.group(3).strip() if match.group(3) else None
     if not amt_str or not ticker_str:
-        await msg.answer("❌ Формат: <code>/ч 10 USDT</code>", parse_mode="HTML")
+        await msg.answer("❌ Формат: <code>/ч 10 USDT [пароль]</code>", parse_mode="HTML")
         return
 
     try:
@@ -284,7 +285,7 @@ async def cmd_check_text(msg: Message):
         return
 
     try:
-        cid = await create_check(msg.from_user.id, ticker, amt)
+        cid = await create_check(msg.from_user.id, ticker, amt, password=password)
     except InsufficientFunds:
         await msg.answer("❌ Недостаточно средств.")
         return
@@ -492,7 +493,7 @@ async def activate_check_link(msg: Message, state: FSMContext):
         if e.code == "bad_password":
             await state.update_data(cid=cid)
             await state.set_state(CheckFSM.waiting_activate_pass)
-            await msg.answer("🔒 Этот чек защищён паролем. Введите пароль:")
+            await msg.answer("Чтобы активировать чек, введите пароль:")
         elif e.code == "own_check":
             await msg.answer("❌ Вы не можете активировать свой собственный чек.")
         elif e.code == "not_recipient":
@@ -507,7 +508,7 @@ async def activate_check_link(msg: Message, state: FSMContext):
                 draft = getattr(main_mod, "INLINE_CHECK_DRAFTS", {}).pop(cid, None)
                 if draft:
                     from database import create_check
-                    await create_check(uid=draft["user_id"], asset=draft["asset"], total=draft["amount"], limit=1, check_id=cid)
+                    await create_check(uid=draft["user_id"], asset=draft["asset"], total=draft["amount"], limit=1, password=draft.get("password"), check_id=cid)
                     res = await activate_check(cid, msg.from_user.id, username=msg.from_user.username)
                     await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
                     new_text = f"✅ <b>Чек на {res['per_activation']} {res['asset']} активирован</b>"
@@ -537,7 +538,7 @@ async def process_activate_pass(msg: Message, state: FSMContext):
         await state.clear()
     except CheckError as e:
         if e.code == "bad_password":
-            await msg.answer("❌ Неверный пароль. Попробуйте снова.")
+            await msg.answer("❌ Неверный пароль. Чтобы активировать чек, введите пароль:")
         elif e.code == "own_check":
             await msg.answer("❌ Вы не можете активировать свой собственный чек.")
             await state.clear()

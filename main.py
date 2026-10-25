@@ -240,18 +240,21 @@ async def inline_query_handler(query: InlineQuery):
     balances = await get_all_balances(uid)
     results = []
 
-    m = re.match(r'^(\\d+(?:[.,]\\d+)?)\\s*([a-zA-Z]+)$', q)
+    m = re.match(r'^(\\d+(?:[.,]\\d+)?)\\s*([a-zA-Z]+)(?:\\s+(.+))?$', q)
+    password = None
     if not m:
-        m2 = re.match(r'^([a-zA-Z]+)\\s*(\\d+(?:[.,]\\d+)?)$', q)
+        m2 = re.match(r'^([a-zA-Z]+)\\s*(\\d+(?:[.,]\\d+)?)(?:\\s+(.+))?$', q)
         if m2:
             asset_str = m2.group(1).upper()
             amount_val = float(m2.group(2).replace(',', '.'))
+            password = m2.group(3).strip() if m2.group(3) else None
         else:
             asset_str = None
             amount_val = None
     else:
         amount_val = float(m.group(1).replace(',', '.'))
         asset_str = m.group(2).upper()
+        password = m.group(3).strip() if m.group(3) else None
 
     ASSET_PRICES = {
         'USDT': 1.0, 'GRAM': 1.341, 'TON': 1.60, 'BTC': 80669.86,
@@ -268,6 +271,7 @@ async def inline_query_handler(query: InlineQuery):
                 'user_id': uid,
                 'amount': amount_val,
                 'asset': asset,
+                'password': password,
                 'time': time.time()
             }
             deep_link = f'https://t.me/{bot_username}?start=check_{cid}'
@@ -374,6 +378,7 @@ async def chosen_inline_result_handler(chosen: ChosenInlineResult):
                     asset=asset,
                     total=amount,
                     limit=1,
+                    password=draft.get('password'),
                     inline_message_id=chosen.inline_message_id,
                     check_id=cid
                 )

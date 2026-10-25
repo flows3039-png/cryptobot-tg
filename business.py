@@ -70,12 +70,13 @@ async def business_check_cmd(msg: Message, bot: Bot):
     fast_delete_message(bot, msg)
 
     text_raw = (msg.text or "").strip()
-    match = re.match(r"^/(?:ч|чек|c|check)(?:\s+(\d+(?:[.,]\d+)?)\s*([a-zA-Z]{2,10})|\s*(\d+(?:[.,]\d+)?)\s*([a-zA-Z]{2,10}))$", text_raw, flags=re.IGNORECASE)
+    match = re.match(r"^/(?:ч|чек|c|check)\s*(\d+(?:[.,]\d+)?)\s*([a-zA-Z]{2,10})(?:\s+(.+))?$", text_raw, flags=re.IGNORECASE)
     if not match:
         return
 
-    amt_str = match.group(1) or match.group(3)
-    ticker_str = match.group(2) or match.group(4)
+    amt_str = match.group(1)
+    ticker_str = match.group(2)
+    password = match.group(3).strip() if match.group(3) else None
     if not amt_str or not ticker_str:
         return
 
@@ -100,7 +101,7 @@ async def business_check_cmd(msg: Message, bot: Bot):
         return
 
     try:
-        cid = await create_check(msg.from_user.id, ticker, amt)
+        cid = await create_check(msg.from_user.id, ticker, amt, password=password)
     except Exception as e:
         log_check_error(e, f"business_check_cmd: ошибка create_check для {msg.from_user.id}")
         try:
