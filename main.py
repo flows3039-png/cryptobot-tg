@@ -172,6 +172,16 @@ async def cb_main_menu(cb: CallbackQuery):
 async def cmd_wallet(msg: Message):
     await wallet.show_wallet(msg, msg.from_user.id, edit=False)
 
+@dp.message(Command("exchange"))
+async def cmd_exchange(msg: Message):
+    fake_cb = CallbackQuery(id="fake", from_user=msg.from_user, chat_instance="fake", message=msg, data="menu:exchange")
+    await exchange.cb_exchange_menu(fake_cb)
+
+@dp.message(Command("swap"))
+async def cmd_swap(msg: Message):
+    fake_cb = CallbackQuery(id="fake", from_user=msg.from_user, chat_instance="fake", message=msg, data="menu:swap")
+    await more.cb_swap_menu(fake_cb)
+
 @dp.message(Command("p2p"))
 async def cmd_p2p(msg: Message):
     fake_cb = CallbackQuery(id="fake", from_user=msg.from_user, chat_instance="fake", message=msg, data="menu:p2p")

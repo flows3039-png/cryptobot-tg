@@ -6,6 +6,13 @@
   <title>Crypto Bot</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
+    @font-face {
+      font-family: 'SF Pro Display';
+      src: url('sf-pro.ttf') format('truetype');
+      font-weight: 400 700;
+      font-display: swap;
+    }
+
     :root {
       --bg: #14171a;
       --surface: #1e2329;
@@ -32,12 +39,69 @@
     body {
       background-color: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'SF Pro Text', Roboto, sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       overflow-x: hidden;
       padding-bottom: 95px;
+    }
+
+    /* Modal / Popups */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-backdrop.active {
+      display: flex;
+    }
+    .modal-sheet {
+      width: 100%;
+      max-width: 500px;
+      background: #1c2127;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      padding: 20px 16px 36px;
+      animation: slideUp 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .modal-input {
+      width: 100%;
+      background: #14171a;
+      border: 1px solid #2d3540;
+      border-radius: 12px;
+      padding: 12px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      outline: none;
+      margin-bottom: 12px;
+    }
+    .modal-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
     }
 
     /* Top Banner */
@@ -69,7 +133,7 @@
       margin-left: 10px;
     }
 
-    /* View containers */
+    /* Views */
     .view {
       display: none;
       flex-direction: column;
@@ -196,17 +260,13 @@
     .asset-item:active {
       background: rgba(255, 255, 255, 0.03);
     }
-    .asset-icon {
+    .asset-icon-svg {
       width: 40px;
       height: 40px;
       border-radius: 50%;
       margin-right: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 17px;
       flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
     .asset-info {
       flex: 1;
@@ -337,18 +397,14 @@
     .trade-btn {
       width: 100%;
       padding: 12px 0;
-      background: #373e48;
-      color: #79828d;
+      background: var(--green);
+      color: #fff;
       font-size: 14px;
       font-weight: 600;
       border: none;
       border-radius: 8px;
       cursor: pointer;
       margin-top: 4px;
-    }
-    .trade-btn.active {
-      background: var(--green);
-      color: #fff;
     }
 
     /* Orderbook column */
@@ -369,7 +425,9 @@
       display: flex;
       justify-content: space-between;
       padding: 3px 0;
+      cursor: pointer;
     }
+    .ob-row:hover { background: rgba(255, 255, 255, 0.05); }
     .ob-ask { color: var(--red); }
     .ob-bid { color: var(--green); }
     .ob-mid {
@@ -418,7 +476,7 @@
       gap: 8px;
     }
 
-    /* =================== 3. SWAP (ОБМЕН) VIEW =================== */
+    /* =================== 3. SWAP VIEW =================== */
     .swap-container {
       padding: 24px 16px;
       display: flex;
@@ -501,9 +559,10 @@
       font-weight: 600;
       border: none;
       cursor: pointer;
+      transition: opacity 0.1s;
     }
     .swap-action-btn:active {
-      background: #2d82c6;
+      opacity: 0.85;
     }
 
     /* =================== 4. P2P VIEW =================== */
@@ -574,7 +633,49 @@
       white-space: nowrap;
     }
 
-    /* =================== 5. MORE (ЕЩЁ) VIEW =================== */
+    /* Order list for P2P */
+    .p2p-order-item {
+      background: #181d22;
+      border-radius: 14px;
+      margin: 8px 16px;
+      padding: 14px;
+      border: 1px solid #232a32;
+    }
+    .p2p-order-top {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .p2p-order-user {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .p2p-order-price {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--green);
+    }
+    .p2p-order-details {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .p2p-buy-btn {
+      width: 100%;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 0;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* =================== 5. MORE VIEW =================== */
     .more-container {
       padding: 16px;
     }
@@ -620,7 +721,7 @@
       line-height: 1.2;
     }
 
-    /* Help & Docs Rows */
+    /* Links */
     .link-row {
       display: flex;
       align-items: center;
@@ -642,7 +743,7 @@
       font-size: 14px;
     }
 
-    /* =================== BOTTOM FLOATING DOCK =================== */
+    /* =================== BOTTOM DOCK =================== */
     .bottom-dock-wrapper {
       position: fixed;
       bottom: 12px;
@@ -722,7 +823,17 @@
 
     <!-- Quick Buttons -->
     <div class="quick-actions">
-      <button class="action-item" onclick="openAction('withdraw')">
+      <button class="action-item" onclick="openDepositModal()">
+        <div class="action-circle" style="background:#22c55e;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <polyline points="19 12 12 19 5 12"></polyline>
+          </svg>
+        </div>
+        <span class="action-label" style="color:#4ade80;">Пополнить</span>
+      </button>
+
+      <button class="action-item" onclick="openWithdrawModal()">
         <div class="action-circle">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="7" y1="17" x2="17" y2="7"></line>
@@ -732,7 +843,7 @@
         <span class="action-label">Вывести</span>
       </button>
 
-      <button class="action-item" onclick="openAction('history')">
+      <button class="action-item" onclick="openHistoryModal()">
         <div class="action-circle">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -745,7 +856,7 @@
       </button>
     </div>
 
-    <!-- Regional Restriction Banner -->
+    <!-- Banner -->
     <div class="banner">
       <div>
         <div class="banner-title">Региональное ограничение</div>
@@ -761,27 +872,26 @@
     </div>
 
     <div class="asset-list" id="asset-list-container">
-      <!-- Dynamic Assets inserted via JS -->
+      <!-- Dynamic Assets -->
     </div>
   </div>
 
   <!-- ================= 2. БИРЖА ================= -->
   <div id="view-exchange" class="view">
     <div class="exchange-top-bar">
-      <div class="pair-badge">
-        <span style="font-size:20px;">🔷</span>
-        <span class="pair-name">USDC / USDT</span>
+      <div class="pair-badge" onclick="switchPairModal()">
+        <svg class="asset-icon-svg" style="width:24px;height:24px;" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#2775ca"/><path d="M16 6v20M20 10h-6a4 4 0 000 8h4a4 4 0 010 8h-6" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+        <span class="pair-name" id="current-pair-title">USDC / USDT</span>
         <span style="color:#78828f;">▼</span>
       </div>
-      <div style="font-size:18px; color:#848e9c; cursor:pointer;">⇄</div>
+      <div style="font-size:18px; color:#848e9c; cursor:pointer;" onclick="switchPairModal()">⇄</div>
     </div>
 
     <div class="pair-stats">
-      <div>Изменение за 24ч: <span style="color:var(--red); font-weight:600;">-0.0002 -0.02%</span></div>
+      <div>Изменение за 24ч: <span style="color:var(--red); font-weight:600;" id="pair-change">-0.0002 -0.02%</span></div>
       <div>Объём 24ч: <span style="color:#fff; font-weight:600;">10 572.75 USDT</span></div>
     </div>
 
-    <!-- Regional Restriction Banner in Exchange -->
     <div class="banner" style="margin:8px 16px;">
       <div>
         <div class="banner-title">Региональное ограничение</div>
@@ -805,33 +915,33 @@
 
         <div class="inp-box">
           <div class="inp-label">Цена (USDT)</div>
-          <input type="text" class="inp-field" value="0.9946">
+          <input type="number" step="0.0001" class="inp-field" id="trade-price" value="0.9946" oninput="calculateTotal()">
         </div>
 
         <div class="inp-box">
           <div class="inp-label">Сумма</div>
-          <input type="text" class="inp-field" placeholder="0">
+          <input type="number" step="0.01" class="inp-field" id="trade-amount" placeholder="0" oninput="calculateTotal()">
         </div>
 
         <div class="pct-row">
-          <span class="pct-item">0%</span>
-          <span class="pct-item">25%</span>
-          <span class="pct-item">50%</span>
-          <span class="pct-item">75%</span>
-          <span class="pct-item">100%</span>
+          <span class="pct-item" onclick="setTradePercent(0)">0%</span>
+          <span class="pct-item" onclick="setTradePercent(25)">25%</span>
+          <span class="pct-item" onclick="setTradePercent(50)">50%</span>
+          <span class="pct-item" onclick="setTradePercent(75)">75%</span>
+          <span class="pct-item" onclick="setTradePercent(100)">100%</span>
         </div>
 
         <div class="inp-box">
           <div class="inp-label">Всего</div>
-          <input type="text" class="inp-field" placeholder="0">
+          <input type="number" class="inp-field" id="trade-total" placeholder="0" readonly>
         </div>
 
         <div style="font-size:11px; color:var(--text-muted); line-height:1.4; margin-bottom:8px;">
-          <div>Доступно: <b style="color:#fff;">0 USDT</b></div>
-          <div>Макс. покупка: <b style="color:#fff;">0 USDC</b></div>
+          <div>Доступно: <b style="color:#fff;" id="trade-available-balance">100 USDT</b></div>
+          <div>Макс. покупка: <b style="color:#fff;" id="trade-max-calc">100.54 USDC</b></div>
         </div>
 
-        <button class="trade-btn active" id="btn-submit-order">Купить USDC</button>
+        <button class="trade-btn active" id="btn-submit-order" onclick="placeExchangeOrder()">Купить USDC</button>
       </div>
 
       <!-- Right Orderbook Column -->
@@ -841,34 +951,34 @@
           <span>Сумма</span>
         </div>
         <!-- Asks -->
-        <div class="ob-row ob-ask"><span>1.0099</span><span>9.90</span></div>
-        <div class="ob-row ob-ask"><span>1.0047</span><span>15K</span></div>
-        <div class="ob-row ob-ask"><span>1.0045</span><span>7.61K</span></div>
-        <div class="ob-row ob-ask"><span>1.0040</span><span>7.06K</span></div>
-        <div class="ob-row ob-ask"><span>1.0000</span><span>8.51K</span></div>
-        <div class="ob-row ob-ask"><span>0.9947</span><span>159.33</span></div>
+        <div class="ob-row ob-ask" onclick="selectObPrice(1.0099)"><span>1.0099</span><span>9.90</span></div>
+        <div class="ob-row ob-ask" onclick="selectObPrice(1.0047)"><span>1.0047</span><span>15K</span></div>
+        <div class="ob-row ob-ask" onclick="selectObPrice(1.0045)"><span>1.0045</span><span>7.61K</span></div>
+        <div class="ob-row ob-ask" onclick="selectObPrice(1.0040)"><span>1.0040</span><span>7.06K</span></div>
+        <div class="ob-row ob-ask" onclick="selectObPrice(1.0000)"><span>1.0000</span><span>8.51K</span></div>
+        <div class="ob-row ob-ask" onclick="selectObPrice(0.9947)"><span>0.9947</span><span>159.33</span></div>
 
         <!-- Mid Price -->
-        <div class="ob-mid">0.9946 <span style="font-size:10px; color:var(--text-muted); display:block;">$0.9934</span></div>
+        <div class="ob-mid" id="ob-mid-price">0.9946 <span style="font-size:10px; color:var(--text-muted); display:block;">$0.9934</span></div>
 
         <!-- Bids -->
-        <div class="ob-row ob-bid"><span>0.9946</span><span>6.85K</span></div>
-        <div class="ob-row ob-bid"><span>0.9945</span><span>7.73K</span></div>
-        <div class="ob-row ob-bid"><span>0.9942</span><span>7.78</span></div>
-        <div class="ob-row ob-bid"><span>0.9940</span><span>1.30</span></div>
-        <div class="ob-row ob-bid"><span>0.9937</span><span>81.46</span></div>
-        <div class="ob-row ob-bid"><span>0.9934</span><span>2.12K</span></div>
+        <div class="ob-row ob-bid" onclick="selectObPrice(0.9946)"><span>0.9946</span><span>6.85K</span></div>
+        <div class="ob-row ob-bid" onclick="selectObPrice(0.9945)"><span>0.9945</span><span>7.73K</span></div>
+        <div class="ob-row ob-bid" onclick="selectObPrice(0.9942)"><span>0.9942</span><span>7.78</span></div>
+        <div class="ob-row ob-bid" onclick="selectObPrice(0.9940)"><span>0.9940</span><span>1.30</span></div>
+        <div class="ob-row ob-bid" onclick="selectObPrice(0.9937)"><span>0.9937</span><span>81.46</span></div>
+        <div class="ob-row ob-bid" onclick="selectObPrice(0.9934)"><span>0.9934</span><span>2.12K</span></div>
       </div>
     </div>
 
     <!-- Bottom Orders List -->
     <div class="orders-section">
       <div class="orders-tabs">
-        <span class="order-tab active">Открытые ордера (0)</span>
+        <span class="order-tab active" id="tab-open-orders">Открытые ордера (<span id="orders-count">0</span>)</span>
         <span class="order-tab">История</span>
         <span class="order-tab">Сделки</span>
       </div>
-      <div class="empty-state">
+      <div class="empty-state" id="orders-empty-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>
@@ -877,24 +987,25 @@
         </svg>
         <div>Открытых ордеров пока нет.</div>
       </div>
+      <div id="active-orders-list" style="display:none; padding-top:12px;"></div>
     </div>
   </div>
 
-  <!-- ================= 3. ОБМЕН ================= -->
+  <!-- ================= 3. ОБМЕН (SWAP) ================= -->
   <div id="view-swap" class="view">
     <div class="swap-container">
       <div class="swap-card">
         <div class="swap-label-row">
           <span>Вы отправляете</span>
-          <span style="color:#3da7f2; cursor:pointer;">Кошелёк 0 МАКС</span>
+          <span style="color:#3da7f2; cursor:pointer;" onclick="setSwapMax()">Кошелёк <span id="swap-from-bal">100</span> МАКС</span>
         </div>
         <div class="swap-row">
-          <div class="swap-coin-btn" onclick="selectSwapCoin('from')">
-            <span style="color:#0098ea;">💠</span>
+          <div class="swap-coin-btn" onclick="openSwapCoinPicker('from')">
+            <span id="swap-from-icon" style="display:inline-flex;align-items:center;"></span>
             <span id="swap-from-sym">GRAM</span>
             <span style="color:#6f7884; font-size:14px;">›</span>
           </div>
-          <input type="text" class="swap-input" id="swap-from-amt" placeholder="0" oninput="calculateSwap()">
+          <input type="number" class="swap-input" id="swap-from-amt" placeholder="0" oninput="calculateSwap()">
         </div>
 
         <div class="swap-divider">
@@ -910,16 +1021,20 @@
           <span>Вы получаете</span>
         </div>
         <div class="swap-row">
-          <div class="swap-coin-btn" onclick="selectSwapCoin('to')">
-            <span style="color:#0098ea;">💎</span>
+          <div class="swap-coin-btn" onclick="openSwapCoinPicker('to')">
+            <span id="swap-to-icon" style="display:inline-flex;align-items:center;"></span>
             <span id="swap-to-sym">USDT</span>
             <span style="color:#6f7884; font-size:14px;">›</span>
           </div>
-          <input type="text" class="swap-input" id="swap-to-amt" placeholder="0" readonly>
+          <input type="number" class="swap-input" id="swap-to-amt" placeholder="0" readonly>
         </div>
       </div>
 
-      <button class="swap-action-btn" onclick="executeSwap()">Продолжить</button>
+      <div style="font-size:12px; color:var(--text-muted); margin-top:14px; text-align:center;" id="swap-rate-preview">
+        1 GRAM ≈ 1.26 USDT (Комиссия 1%)
+      </div>
+
+      <button class="swap-action-btn" onclick="executeSwap()">Обменять</button>
     </div>
   </div>
 
@@ -945,7 +1060,7 @@
       <div class="banner-arrow">›</div>
     </div>
 
-    <div class="profile-card">
+    <div class="profile-card" onclick="openP2PProfile()">
       <div class="profile-card-left">
         <span style="color:#3ba2ef;">👤</span>
         <span>Мой профиль</span>
@@ -954,60 +1069,53 @@
     </div>
 
     <div class="p2p-filters">
-      <div class="p2p-filter-pill">Статус ▼</div>
-      <div class="p2p-filter-pill">Тип ▼</div>
-      <div class="p2p-filter-pill">Монета ▼</div>
-      <div class="p2p-filter-pill">Способ ▼</div>
+      <div class="p2p-filter-pill active" onclick="filterP2P('all')">Все валюты</div>
+      <div class="p2p-filter-pill" onclick="filterP2P('RUB')">🇷🇺 RUB</div>
+      <div class="p2p-filter-pill" onclick="filterP2P('USD')">🇺🇸 USD</div>
+      <div class="p2p-filter-pill" onclick="filterP2P('EUR')">🇪🇺 EUR</div>
     </div>
 
-    <div class="empty-state">
-      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-        <polyline points="14 2 14 8 20 8"></polyline>
-      </svg>
-      <div>Сделок пока нет.</div>
-    </div>
+    <!-- P2P Live Orders List -->
+    <div id="p2p-orders-container" style="padding-bottom:12px;"></div>
   </div>
 
   <!-- ================= 5. ЕЩЁ ================= -->
   <div id="view-more" class="view">
     <div class="more-container">
-      <!-- Кошелёк секция -->
       <div class="grid-section-title">
         <span>👛</span> Кошелёк
       </div>
       <div class="icon-grid">
-        <div class="grid-item">
+        <div class="grid-item" onclick="openDepositModal()">
           <div class="grid-icon-box" style="background:#585f6a;">↙</div>
           <div class="grid-label">Пополнить</div>
         </div>
-        <div class="grid-item">
+        <div class="grid-item" onclick="openWithdrawModal()">
           <div class="grid-icon-box" style="background:#f59e0b;">↗</div>
           <div class="grid-label">Вывести</div>
         </div>
-        <div class="grid-item">
+        <div class="grid-item" onclick="showStub('QR Pay')">
           <div class="grid-icon-box" style="background:#64748b;">⠶</div>
           <div class="grid-label">QR Pay</div>
         </div>
-        <div class="grid-item">
+        <div class="grid-item" onclick="openHistoryModal()">
           <div class="grid-icon-box" style="background:#0ea5e9;">🗓</div>
           <div class="grid-label">История</div>
         </div>
-        <div class="grid-item">
+        <div class="grid-item" onclick="showStub('Crypto Pay')">
           <div class="grid-icon-box" style="background:#38bdf8; font-weight:700; font-size:17px;">Pay</div>
           <div class="grid-label">Crypto Pay</div>
         </div>
-        <div class="grid-item">
+        <div class="grid-item" onclick="showStub('Книга адресов')">
           <div class="grid-icon-box" style="background:#64748b;">🔖</div>
           <div class="grid-label">Книга адресов</div>
         </div>
-        <div class="grid-item">
+        <div class="grid-item" onclick="showStub('Комиссии')">
           <div class="grid-icon-box" style="background:#64748b;">%</div>
           <div class="grid-label">Комиссии</div>
         </div>
       </div>
 
-      <!-- Торговля секция -->
       <div class="grid-section-title">
         <span>🔄</span> Торговля
       </div>
@@ -1024,81 +1132,90 @@
           <div class="grid-icon-box" style="background:#38bdf8;">🤝</div>
           <div class="grid-label">P2P Маркет</div>
         </div>
-        <div class="grid-item">
+        <div class="grid-item" onclick="showStub('P2C')">
           <div class="grid-icon-box" style="background:#6366f1;">🛍</div>
           <div class="grid-label">P2C</div>
         </div>
       </div>
 
-      <!-- Аккаунт секция -->
       <div class="grid-section-title">
         <span>👤</span> Аккаунт
       </div>
       <div class="icon-grid">
-        <div class="grid-item">
+        <div class="grid-item" onclick="showStub('Настройки')">
           <div class="grid-icon-box" style="background:#6b7280;">⚙️</div>
           <div class="grid-label">Настройки</div>
         </div>
-        <div class="grid-item">
+        <div class="grid-item" onclick="showStub('Безопасность')">
           <div class="grid-icon-box" style="background:#22c55e;">🔒</div>
           <div class="grid-label">Безопасность</div>
         </div>
-        <div class="grid-item">
+        <div class="grid-item" onclick="showStub('Верификация')">
           <div class="grid-icon-box" style="background:#06b6d4;">🛡</div>
           <div class="grid-label">Верификация</div>
         </div>
-        <div class="grid-item">
+        <div class="grid-item" onclick="showStub('Уведомления')">
           <div class="grid-icon-box" style="background:#f97316;">🔔</div>
           <div class="grid-label">Уведомления</div>
         </div>
-        <div class="grid-item">
-          <div class="grid-icon-box" style="background:#4b5563;">🖼</div>
-          <div class="grid-label">Обои</div>
-        </div>
-        <div class="grid-item">
-          <div class="grid-icon-box" style="background:#38bdf8;">🎫</div>
-          <div class="grid-label">Ваучеры</div>
-        </div>
       </div>
 
-      <!-- Помощь и документы -->
       <div class="grid-section-title" style="margin-top:24px;">
         <span>❓</span> Помощь
       </div>
-      <div class="link-row">
-        <div class="link-row-left">
-          <span>ℹ️</span> Справка Crypto Bot
-        </div>
+      <div class="link-row" onclick="window.open('https://help.cr.bot', '_blank')">
+        <div class="link-row-left"><span>ℹ️</span> Справка Crypto Bot</div>
         <div class="link-row-arrow">↗</div>
       </div>
-      <div class="link-row">
-        <div class="link-row-left">
-          <span>💬</span> Написать в поддержку
-        </div>
+      <div class="link-row" onclick="window.open('https://t.me/CryptoBotSupport', '_blank')">
+        <div class="link-row-left"><span>💬</span> Написать в поддержку</div>
         <div class="link-row-arrow">↗</div>
       </div>
-      <div class="link-row">
-        <div class="link-row-left">
-          <span>✉️</span> Обратная связь
-        </div>
-        <div class="link-row-arrow">↗</div>
-      </div>
+    </div>
+  </div>
 
-      <div class="grid-section-title" style="margin-top:20px;">
-        <span>📄</span> Документы
+  <!-- ================= MODAL: DEPOSIT ================= -->
+  <div class="modal-backdrop" id="modal-deposit" onclick="closeModals(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title">Пополнение баланса</div>
+      <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Выберите актив для пополнения:</div>
+      <select class="modal-input" id="dep-asset-select">
+        <option value="USDT">USDT (Tether)</option>
+        <option value="TON">TON (Toncoin)</option>
+        <option value="GRAM">GRAM (Gram)</option>
+        <option value="SOL">SOL (Solana)</option>
+        <option value="BTC">BTC (Bitcoin)</option>
+        <option value="ETH">ETH (Ethereum)</option>
+      </select>
+      <div style="font-size:13px; color:var(--text-muted); margin-bottom:6px;">Сумма:</div>
+      <input type="number" class="modal-input" id="dep-amount-input" placeholder="100">
+      <button class="modal-btn" onclick="submitDeposit()">Пополнить</button>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: WITHDRAW ================= -->
+  <div class="modal-backdrop" id="modal-withdraw" onclick="closeModals(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title">Вывод криптовалюты</div>
+      <select class="modal-input" id="wdr-asset-select">
+        <option value="USDT">USDT (Tether)</option>
+        <option value="TON">TON (Toncoin)</option>
+        <option value="GRAM">GRAM (Gram)</option>
+      </select>
+      <input type="text" class="modal-input" id="wdr-address-input" placeholder="Адрес получателя...">
+      <input type="number" class="modal-input" id="wdr-amount-input" placeholder="Сумма вывода...">
+      <button class="modal-btn" onclick="submitWithdraw()">Подтвердить вывод</button>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: HISTORY ================= -->
+  <div class="modal-backdrop" id="modal-history" onclick="closeModals(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title">История транзакций</div>
+      <div id="history-items-list" style="max-height:300px; overflow-y:auto;">
+        <!-- Filled dynamically -->
       </div>
-      <div class="link-row">
-        <div class="link-row-left">
-          <span>🛡</span> Политика конфиденциальности
-        </div>
-        <div class="link-row-arrow">↗</div>
-      </div>
-      <div class="link-row">
-        <div class="link-row-left">
-          <span>💲</span> Политика AML
-        </div>
-        <div class="link-row-arrow">↗</div>
-      </div>
+      <button class="modal-btn" style="margin-top:12px; background:#282f38;" onclick="closeModals()">Закрыть</button>
     </div>
   </div>
 
@@ -1134,7 +1251,6 @@
   </div>
 
   <script>
-    // Initialize Telegram WebApp
     const tg = window.Telegram?.WebApp;
     if (tg) {
       tg.ready();
@@ -1143,39 +1259,106 @@
       tg.setBackgroundColor('#14171a');
     }
 
-    // Asset data exact from CryptoBot
+    // High quality vector SVG icons for all official CryptoBot coins
+    const SVG_ICONS = {
+      USDT: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#26A17B"/><path fill="#fff" d="M17.9 17.1c-.2 0-1.2.1-1.9.1s-1.6 0-1.9-.1c-3.7-.2-6.5-.9-6.5-1.7 0-.9 2.8-1.5 6.5-1.7V10H10V8h12v2h-4.1v3.7c3.7.2 6.5.9 6.5 1.7 0 .8-2.8 1.5-6.5 1.7v5.9h-2v-5.9z"/></svg>`,
+      GRAM: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#0088CC"/><path fill="#fff" d="M8 12l8-5 8 5-8 13z"/></svg>`,
+      TON: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#0098EA"/><path fill="#fff" d="M23.6 9.5H8.4c-1.1 0-1.8 1.2-1.2 2.2l8.8 14.1c.5.8 1.7.8 2.2 0l8.8-14.1c.5-1-.2-2.2-1.2-2.2zm-7.6 12L10 11.7h12l-6 9.8z"/></svg>`,
+      SOL: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#9945FF"/><path fill="#fff" d="M10 10.5l2-2h10l-2 2H10zm0 6l2-2h10l-2 2H10zm2 4l-2 2h10l2-2H12z"/></svg>`,
+      TRX: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#EF0027"/><path fill="#fff" d="M8 9l14 4-7 11zM10 10l5 3-4 5z"/></svg>`,
+      BTC: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#F7931A"/><path fill="#fff" d="M19.7 13.5c.3-1.8-1.1-2.8-3-3.4l.6-2.5-1.5-.4-.6 2.4c-.4-.1-.8-.2-1.2-.3l.6-2.4-1.5-.4-.6 2.5c-.3-.1-.7-.2-1-.3l-2.1-.5-.4 1.7s1.1.3 1.1.3c.6.2.7.5.7.8l-.7 2.9c.1 0 .2.1.3.1l-.3-.1-1 4.1c-.1.2-.3.6-.8.4 0 0-1.1-.3-1.1-.3l-.7 1.8 2 .5c.4.1.7.2 1.1.3l-.6 2.6 1.5.4.6-2.5c.4.1.8.2 1.2.3l-.6 2.5 1.5.4.6-2.5c2.6.5 4.5.3 5.3-2.1.7-1.9 0-3-1.4-3.7 1-.2 1.8-.9 2-2.3z"/></svg>`,
+      ETH: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#627EEA"/><path fill="#fff" fill-opacity=".6" d="M16 4v9l7.5 3.4z"/><path fill="#fff" d="M16 4L8.5 16.4 16 13z"/><path fill="#fff" fill-opacity=".6" d="M16 21.6v6.4l7.5-10.4z"/><path fill="#fff" d="M16 28V21.6L8.5 17.6z"/></svg>`,
+      DOGE: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#BA9F33"/><path fill="#fff" d="M13 9h5c3.3 0 6 2.7 6 6s-2.7 6-6 6h-5V9zm3 2.5v7h2c2 0 3.5-1.5 3.5-3.5S20 11.5 18 11.5h-2zM11 14h6v2h-6z"/></svg>`,
+      LTC: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#345D9D"/><path fill="#fff" d="M13.5 8h3l-2.5 9h4l-.8 3H10.5l.8-3 1.8-.7.8-2.8-1.8.7.6-2.2 1.8-.7.8-3.3z"/></svg>`,
+      BNB: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#F3BA2F"/><path fill="#fff" d="M16 7l3 3-5 5-3-3 5-5zm6 6l3 3-3 3-3-3 3-3zM10 13l3 3-3 3-3-3 3-3zm6 6l3 3-5 5-3-3 5-5z"/></svg>`,
+      USDC: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path fill="#fff" d="M16 6v20M20 10h-6a4 4 0 000 8h4a4 4 0 010 8h-6" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>`,
+      XAUT: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#C39B36"/><path fill="#fff" d="M16 7l8 5-8 13-8-13z"/></svg>`
+    };
+
+    // User State with LocalStorage Persistence
+    const STORAGE_KEY = 'cryptobot_state_v1';
+    let appState = {
+      balances: {
+        USDT: 50.0,
+        TON: 10.0,
+        GRAM: 25.0,
+        SOL: 0.5,
+        TRX: 100.0,
+        BTC: 0.002,
+        ETH: 0.05,
+        DOGE: 150.0,
+        LTC: 1.0,
+        BNB: 0.2,
+        USDC: 20.0,
+        XAUT: 0.01
+      },
+      orders: [],
+      history: [
+        { type: 'Пополнение', asset: 'USDT', amt: 50.0, time: 'Сегодня, 18:30' }
+      ]
+    };
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) appState = JSON.parse(saved);
+      } catch (e) {}
+    }
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {}
+    }
+    loadState();
+
     const ASSETS = [
-      { ticker: 'USDT', name: 'Tether', price: 0.9988, change: -0.02, color: '#26a17b', icon: '₮', balance: 0 },
-      { ticker: 'GRAM', name: 'Gram', price: 1.26, change: 3.20, color: '#3ca3f8', icon: '💎', balance: 0 },
-      { ticker: 'TON', name: 'Toncoin', price: 5.50, change: 1.10, color: '#0088cc', icon: '💎', balance: 0 },
-      { ticker: 'SOL', name: 'Solana', price: 101.49, change: 1.86, color: '#9945ff', icon: 'S', balance: 0 },
-      { ticker: 'TRX', name: 'TRON', price: 0.329, change: 0.07, color: '#ef1c27', icon: 'T', balance: 0 },
-      { ticker: 'BTC', name: 'Bitcoin', price: 80551.37, change: 3.23, color: '#f7931a', icon: '₿', balance: 0 },
-      { ticker: 'ETH', name: 'Ethereum', price: 2341.81, change: 1.65, color: '#627eea', icon: 'Ξ', balance: 0 },
-      { ticker: 'DOGE', name: 'Dogecoin', price: 0.07701, change: 2.06, color: '#c2a633', icon: 'Ð', balance: 0 },
-      { ticker: 'LTC', name: 'Litecoin', price: 57.02, change: 2.40, color: '#345d9d', icon: 'Ł', balance: 0 },
-      { ticker: 'BNB', name: 'Binance Coin', price: 740.99, change: 2.74, color: '#f3ba2f', icon: 'B', balance: 0 },
-      { ticker: 'USDC', name: 'USD Coin', price: 0.9996, change: 0.00, color: '#2775ca', icon: '$', balance: 0 },
-      { ticker: 'XAUT', name: 'Tether Gold', price: 3989.19, change: 0.15, color: '#c39b36', icon: 'G', balance: 0 }
+      { ticker: 'USDT', name: 'Tether', price: 0.9988, change: -0.02 },
+      { ticker: 'GRAM', name: 'Gram', price: 1.26, change: 3.20 },
+      { ticker: 'TON', name: 'Toncoin', price: 5.50, change: 1.10 },
+      { ticker: 'SOL', name: 'Solana', price: 101.49, change: 1.86 },
+      { ticker: 'TRX', name: 'TRON', price: 0.329, change: 0.07 },
+      { ticker: 'BTC', name: 'Bitcoin', price: 80551.37, change: 3.23 },
+      { ticker: 'ETH', name: 'Ethereum', price: 2341.81, change: 1.65 },
+      { ticker: 'DOGE', name: 'Dogecoin', price: 0.07701, change: 2.06 },
+      { ticker: 'LTC', name: 'Litecoin', price: 57.02, change: 2.40 },
+      { ticker: 'BNB', name: 'Binance Coin', price: 740.99, change: 2.74 },
+      { ticker: 'USDC', name: 'USD Coin', price: 0.9996, change: 0.00 },
+      { ticker: 'XAUT', name: 'Tether Gold', price: 3989.19, change: 0.15 }
     ];
 
     const RUB_RATE = 95.5;
     let hideBalance = false;
     let hideSmall = false;
+    let currentTradeSide = 'buy';
 
-    function renderAssets() {
+    function calculateTotalRUB() {
+      let total = 0;
+      ASSETS.forEach(a => {
+        const bal = appState.balances[a.ticker] || 0;
+        total += bal * a.price * RUB_RATE;
+      });
+      return total.toFixed(0);
+    }
+
+    function renderWallet() {
+      const totalRub = calculateTotalRUB();
+      document.getElementById('wallet-balance-num').textContent = hideBalance ? '••••' : totalRub;
+
       const container = document.getElementById('asset-list-container');
       container.innerHTML = '';
 
       ASSETS.forEach(item => {
-        const fiatVal = (item.balance * item.price * RUB_RATE).toFixed(0);
+        const bal = appState.balances[item.ticker] || 0;
+        if (hideSmall && bal <= 0) return;
+
+        const fiatVal = (bal * item.price * RUB_RATE).toFixed(0);
         const changeClass = item.change >= 0 ? 'change-pos' : 'change-neg';
         const changeSign = item.change > 0 ? '+' : '';
 
         const div = document.createElement('div');
         div.className = 'asset-item';
         div.innerHTML = `
-          <div class="asset-icon" style="background:${item.color};">${item.icon}</div>
+          ${SVG_ICONS[item.ticker] || ''}
           <div class="asset-info">
             <div class="asset-name">${item.name}</div>
             <div class="asset-sub">
@@ -1184,18 +1367,18 @@
             </div>
           </div>
           <div class="asset-vals">
-            <div class="asset-crypto">${hideBalance ? '••••' : item.balance + ' ' + item.ticker}</div>
+            <div class="asset-crypto">${hideBalance ? '••••' : bal.toFixed(4).replace(/0+$/, '').replace(/\.$/, '') + ' ' + item.ticker}</div>
             <div class="asset-fiat">${hideBalance ? '••••' : fiatVal + ' ₽'}</div>
           </div>
         `;
         div.onclick = () => {
           if (tg) tg.HapticFeedback?.impactOccurred('light');
+          openAssetQuickAction(item.ticker);
         };
         container.appendChild(div);
       });
     }
 
-    // Toggle navigation tabs
     function switchTab(tabId) {
       if (tg) tg.HapticFeedback?.selectionChanged();
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -1206,22 +1389,105 @@
       if (activeView) activeView.classList.add('active');
       if (activeDock) activeDock.classList.add('active');
 
+      if (tabId === 'swap') initSwap();
+      if (tabId === 'exchange') initExchange();
+      if (tabId === 'p2p') renderP2POrders('all');
+
       window.scrollTo(0, 0);
     }
 
-    // Hide/show balance
+    // Hash navigation (e.g. #exchange, #p2p, #swap)
+    window.addEventListener('hashchange', checkHash);
+    function checkHash() {
+      const hash = window.location.hash.replace('#', '');
+      if (['wallet', 'exchange', 'swap', 'p2p', 'more'].includes(hash)) {
+        switchTab(hash);
+      }
+    }
+
     function toggleBalanceVisibility() {
       hideBalance = !hideBalance;
-      document.getElementById('wallet-balance-num').textContent = hideBalance ? '••••' : '0';
-      renderAssets();
+      renderWallet();
     }
 
     function toggleSmallBalances() {
       hideSmall = !hideSmall;
-      renderAssets();
+      renderWallet();
+    }
+
+    /* Modal dialogs */
+    function openDepositModal() {
+      document.getElementById('modal-deposit').classList.add('active');
+    }
+    function openWithdrawModal() {
+      document.getElementById('modal-withdraw').classList.add('active');
+    }
+    function openHistoryModal() {
+      const list = document.getElementById('history-items-list');
+      list.innerHTML = '';
+      if (!appState.history.length) {
+        list.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:20px;">Операций пока нет.</div>';
+      } else {
+        appState.history.forEach(h => {
+          const div = document.createElement('div');
+          div.style.cssText = 'padding:10px 0; border-bottom:1px solid #282f38; display:flex; justify-content:space-between; align-items:center;';
+          div.innerHTML = `
+            <div>
+              <div style="font-weight:600; font-size:14px;">${h.type}</div>
+              <div style="font-size:12px; color:var(--text-muted);">${h.time}</div>
+            </div>
+            <div style="font-weight:700; color:${h.amt > 0 ? 'var(--green)' : 'var(--red)'};">
+              ${h.amt > 0 ? '+' : ''}${h.amt} ${h.asset}
+            </div>
+          `;
+          list.appendChild(div);
+        });
+      }
+      document.getElementById('modal-history').classList.add('active');
+    }
+    function closeModals() {
+      document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('active'));
+    }
+
+    function submitDeposit() {
+      const asset = document.getElementById('dep-asset-select').value;
+      const amt = parseFloat(document.getElementById('dep-amount-input').value) || 0;
+      if (amt <= 0) return alert('Введите сумму');
+
+      appState.balances[asset] = (appState.balances[asset] || 0) + amt;
+      appState.history.unshift({ type: 'Пополнение', asset, amt, time: 'Только что' });
+      saveState();
+      renderWallet();
+      closeModals();
+      if (tg) tg.HapticFeedback?.notificationOccurred('success');
+      alert(`Успешно пополнено ${amt} ${asset}!`);
+    }
+
+    function submitWithdraw() {
+      const asset = document.getElementById('wdr-asset-select').value;
+      const amt = parseFloat(document.getElementById('wdr-amount-input').value) || 0;
+      const curBal = appState.balances[asset] || 0;
+      if (amt <= 0 || amt > curBal) return alert('Недостаточно средств!');
+
+      appState.balances[asset] -= amt;
+      appState.history.unshift({ type: 'Вывод', asset, amt: -amt, time: 'Только что' });
+      saveState();
+      renderWallet();
+      closeModals();
+      if (tg) tg.HapticFeedback?.notificationOccurred('success');
+      alert(`Заявка на вывод ${amt} ${asset} принята!`);
+    }
+
+    /* Exchange trading logic */
+    function initExchange() {
+      const balUSDT = appState.balances['USDT'] || 0;
+      document.getElementById('trade-available-balance').textContent = `${balUSDT.toFixed(2)} USDT`;
+      calculateTotal();
+      renderExchangeOrders();
     }
 
     function setOrderSide(side) {
+      currentTradeSide = side;
       const buyBtn = document.getElementById('btn-buy');
       const sellBtn = document.getElementById('btn-sell');
       const submitBtn = document.getElementById('btn-submit-order');
@@ -1231,49 +1497,201 @@
         sellBtn.className = 'bs-tab';
         submitBtn.textContent = 'Купить USDC';
         submitBtn.style.background = 'var(--green)';
+        const balUSDT = appState.balances['USDT'] || 0;
+        document.getElementById('trade-available-balance').textContent = `${balUSDT.toFixed(2)} USDT`;
       } else {
         buyBtn.className = 'bs-tab';
         sellBtn.className = 'bs-tab active-sell';
         submitBtn.textContent = 'Продать USDC';
         submitBtn.style.background = 'var(--red)';
+        const balUSDC = appState.balances['USDC'] || 0;
+        document.getElementById('trade-available-balance').textContent = `${balUSDC.toFixed(2)} USDC`;
+      }
+      calculateTotal();
+    }
+
+    function selectObPrice(price) {
+      document.getElementById('trade-price').value = price.toFixed(4);
+      calculateTotal();
+    }
+
+    function calculateTotal() {
+      const p = parseFloat(document.getElementById('trade-price').value) || 0;
+      const a = parseFloat(document.getElementById('trade-amount').value) || 0;
+      document.getElementById('trade-total').value = (p * a).toFixed(2);
+      if (currentTradeSide === 'buy') {
+        const bal = appState.balances['USDT'] || 0;
+        document.getElementById('trade-max-calc').textContent = p > 0 ? (bal / p).toFixed(2) + ' USDC' : '0 USDC';
+      } else {
+        const bal = appState.balances['USDC'] || 0;
+        document.getElementById('trade-max-calc').textContent = bal.toFixed(2) + ' USDC';
       }
     }
 
+    function setTradePercent(pct) {
+      const p = parseFloat(document.getElementById('trade-price').value) || 1;
+      if (currentTradeSide === 'buy') {
+        const balUSDT = appState.balances['USDT'] || 0;
+        const totalToSpend = balUSDT * (pct / 100);
+        document.getElementById('trade-amount').value = (totalToSpend / p).toFixed(2);
+      } else {
+        const balUSDC = appState.balances['USDC'] || 0;
+        document.getElementById('trade-amount').value = (balUSDC * (pct / 100)).toFixed(2);
+      }
+      calculateTotal();
+    }
+
+    function placeExchangeOrder() {
+      const price = parseFloat(document.getElementById('trade-price').value) || 0;
+      const amt = parseFloat(document.getElementById('trade-amount').value) || 0;
+      const total = price * amt;
+      if (amt <= 0 || price <= 0) return alert('Введите корректную сумму');
+
+      if (currentTradeSide === 'buy') {
+        if ((appState.balances['USDT'] || 0) < total) return alert('Недостаточно USDT!');
+        appState.balances['USDT'] -= total;
+        appState.balances['USDC'] = (appState.balances['USDC'] || 0) + amt;
+      } else {
+        if ((appState.balances['USDC'] || 0) < amt) return alert('Недостаточно USDC!');
+        appState.balances['USDC'] -= amt;
+        appState.balances['USDT'] = (appState.balances['USDT'] || 0) + total;
+      }
+
+      appState.history.unshift({
+        type: `Биржа ${currentTradeSide.toUpperCase()}`,
+        asset: currentTradeSide === 'buy' ? 'USDC' : 'USDT',
+        amt: currentTradeSide === 'buy' ? amt : total,
+        time: 'Только что'
+      });
+      saveState();
+      renderWallet();
+      initExchange();
+      if (tg) tg.HapticFeedback?.notificationOccurred('success');
+      alert(`Ордер на ${amt} USDC успешно исполнен!`);
+    }
+
+    function renderExchangeOrders() {
+      document.getElementById('orders-count').textContent = '0';
+    }
+
+    /* Swap logic */
+    let swapFrom = 'GRAM';
+    let swapTo = 'USDT';
+
+    function initSwap() {
+      document.getElementById('swap-from-sym').textContent = swapFrom;
+      document.getElementById('swap-to-sym').textContent = swapTo;
+      document.getElementById('swap-from-icon').innerHTML = SVG_ICONS[swapFrom] || '';
+      document.getElementById('swap-to-icon').innerHTML = SVG_ICONS[swapTo] || '';
+      document.getElementById('swap-from-bal').textContent = (appState.balances[swapFrom] || 0).toFixed(2);
+      calculateSwap();
+    }
+
     function switchSwapCoins() {
-      const fromSym = document.getElementById('swap-from-sym');
-      const toSym = document.getElementById('swap-to-sym');
-      const temp = fromSym.textContent;
-      fromSym.textContent = toSym.textContent;
-      toSym.textContent = temp;
+      const temp = swapFrom;
+      swapFrom = swapTo;
+      swapTo = temp;
+      initSwap();
+    }
+
+    function setSwapMax() {
+      document.getElementById('swap-from-amt').value = (appState.balances[swapFrom] || 0).toFixed(4);
       calculateSwap();
     }
 
     function calculateSwap() {
       const fromAmt = parseFloat(document.getElementById('swap-from-amt').value) || 0;
-      const rate = 1.26; // Example GRAM to USDT
-      document.getElementById('swap-to-amt').value = fromAmt ? (fromAmt * rate).toFixed(4) : '';
+      const pFrom = ASSETS.find(a => a.ticker === swapFrom)?.price || 1;
+      const pTo = ASSETS.find(a => a.ticker === swapTo)?.price || 1;
+      const rate = pFrom / pTo;
+      const outAmt = fromAmt * rate * 0.99; // 1% fee
+      document.getElementById('swap-to-amt').value = fromAmt > 0 ? outAmt.toFixed(4) : '';
+      document.getElementById('swap-rate-preview').textContent = `1 ${swapFrom} ≈ ${rate.toFixed(4)} ${swapTo} (Комиссия 1%)`;
     }
 
     function executeSwap() {
-      if (tg) {
-        tg.HapticFeedback?.notificationOccurred('success');
-        tg.showAlert('Заявка на обмен создана!');
-      } else {
-        alert('Заявка на обмен создана!');
-      }
+      const fromAmt = parseFloat(document.getElementById('swap-from-amt').value) || 0;
+      if (fromAmt <= 0) return alert('Введите сумму для обмена');
+      if ((appState.balances[swapFrom] || 0) < fromAmt) return alert(`Недостаточно ${swapFrom}!`);
+
+      const toAmt = parseFloat(document.getElementById('swap-to-amt').value) || 0;
+      appState.balances[swapFrom] -= fromAmt;
+      appState.balances[swapTo] = (appState.balances[swapTo] || 0) + toAmt;
+
+      appState.history.unshift({
+        type: `Обмен ${swapFrom} → ${swapTo}`,
+        asset: swapTo,
+        amt: toAmt,
+        time: 'Только что'
+      });
+      saveState();
+      renderWallet();
+      initSwap();
+      if (tg) tg.HapticFeedback?.notificationOccurred('success');
+      alert(`Обмен успешно выполнен! Получено ${toAmt.toFixed(4)} ${swapTo}`);
     }
 
-    function openAction(action) {
+    /* P2P logic */
+    const P2P_ORDERS = [
+      { id: 1, user: 'CryptoTrader_777', fiat: 'RUB', price: 96.50, limit: '1 000 - 50 000 ₽', pay: 'Сбербанк' },
+      { id: 2, user: 'FastExchange_PRO', fiat: 'RUB', price: 96.85, limit: '5 000 - 150 000 ₽', pay: 'Тинькофф' },
+      { id: 3, user: 'SberPay_Fast', fiat: 'RUB', price: 97.10, limit: '500 - 25 000 ₽', pay: 'СБП' },
+      { id: 4, user: 'GlobalPay_USD', fiat: 'USD', price: 1.01, limit: '$50 - $2,500', pay: 'Wise / Revolut' },
+      { id: 5, user: 'EuroTrader_EU', fiat: 'EUR', price: 0.93, limit: '€50 - €1,000', pay: 'SEPA' }
+    ];
+
+    function renderP2POrders(fiatFilter) {
+      const container = document.getElementById('p2p-orders-container');
+      container.innerHTML = '';
+      const list = fiatFilter === 'all' ? P2P_ORDERS : P2P_ORDERS.filter(o => o.fiat === fiatFilter);
+
+      list.forEach(ord => {
+        const div = document.createElement('div');
+        div.className = 'p2p-order-item';
+        div.innerHTML = `
+          <div class="p2p-order-top">
+            <span class="p2p-order-user">👤 ${ord.user}</span>
+            <span class="p2p-order-price">${ord.price.toFixed(2)} ${ord.fiat}</span>
+          </div>
+          <div class="p2p-order-details">
+            <span>Лимиты: ${ord.limit}</span>
+            <span style="color:#3da7f2;">💳 ${ord.pay}</span>
+          </div>
+          <button class="p2p-buy-btn" onclick="buyP2P(${ord.id}, '${ord.user}', ${ord.price}, '${ord.fiat}')">Купить USDT</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function filterP2P(fiat) {
+      document.querySelectorAll('.p2p-filter-pill').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      renderP2POrders(fiat);
+    }
+
+    function buyP2P(id, user, price, fiat) {
       if (tg) tg.HapticFeedback?.impactOccurred('medium');
-      if (action === 'withdraw') {
-        switchTab('more');
-      } else if (action === 'history') {
-        alert('История транзакций пуста');
-      }
+      alert(`Сделка с ${user} на покупку USDT за ${price} ${fiat} открыта!\nОжидайте подтверждения реквизитов.`);
     }
 
-    // Initial render
-    renderAssets();
+    function openP2PProfile() {
+      alert('Профиль P2P:\nСделок: 14\nУспешность: 100%\nВерификация: Пройдена');
+    }
+
+    function showStub(feature) {
+      if (tg) tg.HapticFeedback?.impactOccurred('light');
+      alert(`Раздел «${feature}» доступен в вашем регионе.`);
+    }
+
+    function openAssetQuickAction(ticker) {
+      switchTab('swap');
+      swapFrom = ticker;
+      initSwap();
+    }
+
+    // Startup
+    renderWallet();
+    checkHash();
   </script>
 </body>
 </html>
