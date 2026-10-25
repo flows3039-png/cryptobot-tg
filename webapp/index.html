@@ -1105,10 +1105,27 @@
       border-top-right-radius: 24px;
       width: 100%;
       max-width: 440px;
-      max-height: 88vh;
+      max-height: 86vh;
       overflow-y: auto;
-      padding: 16px 20px calc(env(safe-area-inset-bottom, 16px) + 20px);
-      animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding: 12px 20px calc(env(safe-area-inset-bottom, 16px) + 24px);
+      animation: slideUp 0.28s cubic-bezier(0.32, 1, 0.23, 1);
+      box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
+    .modal-sheet::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    .modal-sheet-handle {
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.22);
+      margin: 0 auto 16px;
     }
     @keyframes slideUp {
       from { transform: translateY(100%); }
@@ -1279,6 +1296,61 @@
     @keyframes qrLaser {
       0%, 100% { transform: translateY(0); opacity: 0.8; }
       50% { transform: translateY(176px); opacity: 1; }
+    }
+
+  
+    /* --- Universal Modern CryptoBot Buttons & Micro-Animations --- */
+    .primary-btn, .modal-action-btn, .cb-primary-btn {
+      width: 100%;
+      height: 48px;
+      border-radius: 14px;
+      background: var(--accent-blue);
+      color: #ffffff;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.12s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.15s ease, background-color 0.15s ease;
+      font-family: var(--font-display);
+      box-shadow: 0 4px 14px rgba(43, 140, 255, 0.25);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .primary-btn:active, .modal-action-btn:active, .cb-primary-btn:active {
+      transform: scale(0.97);
+      opacity: 0.9;
+    }
+    .primary-btn.secondary {
+      background: var(--bg-card-secondary);
+      color: var(--text-primary);
+      box-shadow: none;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .primary-btn.danger {
+      background: rgba(255, 69, 58, 0.15);
+      color: var(--accent-red);
+      box-shadow: none;
+      border: 1px solid rgba(255, 69, 58, 0.22);
+    }
+    .primary-btn.disabled, .primary-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+      box-shadow: none;
+    }
+
+    /* Smooth Glide Animation for Text & Numbers */
+    .glide-in {
+      animation: textGlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes textGlideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
   </style>
@@ -1500,7 +1572,12 @@
 
         <div class="swap-switch-circle-wrap">
           <div class="swap-switch-circle" onclick="switchSwapCurrencies()">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l4-4m-4 4l-4-4"/></svg>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2b8cff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+              <path d="M16 21h5v-5"/>
+            </svg>
           </div>
         </div>
 
@@ -2977,15 +3054,29 @@
     }
 
     // ==========================================
-    // P2P PROFILE & MERCHANT INTERACTIVE SYSTEM (100% FUNCTIONAL)
+    // P2P PROFILE & MERCHANT INTERACTIVE SYSTEM (V3 POLISHED)
     // ==========================================
+    const CIRCULAR_FLAG_SVGS = {
+      RUB: `<svg viewBox="0 0 32 32" width="32" height="32" style="border-radius: 50%; display: block; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"><rect width="32" height="10.66" fill="#ffffff"/><rect y="10.66" width="32" height="10.66" fill="#0039a6"/><rect y="21.33" width="32" height="10.66" fill="#d52b1e"/></svg>`,
+      USD: `<svg viewBox="0 0 32 32" width="32" height="32" style="border-radius: 50%; display: block; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"><rect width="32" height="32" fill="#b22234"/><rect y="3.5" width="32" height="3" fill="#fff"/><rect y="9.5" width="32" height="3" fill="#fff"/><rect y="15.5" width="32" height="3" fill="#fff"/><rect y="21.5" width="32" height="3" fill="#fff"/><rect y="27.5" width="32" height="3" fill="#fff"/><rect width="16" height="15" fill="#3c3b6e"/><circle cx="4" cy="4" r="1" fill="#fff"/><circle cx="8" cy="4" r="1" fill="#fff"/><circle cx="12" cy="4" r="1" fill="#fff"/><circle cx="6" cy="8" r="1" fill="#fff"/><circle cx="10" cy="8" r="1" fill="#fff"/><circle cx="4" cy="12" r="1" fill="#fff"/><circle cx="8" cy="12" r="1" fill="#fff"/><circle cx="12" cy="12" r="1" fill="#fff"/></svg>`,
+      EUR: `<svg viewBox="0 0 32 32" width="32" height="32" style="border-radius: 50%; display: block; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"><rect width="32" height="32" fill="#003399"/><circle cx="16" cy="6" r="1.3" fill="#ffcc00"/><circle cx="21" cy="7.3" r="1.3" fill="#ffcc00"/><circle cx="24.7" cy="11" r="1.3" fill="#ffcc00"/><circle cx="26" cy="16" r="1.3" fill="#ffcc00"/><circle cx="24.7" cy="21" r="1.3" fill="#ffcc00"/><circle cx="21" cy="24.7" r="1.3" fill="#ffcc00"/><circle cx="16" cy="26" r="1.3" fill="#ffcc00"/><circle cx="11" cy="24.7" r="1.3" fill="#ffcc00"/><circle cx="7.3" cy="21" r="1.3" fill="#ffcc00"/><circle cx="6" cy="16" r="1.3" fill="#ffcc00"/><circle cx="7.3" cy="11" r="1.3" fill="#ffcc00"/><circle cx="11" cy="7.3" r="1.3" fill="#ffcc00"/></svg>`,
+      KZT: `<svg viewBox="0 0 32 32" width="32" height="32" style="border-radius: 50%; display: block; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"><rect width="32" height="32" fill="#00afca"/><circle cx="16" cy="14" r="4.5" fill="#fec50c"/><path d="M10 20c3-2 9-2 12 0-3-1-9-1-12 0z" fill="#fec50c"/></svg>`,
+      BYN: `<svg viewBox="0 0 32 32" width="32" height="32" style="border-radius: 50%; display: block; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"><rect width="32" height="21.3" fill="#c8313e"/><rect y="21.3" width="32" height="10.7" fill="#439b4b"/><rect width="6" height="32" fill="#fff"/><path d="M1 4l2-2 2 2-2 2zM1 12l2-2 2 2-2 2zM1 20l2-2 2 2-2 2zM1 28l2-2 2 2-2 2z" fill="#c8313e"/></svg>`,
+      UAH: `<svg viewBox="0 0 32 32" width="32" height="32" style="border-radius: 50%; display: block; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"><rect width="32" height="16" fill="#0057b7"/><rect y="16" width="32" height="16" fill="#ffd700"/></svg>`,
+      GEL: `<svg viewBox="0 0 32 32" width="32" height="32" style="border-radius: 50%; display: block; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"><rect width="32" height="32" fill="#ffffff"/><rect x="13" width="6" height="32" fill="#ff0000"/><rect y="13" width="32" height="6" fill="#ff0000"/><path d="M5 4h3v3H5zm0 17h3v3H5zm17-17h3v3h-3zm0 17h3v3h-3z" fill="#ff0000"/></svg>`,
+      AED: `<svg viewBox="0 0 32 32" width="32" height="32" style="border-radius: 50%; display: block; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"><rect width="32" height="10.6" fill="#00732f"/><rect y="10.6" width="32" height="10.6" fill="#ffffff"/><rect y="21.3" width="32" height="10.6" fill="#000000"/><rect width="9" height="32" fill="#ff0000"/></svg>`,
+      THB: `<svg viewBox="0 0 32 32" width="32" height="32" style="border-radius: 50%; display: block; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"><rect width="32" height="32" fill="#a51931"/><rect y="5.3" width="32" height="21.3" fill="#f4f5f8"/><rect y="10.6" width="32" height="10.6" fill="#2d2a4a"/></svg>`,
+      TRY: `<svg viewBox="0 0 32 32" width="32" height="32" style="border-radius: 50%; display: block; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"><rect width="32" height="32" fill="#e30a17"/><circle cx="14" cy="16" r="6" fill="#fff"/><circle cx="16" cy="16" r="4.8" fill="#e30a17"/><polygon points="21 16 19 14.5 19.8 17 17.5 15.5 20.5 15.5" fill="#fff"/></svg>`,
+      GBP: `<svg viewBox="0 0 32 32" width="32" height="32" style="border-radius: 50%; display: block; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"><rect width="32" height="32" fill="#012169"/><path d="M0 0l32 32m0-32L0 32" stroke="#fff" stroke-width="4"/><path d="M0 0l32 32m0-32L0 32" stroke="#c8102e" stroke-width="2"/><path d="M16 0v32M0 16h32" stroke="#fff" stroke-width="6"/><path d="M16 0v32M0 16h32" stroke="#c8102e" stroke-width="3.5"/></svg>`
+    };
+
     function getP2PState() {
       return {
         merchant: localStorage.getItem('cb_p2p_merchant') === 'active',
         currency: localStorage.getItem('cb_market_currency') || 'RUB',
         methods: JSON.parse(localStorage.getItem('cb_p2p_payment_methods') || '[]'),
         quietHours: JSON.parse(localStorage.getItem('cb_quiet_hours') || '{"enabled": false, "from": "23:00", "to": "08:00"}'),
-        favorites: JSON.parse(localStorage.getItem('cb_p2p_favorites') || '["CryptoMaster", "QuickPay P2P"]'),
+        favorites: JSON.parse(localStorage.getItem('cb_p2p_favorites') || '[]'),
         blacklist: JSON.parse(localStorage.getItem('cb_p2p_blacklist') || '[]')
       };
     }
@@ -2997,7 +3088,7 @@
       const state = getP2PState();
 
       const merchantBadge = state.merchant 
-        ? '<span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 179, 0, 0.16); color: #ffb300; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: 700;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg> Мерчант активен</span>'
+        ? '<span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 179, 0, 0.16); color: #ffb300; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: 700;"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg> Мерчант активен</span>'
         : '<span style="display: inline-block; background: var(--bg-card-secondary); border-radius: 8px; padding: 4px 10px; font-size: 11px; color: var(--text-secondary); margin: 4px 0 2px;">Нет KYC</span>';
 
       const methodsText = state.methods.length > 0 
@@ -3111,12 +3202,22 @@
           </div>
         </div>
 
-        <button class="primary-btn" onclick="closeModal()" style="margin-top: 10px;">Закрыть</button>
+        <button class="primary-btn secondary" onclick="closeModal()" style="margin-top: 10px;">Закрыть</button>
       `);
     }
 
+    // --- 1. P2P Мерчант Modal (СТРОГАЯ ПРОВЕРКА УСЛОВИЙ) ---
     function openMerchantModal() {
       const isMerchant = localStorage.getItem('cb_p2p_merchant') === 'active';
+      const deals = parseInt(localStorage.getItem('cb_p2p_deals_count') || '0', 10);
+      const rate = parseFloat(localStorage.getItem('cb_p2p_deals_rate') || '100');
+      const usdtBal = parseFloat(userBalance['USDT'] || '0');
+
+      const condDeals = deals >= 10;
+      const condRate = rate >= 95;
+      const condDeposit = usdtBal >= 100;
+      const allConditionsMet = condDeals && condRate && condDeposit;
+
       openModal('P2P Мерчант', `
         <div style="text-align: center; margin-bottom: 20px;">
           <div style="width: 64px; height: 64px; border-radius: 20px; background: rgba(255, 179, 0, 0.15); color: #ffb300; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;">
@@ -3124,76 +3225,117 @@
           </div>
           <div style="font-size: 20px; font-weight: 700; margin-bottom: 6px;">Статус P2P Мерчанта</div>
           <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.4;">
-            Мерчанты получают верифицированный значок короны, приоритетное размещение в списке и повышенное доверие покупателей.
+            Мерчанты получают официальный значок короны, приоритетное размещение в стакане P2P и повышенные лимиты сделок.
           </div>
         </div>
 
         <div style="background: var(--bg-card-secondary); border-radius: 14px; padding: 14px; margin-bottom: 18px;">
           <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Условия получения статуса:</div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px;">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px;">
             <span style="color: var(--text-secondary);">Количество сделок</span>
-            <span style="font-weight: 600;">10 / 10 выполнено</span>
+            <span style="font-weight: 600; color: ${condDeals ? 'var(--accent-green)' : 'var(--accent-red)'};">
+              ${deals} / 10 ${condDeals ? '✓' : `(нужно еще ${10 - deals})`}
+            </span>
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px;">
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px;">
             <span style="color: var(--text-secondary);">Процент выполнения</span>
-            <span style="font-weight: 600; color: var(--accent-green);">100% (требуется >95%)</span>
+            <span style="font-weight: 600; color: ${condRate ? 'var(--accent-green)' : 'var(--accent-red)'};">
+              ${rate}% ${condRate ? '✓' : '(требуется >95%)'}
+            </span>
           </div>
+
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
             <span style="color: var(--text-secondary);">Страховой депозит</span>
-            <span style="font-weight: 600;">0 USDT (требуется 100 USDT)</span>
+            <span style="font-weight: 600; color: ${condDeposit ? 'var(--accent-green)' : 'var(--accent-red)'};">
+              ${usdtBal.toFixed(2)} / 100 USDT ${condDeposit ? '✓' : '(недостаточно)'}
+            </span>
           </div>
         </div>
 
-        <button class="primary-btn" onclick="toggleMerchantStatus()" style="background: ${isMerchant ? 'var(--accent-red)' : '#ffb300'}; color: ${isMerchant ? '#fff' : '#000'};">
-          ${isMerchant ? 'Отключить статус мерчанта' : 'Активировать статус мерчанта'}
-        </button>
+        ${isMerchant ? `
+          <button class="primary-btn danger" onclick="disableMerchantStatus()">
+            Отключить статус мерчанта
+          </button>
+        ` : allConditionsMet ? `
+          <button class="primary-btn" onclick="activateMerchantStatus()" style="background: #ffb300; color: #000;">
+            Внести депозит 100 USDT и активировать
+          </button>
+        ` : `
+          <button class="primary-btn disabled" disabled style="background: var(--bg-card-secondary); color: var(--text-muted); box-shadow: none;">
+            Условия не выполнены
+          </button>
+          <div style="font-size: 12px; color: var(--text-secondary); text-align: center; margin-top: 10px;">
+            Совершите минимум 10 сделок в боте и обеспечьте баланс от 100 USDT для активации.
+          </div>
+        `}
       `);
     }
 
-    function toggleMerchantStatus() {
-      const current = localStorage.getItem('cb_p2p_merchant') === 'active';
-      if (current) {
-        localStorage.removeItem('cb_p2p_merchant');
-        showToast('P2P Мерчант', 'Статус мерчанта отключен');
-      } else {
-        localStorage.setItem('cb_p2p_merchant', 'active');
-        showToast('P2P Мерчант', 'Статус мерчанта успешно активирован');
+    function activateMerchantStatus() {
+      const deals = parseInt(localStorage.getItem('cb_p2p_deals_count') || '0', 10);
+      const rate = parseFloat(localStorage.getItem('cb_p2p_deals_rate') || '100');
+      const usdtBal = parseFloat(userBalance['USDT'] || '0');
+
+      if (deals < 10 || rate < 95 || usdtBal < 100) {
+        showToast('Отказ', 'Условия для получения мерчанта не выполнены');
+        return;
       }
+
+      userBalance['USDT'] = (usdtBal - 100).toFixed(2);
+      localStorage.setItem('cb_p2p_merchant', 'active');
+      showToast('P2P Мерчант', 'Поздравляем! Страховой депозит внесён, статус мерчанта активен');
       closeModal();
       setTimeout(openP2PProfileModal, 250);
     }
 
+    function disableMerchantStatus() {
+      localStorage.removeItem('cb_p2p_merchant');
+      const usdtBal = parseFloat(userBalance['USDT'] || '0');
+      userBalance['USDT'] = (usdtBal + 100).toFixed(2);
+      showToast('P2P Мерчант', 'Статус мерчанта отключен, депозит возвращен');
+      closeModal();
+      setTimeout(openP2PProfileModal, 250);
+    }
+
+    // --- 2. Способы оплаты Modal (БЕЗ ЗАШИТЫХ ШАБЛОНОВ) ---
     function openPaymentMethodsModal() {
       const methods = JSON.parse(localStorage.getItem('cb_p2p_payment_methods') || '[]');
-      if (methods.length === 0) {
-        methods.push(
-          { id: '1', bank: 'Т-Банк (Тинькофф)', details: '5536 91** **** 4812', name: 'MODRIX' },
-          { id: '2', bank: 'СБП (Система быстрых платежей)', details: '+7 (999) ***-45-67', name: 'MODRIX' }
-        );
-        localStorage.setItem('cb_p2p_payment_methods', JSON.stringify(methods));
-      }
 
       let listHtml = '';
-      methods.forEach(m => {
-        listHtml += `
-          <div style="background: var(--bg-card-secondary); border-radius: 14px; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-weight: 600; font-size: 15px; margin-bottom: 3px;">${m.bank}</div>
-              <div class="num-rounded" style="color: var(--text-secondary); font-size: 13px;">${m.details}</div>
-              <div style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${m.name}</div>
+      if (methods.length === 0) {
+        listHtml = `
+          <div style="text-align: center; color: var(--text-secondary); padding: 32px 16px 24px;">
+            <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(255, 152, 26, 0.12); color: var(--accent-orange); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
             </div>
-            <button onclick="deletePaymentMethod('${m.id}')" style="background: rgba(255, 69, 58, 0.12); color: var(--accent-red); border: none; border-radius: 8px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
+            <div style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">Нет способов оплаты</div>
+            <div style="font-size: 13px; line-height: 1.4;">Добавьте карту или номер СБП для приёма платежей в P2P-сделках.</div>
           </div>
         `;
-      });
+      } else {
+        methods.forEach(m => {
+          listHtml += `
+            <div style="background: var(--bg-card-secondary); border-radius: 14px; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: 600; font-size: 15px; margin-bottom: 3px;">${m.bank}</div>
+                <div class="num-rounded" style="color: var(--text-secondary); font-size: 13px;">${m.details}</div>
+                <div style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${m.name}</div>
+              </div>
+              <button onclick="deletePaymentMethod('${m.id}')" style="background: rgba(255, 69, 58, 0.12); color: var(--accent-red); border: none; border-radius: 8px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
+          `;
+        });
+      }
 
       openModal('Способы оплаты', `
         <div style="margin-bottom: 16px;">
           ${listHtml}
         </div>
-        <button class="primary-btn" onclick="openAddPaymentMethodForm()" style="margin-bottom: 8px;">
+        <button class="primary-btn" onclick="openAddPaymentMethodForm()">
           + Добавить способ оплаты
         </button>
       `);
@@ -3258,39 +3400,45 @@
       openPaymentMethodsModal();
     }
 
+    // --- 3. Валюта маркета Modal (КРУГЛЫЕ ФЛАГИ СТРАН) ---
     function openMarketCurrencyModal() {
       const current = localStorage.getItem('cb_market_currency') || 'RUB';
       const currencies = [
-        { code: 'RUB', name: 'Российский рубль', symbol: '₽' },
-        { code: 'USD', name: 'Доллар США', symbol: '$' },
-        { code: 'EUR', name: 'Евро', symbol: '€' },
-        { code: 'KZT', name: 'Казахстанский тенге', symbol: '₸' },
-        { code: 'BYN', name: 'Белорусский рубль', symbol: 'Br' },
-        { code: 'UAH', name: 'Украинская гривна', symbol: '₴' },
-        { code: 'GEL', name: 'Грузинский лари', symbol: '₾' },
-        { code: 'AED', name: 'Дирхам ОАЭ', symbol: 'AED' },
-        { code: 'THB', name: 'Тайский бат', symbol: '฿' }
+        { code: 'RUB', name: 'Российский рубль' },
+        { code: 'USD', name: 'Доллар США' },
+        { code: 'EUR', name: 'Евро' },
+        { code: 'KZT', name: 'Казахстанский тенге' },
+        { code: 'BYN', name: 'Белорусский рубль' },
+        { code: 'UAH', name: 'Украинская гривна' },
+        { code: 'GEL', name: 'Грузинский лари' },
+        { code: 'AED', name: 'Дирхам ОАЭ' },
+        { code: 'THB', name: 'Тайский бат' },
+        { code: 'TRY', name: 'Турецкая лира' },
+        { code: 'GBP', name: 'Британский фунт' }
       ];
 
       let listHtml = '';
       currencies.forEach(c => {
         const isSel = c.code === current;
+        const flagSvg = CIRCULAR_FLAG_SVGS[c.code] || CIRCULAR_FLAG_SVGS.USD;
         listHtml += `
-          <div class="more-list-row" onclick="selectMarketCurrency('${c.code}')">
-            <div class="more-list-left">
-              <span class="num-rounded" style="font-weight: 700; width: 36px; color: var(--accent-blue); font-size: 16px;">${c.symbol}</span>
+          <div class="more-list-row" onclick="selectMarketCurrency('${c.code}')" style="cursor: pointer; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+            <div class="more-list-left" style="display: flex; align-items: center; gap: 14px;">
+              <div style="width: 32px; height: 32px; flex-shrink: 0;">
+                ${flagSvg}
+              </div>
               <div>
-                <div style="font-weight: 600;">${c.name}</div>
-                <div style="font-size: 12px; color: var(--text-secondary);">${c.code}</div>
+                <div style="font-weight: 600; font-size: 15px;">${c.name}</div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">${c.code}</div>
               </div>
             </div>
-            ${isSel ? '<span style="color: var(--accent-blue); font-weight: 700;">✓</span>' : ''}
+            ${isSel ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent-blue)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
           </div>
         `;
       });
 
       openModal('Валюта маркета', `
-        <div class="more-list-card" style="margin-top: 10px;">
+        <div class="more-list-card" style="margin-top: 6px; border-radius: 16px; overflow: hidden;">
           ${listHtml}
         </div>
       `);
@@ -3303,6 +3451,7 @@
       setTimeout(openP2PProfileModal, 250);
     }
 
+    // --- 4. Тихие часы Modal ---
     function openQuietHoursModal() {
       const quiet = JSON.parse(localStorage.getItem('cb_quiet_hours') || '{"enabled": false, "from": "23:00", "to": "08:00"}');
 
@@ -3355,19 +3504,20 @@
       setTimeout(openP2PProfileModal, 250);
     }
 
+    // --- 5. Избранное Modal ---
     function openFavoritesModal() {
-      const favs = JSON.parse(localStorage.getItem('cb_p2p_favorites') || '["CryptoMaster", "QuickPay P2P"]');
+      const favs = JSON.parse(localStorage.getItem('cb_p2p_favorites') || '[]');
 
       let listHtml = '';
       if (favs.length === 0) {
-        listHtml = '<div style="text-align: center; color: var(--text-secondary); padding: 24px 0;">Список избранных пуст</div>';
+        listHtml = '<div style="text-align: center; color: var(--text-secondary); padding: 32px 0 20px;">В списке избранного пока никого нет</div>';
       } else {
         favs.forEach(user => {
           listHtml += `
             <div style="background: var(--bg-card-secondary); border-radius: 14px; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
               <div>
                 <div style="font-weight: 600; font-size: 15px;">${user}</div>
-                <div style="color: var(--accent-green); font-size: 12px;">100% отзывов · 300+ сделок</div>
+                <div style="color: var(--accent-green); font-size: 12px;">100% отзывов</div>
               </div>
               <button onclick="removeFavorite('${user}')" style="background: rgba(255,255,255,0.06); border: none; border-radius: 8px; padding: 6px 12px; color: var(--accent-red); font-size: 12px; font-weight: 600; cursor: pointer;">
                 Удалить
@@ -3408,12 +3558,13 @@
       openFavoritesModal();
     }
 
+    // --- 6. Чёрный список Modal ---
     function openBlacklistModal() {
       const list = JSON.parse(localStorage.getItem('cb_p2p_blacklist') || '[]');
 
       let listHtml = '';
       if (list.length === 0) {
-        listHtml = '<div style="text-align: center; color: var(--text-secondary); padding: 24px 0;">В чёрном списке никого нет</div>';
+        listHtml = '<div style="text-align: center; color: var(--text-secondary); padding: 32px 0 20px;">В чёрном списке никого нет</div>';
       } else {
         list.forEach(user => {
           listHtml += `
@@ -3436,7 +3587,7 @@
         </div>
         <div style="display: flex; gap: 8px;">
           <input type="text" id="new-block-user" placeholder="Имя пользователя или ID" style="flex: 1; background: var(--bg-card-secondary); color: #fff; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 14px; font-size: 14px; outline: none;">
-          <button class="primary-btn" onclick="blockUser()" style="width: auto; padding: 0 18px; margin: 0; background: var(--accent-red);">Заблокировать</button>
+          <button class="primary-btn danger" onclick="blockUser()" style="width: auto; padding: 0 18px; margin: 0;">Заблокировать</button>
         </div>
       `);
     }
@@ -3459,93 +3610,6 @@
       localStorage.setItem('cb_p2p_blacklist', JSON.stringify(list));
       showToast('Чёрный список', `Пользователь ${user} разблокирован`);
       openBlacklistModal();
-    }
-
-    // ==========================================
-    // OTHER MODALS (CURRENCY, SETTINGS, QR)
-    // ==========================================
-    function openCurrencySelectorModal() {
-      const current = localStorage.getItem('selected_fiat') || 'RUB';
-      const listHtml = Object.keys(FIAT_CONFIG).map(code => {
-        const item = FIAT_CONFIG[code];
-        const isSel = code === current;
-        return `
-          <div class="asset-row" onclick="selectFiatCurrency('${code}')">
-            <div class="asset-row-left">
-              <div style="width: 38px; height: 38px; border-radius: 50%; background: var(--bg-card-secondary); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700;">
-                ${item.symbol}
-              </div>
-              <div>
-                <div class="asset-row-name">${code}</div>
-                <div class="asset-row-price-sub">${item.name}</div>
-              </div>
-            </div>
-            <div class="asset-row-right">
-              ${isSel ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent-blue)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      openModal('Основная валюта', `
-        <div class="search-input-box">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" class="search-input-field" placeholder="Поиск валюты" oninput="filterFiatList(this.value)">
-        </div>
-        <div id="fiat-modal-list" class="assets-list">${listHtml}</div>
-      `);
-    }
-
-    function filterFiatList(q) {
-      const query = (q || '').toUpperCase();
-      document.querySelectorAll('#fiat-modal-list .asset-row').forEach(r => {
-        r.style.display = r.innerText.toUpperCase().includes(query) ? 'flex' : 'none';
-      });
-    }
-
-    function selectFiatCurrency(code) {
-      localStorage.setItem('selected_fiat', code);
-      closeModal();
-      renderAssetsList();
-      showToast('Валюта изменена', `Основная валюта: ${code}`);
-    }
-
-    function openAddressBookModal() {
-      openModal('Книга адресов', `
-        <div class="empty-state-card">
-          <svg class="empty-doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-          <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">Книга адресов пуста</div>
-          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">Сохраняйте адреса для быстрого вывода</div>
-          <button class="swap-submit-btn" style="margin-top: 0; padding: 12px;" onclick="showToast('Адрес', 'Добавление адресов доступно в профиле')">Добавить адрес</button>
-        </div>
-      `);
-    }
-
-    function openCommissionsModal() {
-      openModal('Комиссии', `
-        <div style="font-size: 14px; line-height: 1.6;">
-          <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-            <span style="color: var(--text-secondary);">Пополнение кошелька:</span>
-            <span style="font-weight: 600; color: var(--accent-green);">0% (Бесплатно)</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-            <span style="color: var(--text-secondary);">Обмен (Swap):</span>
-            <span style="font-weight: 600; color: var(--accent-green);">0% (Без комиссии)</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-            <span style="color: var(--text-secondary);">P2P Маркет:</span>
-            <span style="font-weight: 600; color: var(--accent-green);">0% (Покупка)</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-            <span style="color: var(--text-secondary);">Торговля на бирже:</span>
-            <span class="num-rounded" style="font-weight: 600;">0.1%</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding: 10px 0;">
-            <span style="color: var(--text-secondary);">Вывод:</span>
-            <span style="font-weight: 600;">Комиссия сети</span>
-          </div>
-        </div>
-      `);
     }
 
     // ==========================================
