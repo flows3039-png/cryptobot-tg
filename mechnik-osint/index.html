@@ -2,28 +2,25 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MECHNIK // INTELLIGENCE & OSINT SYSTEM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>mechnik-osint.lol // OSINT Search</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-dark: #07090e;
-      --bg-card: rgba(13, 17, 27, 0.75);
-      --bg-card-border: rgba(43, 62, 107, 0.45);
-      --neon-cyan: #00e5ff;
-      --neon-cyan-glow: rgba(0, 229, 255, 0.25);
-      --neon-blue: #2979ff;
-      --neon-purple: #7c4dff;
-      --neon-green: #00e676;
-      --neon-red: #ff1744;
-      --text-main: #e2e8f0;
-      --text-muted: #8392a7;
-      --font-mono: 'JetBrains Mono', monospace;
-      --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --bg-color: #0b0c0e;
+      --card-bg: #15171c;
+      --card-inner: #1c1f26;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-primary: #ffffff;
+      --text-secondary: #8e95a5;
+      --text-muted: #585e6d;
+      --accent-blue: #0084ff;
+      --accent-blue-hover: #0073e6;
+      --pill-bg: #1c1f26;
+      --pill-active: #2b303c;
+      --dot-color: rgba(255, 255, 255, 0.07);
     }
 
     * {
@@ -31,932 +28,1368 @@
       margin: 0;
       padding: 0;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     body {
-      background: var(--bg-dark);
-      color: var(--text-main);
-      font-family: var(--font-ui);
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       min-height: 100vh;
+      overflow-x: hidden;
       display: flex;
       flex-direction: column;
-      overflow-x: hidden;
-      position: relative;
+      user-select: none;
     }
 
-    /* Ambient cyber background */
-    body::before {
-      content: "";
+    /* Subtle dot grid pattern */
+    .dot-grid {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background:
-        radial-gradient(circle at 15% 20%, rgba(0, 229, 255, 0.08) 0%, transparent 45%),
-        radial-gradient(circle at 85% 75%, rgba(124, 77, 255, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 50% 50%, rgba(41, 121, 255, 0.04) 0%, transparent 60%);
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);
+      background-size: 24px 24px;
       pointer-events: none;
-      z-index: 0;
+      z-index: 1;
     }
 
-    /* Grid lines */
-    body::after {
-      content: "";
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-image: 
-        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
+    /* Top Navigation */
     header {
       position: relative;
-      z-index: 10;
-      padding: 18px 32px;
+      z-index: 50;
+      height: 64px;
+      padding: 0 28px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(12px);
-      background: rgba(7, 9, 14, 0.6);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .brand-logo {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 15px var(--neon-cyan-glow);
-    }
-
-    .brand-logo i {
-      color: #07090e;
-      stroke-width: 2.5;
-    }
-
-    .brand-title {
-      font-family: var(--font-mono);
-      font-weight: 700;
-      font-size: 1.15rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      background: linear-gradient(90deg, #ffffff, var(--neon-cyan));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .brand-sub {
-      font-size: 0.72rem;
-      color: var(--text-muted);
-      letter-spacing: 0.08em;
-      font-family: var(--font-mono);
-    }
-
-    .sys-status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      padding: 6px 14px;
-      border-radius: 20px;
-      background: rgba(0, 230, 118, 0.08);
-      border: 1px solid rgba(0, 230, 118, 0.25);
-      color: var(--neon-green);
-    }
-
-    .status-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--neon-green);
-      box-shadow: 0 0 8px var(--neon-green);
-      animation: pulse-dot 2s infinite ease-in-out;
-    }
-
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
-    }
-
-    main {
-      position: relative;
-      z-index: 10;
-      flex: 1;
-      padding: 28px 32px 120px 32px;
-      max-width: 1440px;
-      margin: 0 auto;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    /* Hero / Status banner */
-    .hero-panel {
-      background: var(--bg-card);
-      border: 1px solid var(--bg-card-border);
-      border-radius: 14px;
-      padding: 24px 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    }
-
-    .hero-info h1 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 6px;
-    }
-
-    .hero-info p {
-      color: var(--text-muted);
-      font-size: 0.88rem;
-      max-width: 640px;
-      line-height: 1.45;
-    }
-
-    .hero-radar {
-      position: relative;
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      border: 1px solid rgba(0, 229, 255, 0.35);
-      background: radial-gradient(circle, rgba(0, 229, 255, 0.1) 0%, transparent 70%);
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .hero-radar::after {
-      content: "";
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: conic-gradient(from 0deg at 50% 50%, rgba(0, 229, 255, 0.4) 0deg, transparent 60deg, transparent 360deg);
-      animation: radar-sweep 2.5s linear infinite;
-    }
-
-    @keyframes radar-sweep {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-
-    /* Layout grid: Graph (left) & Dossier (right) */
-    .intel-grid {
-      display: grid;
-      grid-template-columns: 1fr 420px;
-      gap: 24px;
-      min-height: 580px;
-    }
-
-    @media (max-width: 1024px) {
-      .intel-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* Vis Network Graph Card */
-    .graph-card {
-      background: var(--bg-card);
-      border: 1px solid var(--bg-card-border);
-      border-radius: 14px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      backdrop-filter: blur(16px);
-      position: relative;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    }
-
-    .card-header {
-      padding: 16px 22px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-family: var(--font-mono);
-      font-size: 0.82rem;
-      color: var(--neon-cyan);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      background: rgba(13, 17, 27, 0.5);
-    }
-
-    .card-header .tools {
-      display: flex;
+      justify-content: flex-end;
       gap: 12px;
     }
 
-    .tool-btn {
-      background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: var(--text-muted);
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 0.72rem;
+    .header-center-logo {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      align-items: center;
+      gap: 8px;
       cursor: pointer;
-      font-family: var(--font-mono);
+    }
+
+    .header-center-logo.visible {
+      display: flex;
+    }
+
+    .brand-title-sm {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .btn-sub {
+      background: transparent;
+      border: none;
+      color: var(--accent-blue);
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-sub:hover {
+      background: rgba(0, 132, 255, 0.1);
+    }
+
+    .btn-profile {
+      background: #191c23;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 12px 5px 6px;
+      border-radius: 24px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
       transition: all 0.2s ease;
     }
 
-    .tool-btn:hover {
-      border-color: var(--neon-cyan);
-      color: var(--neon-cyan);
-      background: rgba(0, 229, 255, 0.05);
+    .btn-profile:hover {
+      background: #222631;
+      border-color: rgba(255, 255, 255, 0.16);
     }
 
-    #network-canvas {
-      flex: 1;
-      width: 100%;
-      height: 100%;
-      min-height: 480px;
-      background: radial-gradient(circle at center, rgba(14, 22, 38, 0.5) 0%, rgba(7, 9, 14, 0.95) 100%);
-    }
-
-    /* Dossier panel */
-    .dossier-card {
-      background: var(--bg-card);
-      border: 1px solid var(--bg-card-border);
-      border-radius: 14px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    }
-
-    .dossier-body {
-      padding: 22px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      max-height: 640px;
-    }
-
-    .target-profile {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .target-avatar {
-      width: 64px;
-      height: 64px;
-      border-radius: 14px;
-      background: #151d2f;
-      border: 2px solid var(--neon-cyan);
-      box-shadow: 0 0 16px var(--neon-cyan-glow);
+    .avatar-sm {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #12141a;
+      border: 1px solid rgba(255, 255, 255, 0.15);
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      position: relative;
     }
 
-    .target-avatar img {
+    .avatar-sm img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
 
-    .target-meta {
+    .avatar-sm svg {
+      width: 16px;
+      height: 16px;
+      fill: #fff;
+    }
+
+    /* Main Container */
+    main {
+      position: relative;
+      z-index: 10;
       flex: 1;
-      min-width: 0;
+      display: flex;
+      flex-direction: column;
     }
 
-    .target-name {
-      font-size: 1.15rem;
+    /* HERO SEARCH SCREEN */
+    #hero-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 24px 100px 24px;
+      margin-top: -20px;
+      text-align: center;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    #hero-screen.hidden {
+      display: none;
+    }
+
+    .spider-icon {
+      width: 44px;
+      height: 44px;
+      margin-bottom: 16px;
+      color: #ffffff;
+    }
+
+    .hero-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .hero-title {
+      font-size: 2.1rem;
       font-weight: 700;
+      letter-spacing: -0.03em;
       color: #fff;
-      white-space: nowrap;
+    }
+
+    .beta-badge {
+      background: #0077ff;
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 6px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .hero-sub {
+      color: #fff;
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      max-width: 600px;
+      line-height: 1.4;
+    }
+
+    /* Category Tabs */
+    .tabs-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .tab-chip {
+      background: #191c23;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab-chip.active {
+      background: #2b303c;
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.12);
+      font-weight: 600;
+    }
+
+    .tab-chip.disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .chip-tag {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* Search Box */
+    .search-wrapper {
+      width: 100%;
+      max-width: 580px;
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .search-input-box {
+      width: 100%;
+      background: #191c23;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 28px;
+      padding: 14px 54px 14px 22px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .search-input-box:focus {
+      border-color: rgba(255, 255, 255, 0.2);
+      background: #1f232c;
+    }
+
+    .search-input-box::placeholder {
+      color: #555b6a;
+      font-weight: 400;
+    }
+
+    .btn-submit-search {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      border: none;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+    }
+
+    .btn-submit-search:hover {
+      background: var(--accent-blue-hover);
+      transform: translateY(-50%) scale(1.05);
+    }
+
+    .btn-submit-search:active {
+      transform: translateY(-50%) scale(0.95);
+    }
+
+    .btn-submit-search svg {
+      width: 18px;
+      height: 18px;
+      stroke: #fff;
+      stroke-width: 2.4;
+      fill: none;
+    }
+
+    /* Limits counter */
+    .limits-text {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      margin-bottom: 14px;
+    }
+
+    /* Footer links */
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: #fff;
+    }
+
+    .footer-links a.tg-link {
+      color: var(--accent-blue);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 500;
+    }
+
+    .footer-links a.tg-link:hover {
+      color: #38a5ff;
+    }
+
+    /* RESULTS CANVAS SCREEN */
+    #canvas-screen {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
       overflow: hidden;
-      text-overflow: ellipsis;
+      flex-direction: column;
     }
 
-    .target-handle {
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      color: var(--neon-cyan);
+    #canvas-screen.active {
+      display: flex;
     }
 
-    .target-badge {
+    /* Graph tree workspace */
+    .canvas-viewport {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 100px 24px 140px 24px;
+    }
+
+    /* Root query card */
+    .node-root {
+      background: #191c23;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 10px 22px;
+      color: #fff;
+      font-size: 0.92rem;
+      font-weight: 600;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      font-family: var(--font-mono);
-      font-size: 0.68rem;
-      padding: 2px 8px;
-      border-radius: 4px;
-      background: rgba(124, 77, 255, 0.15);
-      border: 1px solid rgba(124, 77, 255, 0.35);
-      color: #b388ff;
-      margin-top: 4px;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      z-index: 10;
     }
 
-    /* Metric cards inside dossier */
-    .metric-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
+    .node-root span.tag {
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    /* Line connector */
+    .tree-line-v {
+      width: 2px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.12);
+      margin: 0 auto;
+    }
+
+    /* Child result cards list */
+    .tree-cards-row {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      max-width: 1100px;
+      z-index: 10;
+    }
+
+    .intel-card {
+      background: #16181f;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      width: 320px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      transition: border-color 0.2s;
+    }
+
+    .intel-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-service-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .card-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-secondary);
+    }
+
+    .card-badge.found {
+      background: rgba(0, 230, 118, 0.12);
+      color: #00e676;
+    }
+
+    .card-badge.hidden-badge {
+      background: rgba(255, 23, 68, 0.12);
+      color: #ff5252;
+    }
+
+    .card-data-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .card-data-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .card-data-val {
+      font-size: 0.88rem;
+      color: #e2e8f0;
+      font-weight: 500;
+      word-break: break-all;
+    }
+
+    .card-avatar-wrap {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #111;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .card-avatar-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Floating Summary Panel (Top Right) */
+    .summary-floating-panel {
+      position: fixed;
+      top: 80px;
+      right: 28px;
+      width: 310px;
+      background: #15171e;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
       gap: 12px;
     }
 
-    .metric-box {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 10px;
-      padding: 12px 14px;
+    .summary-header {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
-      transition: all 0.2s ease;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    .metric-box:hover {
-      border-color: rgba(0, 229, 255, 0.3);
-      background: rgba(0, 229, 255, 0.02);
+    .summary-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
-    .metric-title {
-      font-family: var(--font-mono);
-      font-size: 0.68rem;
+    .summary-title-count {
+      background: rgba(255, 255, 255, 0.1);
+      font-size: 0.72rem;
+      padding: 1px 6px;
+      border-radius: 10px;
+      color: var(--text-secondary);
+    }
+
+    .summary-ctrls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .summary-ctrls svg {
+      width: 15px;
+      height: 15px;
+      stroke: var(--text-secondary);
+      transition: stroke 0.2s;
+    }
+
+    .summary-ctrls svg:hover {
+      stroke: #fff;
+    }
+
+    .summary-sec-title {
+      font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .summary-fact-row {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 6px;
-    }
-
-    .metric-title i {
-      width: 14px;
-      height: 14px;
-      color: var(--neon-cyan);
-    }
-
-    .metric-val {
-      font-family: var(--font-mono);
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    /* Dossier sections */
-    .dossier-sec-title {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--neon-cyan);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-
-    .bio-box {
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px dashed rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 12px;
       font-size: 0.82rem;
-      color: #cbd5e1;
-      line-height: 1.45;
-      font-family: var(--font-mono);
-      max-height: 100px;
-      overflow-y: auto;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
     }
 
-    /* Open platforms links */
-    .platforms-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
+    .summary-fact-label {
+      color: var(--text-secondary);
     }
 
-    .platform-chip {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      text-decoration: none;
-      color: var(--text-main);
-      font-size: 0.78rem;
-      font-family: var(--font-mono);
-      transition: all 0.2s ease;
+    .summary-fact-val {
+      color: #fff;
+      font-weight: 500;
     }
 
-    .platform-chip:hover {
-      border-color: var(--neon-cyan);
-      color: var(--neon-cyan);
-      background: rgba(0, 229, 255, 0.05);
-      transform: translateY(-1px);
-    }
-
-    .platform-chip .p-status {
-      margin-left: auto;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--text-muted);
-    }
-
-    .platform-chip.found .p-status {
-      background: var(--neon-green);
-      box-shadow: 0 0 6px var(--neon-green);
-    }
-
-    /* Floating Search Bar */
-    .search-dock {
+    /* Bottom Floating Dock */
+    .dock-container {
       position: fixed;
-      bottom: 26px;
+      bottom: 24px;
       left: 50%;
       transform: translateX(-50%);
-      width: 90%;
-      max-width: 680px;
-      z-index: 100;
-    }
-
-    .search-box {
-      background: rgba(13, 17, 27, 0.85);
-      border: 1px solid rgba(0, 229, 255, 0.35);
-      border-radius: 14px;
-      padding: 8px 10px 8px 18px;
+      width: 100%;
+      max-width: 580px;
+      z-index: 70;
+      padding: 0 16px;
       display: flex;
       align-items: center;
-      gap: 12px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 229, 255, 0.15);
-      backdrop-filter: blur(20px);
-      transition: all 0.25s ease;
     }
 
-    .search-box:focus-within {
-      border-color: var(--neon-cyan);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 229, 255, 0.3);
+    /* Zoom Controls (Bottom Right) */
+    .zoom-ctrls {
+      position: fixed;
+      bottom: 24px;
+      right: 28px;
+      background: #191c23;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      z-index: 70;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     }
 
-    .search-box i.search-icon {
-      color: var(--neon-cyan);
-      width: 20px;
-      height: 20px;
-    }
-
-    .search-box input {
-      flex: 1;
+    .zoom-btn {
       background: transparent;
       border: none;
-      outline: none;
-      color: #fff;
-      font-family: var(--font-mono);
-      font-size: 0.95rem;
-    }
-
-    .search-box input::placeholder {
-      color: rgba(131, 146, 167, 0.7);
-    }
-
-    .search-btn {
-      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));
-      border: none;
-      border-radius: 10px;
-      padding: 10px 20px;
-      color: #07090e;
-      font-family: var(--font-mono);
-      font-weight: 700;
-      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-size: 1rem;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 6px;
-      letter-spacing: 0.05em;
-      transition: all 0.2s ease;
+      justify-content: center;
+      padding: 0 4px;
     }
 
-    .search-btn:hover {
-      box-shadow: 0 0 16px var(--neon-cyan);
-      transform: translateY(-1px);
+    .zoom-btn:hover {
+      color: #fff;
     }
 
-    .search-btn:active {
-      transform: translateY(0);
-    }
-
-    /* Scanlines effect overlay */
-    .scanlines {
+    /* MODAL DIALOG (Учетная запись) */
+    .modal-backdrop {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
-      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-      background-size: 100% 4px;
-      z-index: 999;
-      pointer-events: none;
-      opacity: 0.35;
-    }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.2);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--neon-cyan);
-    }
-
-    .loading-pulse {
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 100;
       display: none;
-      color: var(--neon-cyan);
-      font-family: var(--font-mono);
-      font-size: 0.8rem;
-      animation: blink 1s infinite;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
     }
 
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+    .modal-backdrop.open {
+      display: flex;
+      opacity: 1;
+    }
+
+    .modal-card {
+      background: #14161d;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 540px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-head {
+      padding: 22px 24px 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-head h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .btn-close-modal {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #1e222b;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      transition: all 0.2s;
+    }
+
+    .btn-close-modal:hover {
+      background: #2a2f3c;
+      color: #fff;
+    }
+
+    /* Modal Navigation tabs */
+    .modal-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 0 24px 16px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .m-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .m-tab.active {
+      background: #232733;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .modal-body {
+      padding: 20px 24px 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    /* User Profile snippet */
+    .user-profile-banner {
+      background: #1b1e27;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .user-avatar-lg {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: #12141a;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      overflow: hidden;
+    }
+
+    .user-avatar-lg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .user-meta-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .user-meta-sub {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-bottom: 1px;
+    }
+
+    /* Subscription card */
+    .sub-plan-box {
+      background: #191c25;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .plan-row-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .plan-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .plan-badge-base {
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: #2b303c;
+      color: #fff;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    .plan-desc-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    .btn-upgrade-plan {
+      background: #222632;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      margin-top: 4px;
+    }
+
+    .btn-upgrade-plan:hover {
+      background: #2d3343;
+    }
+
+    /* Info rows (Reg date / last login) */
+    .meta-list-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 4px 0;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .meta-row span.val {
+      color: #fff;
+      font-weight: 500;
+    }
+
+    /* Limits detail box */
+    .limits-sec-box {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .limits-sec-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .limit-progress-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .limit-lbl-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .limit-main-lbl {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .limit-sub-lbl {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .limit-val-right {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* Loading Spinner */
+    .loading-pulse {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
-  <div class="scanlines"></div>
 
+  <!-- Dot Matrix Grid -->
+  <div class="dot-grid"></div>
+
+  <!-- Header -->
   <header>
-    <div class="brand">
-      <div class="brand-logo">
-        <i data-lucide="crosshair"></i>
-      </div>
-      <div>
-        <div class="brand-title">MECHNIK // OSINT</div>
-        <div class="brand-sub">TACTICAL INTEL & CORRELATION ENGINE</div>
-      </div>
+    <div class="header-center-logo" id="header-logo" onclick="goHome()">
+      <svg class="spider-icon" style="width: 24px; height: 24px; margin: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07l14.14-14.14" stroke-linecap="round"/>
+        <circle cx="12" cy="12" r="4" fill="currentColor"/>
+      </svg>
+      <span class="brand-title-sm">mechnik-osint.lol</span>
+      <span class="beta-badge">BETA</span>
     </div>
-    <div class="sys-status">
-      <div class="status-dot"></div>
-      <span id="engine-status">ONLINE // 8 PLATFORMS</span>
-    </div>
+
+    <button class="btn-sub" onclick="openModal()">Подписка</button>
+    <button class="btn-profile" onclick="openModal()">
+      <div class="avatar-sm">
+        <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      </div>
+      <span>#мечник</span>
+    </button>
   </header>
 
+  <!-- Main View -->
   <main>
-    <div class="hero-panel">
-      <div class="hero-info">
-        <h1>ДЕЦЕНТРАЛИЗОВАННЫЙ OSINT СКАНИНГ</h1>
-        <p>Быстрый поиск информации по Telegram ID, @username, телефонному номеру или никнейму. Система автоматически строит граф связанных сущностей и проверяет профили в открытых источниках.</p>
-      </div>
-      <div class="hero-radar">
-        <i data-lucide="radar" style="color: var(--neon-cyan); width: 26px; height: 26px; z-index: 2;"></i>
-      </div>
-    </div>
+    <!-- HERO INITIAL SCREEN -->
+    <section id="hero-screen">
+      <!-- Stylized Spider SVG Icon -->
+      <svg class="spider-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor">
+        <circle cx="24" cy="24" r="5" fill="#fff"/>
+        <circle cx="24" cy="16" r="3" fill="#fff"/>
+        <path d="M21 21C16 19 10 20 6 24" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M27 21C32 19 38 20 42 24" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M20 24C14 25 9 28 5 34" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M28 24C34 25 39 28 43 34" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M21 27C17 31 12 36 8 42" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M27 27C31 31 36 36 40 42" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M22 14C17 10 12 9 8 10" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        <path d="M26 14C31 10 36 9 40 10" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+      </svg>
 
-    <div class="intel-grid">
-      <!-- Graph view -->
-      <div class="graph-card">
-        <div class="card-header">
-          <span><i data-lucide="share-2" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 6px;"></i>ИНТЕРАКТИВНЫЙ ГРАФ СВЯЗЕЙ</span>
-          <div class="tools">
-            <button class="tool-btn" onclick="resetZoom()">ЦЕНТР</button>
-            <button class="tool-btn" onclick="randomizeTarget()">СЛУЧАЙНЫЙ ДЕМО</button>
+      <div class="hero-title-wrap">
+        <h1 class="hero-title">mechnik-osint.lol</h1>
+        <span class="beta-badge">BETA</span>
+      </div>
+
+      <p class="hero-sub">Автоматический поиск по 900+ инстуме...</p>
+
+      <!-- Category Filter Chips -->
+      <div class="tabs-row">
+        <div class="tab-chip active" onclick="switchTab(this, 'tg')">Telegram</div>
+        <div class="tab-chip" onclick="switchTab(this, 'phone')">Телефон</div>
+        <div class="tab-chip disabled">ИНН <span class="chip-tag">скоро</span></div>
+        <div class="tab-chip disabled">Email <span class="chip-tag">скоро</span></div>
+        <div class="tab-chip" onclick="switchTab(this, 'nick')">Никнейм</div>
+      </div>
+
+      <!-- Center Search Box -->
+      <form class="search-wrapper" onsubmit="executeSearch(event)">
+        <input type="text" id="hero-search-input" class="search-input-box" placeholder="@username, телефон или ID..." autocomplete="off">
+        <button type="submit" class="btn-submit-search" id="hero-submit-btn">
+          <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        </button>
+      </form>
+
+      <div class="limits-text" id="limit-counter-hero">Лимит: 5 из 10 ост. (5ч)</div>
+
+      <div class="footer-links">
+        <a href="#">Правила использования</a>
+        <span>•</span>
+        <a href="https://t.me/" target="_blank" class="tg-link">
+          <svg style="width: 14px; height: 14px; fill: currentColor;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+          Telegram-канал
+        </a>
+      </div>
+    </section>
+
+    <!-- RESULTS CANVAS SCREEN -->
+    <section id="canvas-screen">
+      <!-- Top Right Floating Summary -->
+      <div class="summary-floating-panel" id="summary-panel">
+        <div class="summary-header">
+          <div class="summary-title">
+            <span>Общая сводка</span>
+            <span class="summary-title-count" id="summary-count">1</span>
+          </div>
+          <div class="summary-ctrls">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="copyDossier()"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="toggleSummary()"><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </div>
         </div>
-        <div id="network-canvas"></div>
-      </div>
 
-      <!-- Dossier view -->
-      <div class="dossier-card">
-        <div class="card-header">
-          <span><i data-lucide="file-text" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 6px;"></i>ДОСЬЕ ОБЪЕКТА</span>
-          <span class="loading-pulse" id="scan-indicator">СКАНИРОВАНИЕ...</span>
-        </div>
-        <div class="dossier-body">
-          <div class="target-profile">
-            <div class="target-avatar" id="avatar-container">
-              <i data-lucide="user" style="color: var(--neon-cyan); width: 32px; height: 32px;"></i>
-            </div>
-            <div class="target-meta">
-              <div class="target-name" id="profile-name">Не выбрано</div>
-              <div class="target-handle" id="profile-handle">@target</div>
-              <div class="target-badge" id="profile-status">OSINT ACTIVE</div>
-            </div>
+        <div id="summary-content">
+          <div class="summary-sec-title">КЛЮЧЕВЫЕ ФАКТЫ</div>
+          <div class="summary-fact-row">
+            <span class="summary-fact-label">Статус:</span>
+            <span class="summary-fact-val" id="sum-status">Активен в сети</span>
           </div>
-
-          <!-- Quick Metrics -->
-          <div class="metric-grid">
-            <div class="metric-box">
-              <div class="metric-title"><i data-lucide="hash"></i>TELEGRAM ID</div>
-              <div class="metric-val" id="val-id">—</div>
-            </div>
-            <div class="metric-box">
-              <div class="metric-title"><i data-lucide="calendar"></i>ГОД РЕГИСТРАЦИИ</div>
-              <div class="metric-val" id="val-year">—</div>
-            </div>
-            <div class="metric-box">
-              <div class="metric-title"><i data-lucide="gift"></i>ПОДАРКОВ TG</div>
-              <div class="metric-val" id="val-gifts">—</div>
-            </div>
-            <div class="metric-box">
-              <div class="metric-title"><i data-lucide="shield-check"></i>PREMIUM</div>
-              <div class="metric-val" id="val-premium">—</div>
-            </div>
+          <div class="summary-fact-row">
+            <span class="summary-fact-label">Telegram ID:</span>
+            <span class="summary-fact-val" id="sum-id">—</span>
           </div>
-
-          <!-- Bio -->
-          <div>
-            <div class="dossier-sec-title"><i data-lucide="align-left" style="width: 14px; height: 14px;"></i>ОПИСАНИЕ / БИОГРАФИЯ</div>
-            <div class="bio-box" id="val-bio">Нет данных об объекте. Введите @username или Telegram ID в поле поиска ниже.</div>
+          <div class="summary-fact-row">
+            <span class="summary-fact-label">Дата регистрации:</span>
+            <span class="summary-fact-val" id="sum-year">—</span>
           </div>
-
-          <!-- Open Source Profiles -->
-          <div>
-            <div class="dossier-sec-title"><i data-lucide="globe" style="width: 14px; height: 14px;"></i>ОТКРЫТЫЕ ПЛАТФОРМЫ</div>
-            <div class="platforms-grid" id="platforms-container">
-              <a href="#" target="_blank" class="platform-chip" id="p-github"><span>GitHub</span><span class="p-status"></span></a>
-              <a href="#" target="_blank" class="platform-chip" id="p-reddit"><span>Reddit</span><span class="p-status"></span></a>
-              <a href="#" target="_blank" class="platform-chip" id="p-vk"><span>VKontakte</span><span class="p-status"></span></a>
-              <a href="#" target="_blank" class="platform-chip" id="p-steam"><span>Steam</span><span class="p-status"></span></a>
-              <a href="#" target="_blank" class="platform-chip" id="p-twitch"><span>Twitch</span><span class="p-status"></span></a>
-              <a href="#" target="_blank" class="platform-chip" id="p-chess"><span>Chess.com</span><span class="p-status"></span></a>
-            </div>
+          <div class="summary-fact-row">
+            <span class="summary-fact-label">Премиум:</span>
+            <span class="summary-fact-val" id="sum-premium">—</span>
+          </div>
+          <div class="summary-fact-row">
+            <span class="summary-fact-label">Подарки:</span>
+            <span class="summary-fact-val" id="sum-gifts">0</span>
+          </div>
+          <div class="summary-fact-row">
+            <span class="summary-fact-label">Платформы:</span>
+            <span class="summary-fact-val" id="sum-platforms">0 найдено</span>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- Graph canvas container -->
+      <div class="canvas-viewport" id="tree-container">
+        <!-- Root node -->
+        <div class="node-root" id="node-root-view">
+          <span class="tag">Запрос:</span>
+          <span id="root-query-text">+7 | 991 | 950-32-62</span>
+        </div>
+
+        <div class="tree-line-v"></div>
+
+        <!-- Child Intel Cards -->
+        <div class="tree-cards-row" id="tree-cards-list">
+          <!-- Dynamically populated cards -->
+        </div>
+      </div>
+
+      <!-- Pinned Bottom Search Dock -->
+      <div class="dock-container">
+        <form class="search-wrapper" style="margin: 0;" onsubmit="executeSearch(event)">
+          <input type="text" id="dock-search-input" class="search-input-box" placeholder="@username, телефон или ID..." autocomplete="off">
+          <button type="submit" class="btn-submit-search" id="dock-submit-btn">
+            <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        </form>
+      </div>
+
+      <!-- Zoom controls -->
+      <div class="zoom-ctrls">
+        <button class="zoom-btn" onclick="adjustZoom(-10)">−</button>
+        <span id="zoom-val">100%</span>
+        <button class="zoom-btn" onclick="adjustZoom(10)">+</button>
+      </div>
+    </section>
   </main>
 
-  <!-- Bottom Floating Dock -->
-  <div class="search-dock">
-    <form class="search-box" id="search-form" onsubmit="handleSearch(event)">
-      <i data-lucide="search" class="search-icon"></i>
-      <input type="text" id="target-input" placeholder="Введите @username, Telegram ID или никнейм..." autocomplete="off">
-      <button type="submit" class="search-btn">
-        <span>РАСПУТАТЬ</span>
-        <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
-      </button>
-    </form>
+  <!-- ACCOUNT MODAL (Учетная запись) -->
+  <div class="modal-backdrop" id="account-modal" onclick="closeModalOnBg(event)">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>Учетная запись</h2>
+        <button class="btn-close-modal" onclick="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-tabs">
+        <button class="m-tab active" onclick="switchModalTab(this)">Профиль</button>
+        <button class="m-tab" onclick="switchModalTab(this)">Сессии</button>
+        <button class="m-tab" onclick="switchModalTab(this)">Настройки</button>
+        <button class="m-tab" onclick="switchModalTab(this)">История</button>
+        <button class="m-tab" onclick="switchModalTab(this)">Версии</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Profile Banner -->
+        <div class="user-profile-banner">
+          <div class="user-avatar-lg">
+            #м
+          </div>
+          <div>
+            <div class="user-meta-name">#мечник</div>
+            <div class="user-meta-sub">@mechnik123</div>
+            <div class="user-meta-sub">Telegram ID: 7182454834</div>
+          </div>
+        </div>
+
+        <!-- Subscription Plan -->
+        <div class="sub-plan-box">
+          <div class="plan-row-top">
+            <span class="plan-title">План подписки</span>
+            <span class="plan-badge-base">BASE</span>
+          </div>
+          <div class="plan-desc-row">
+            <span>Срок действия</span>
+            <span style="color: #fff; font-weight: 500;">Бессрочно</span>
+          </div>
+          <div class="plan-desc-row" style="font-size: 0.78rem;">
+            <span>Квота тарифа:</span>
+            <span>10 запросов в 5 часов • 100 в неделю</span>
+          </div>
+          <button class="btn-upgrade-plan">Улучшить тариф →</button>
+        </div>
+
+        <!-- Meta Registration Info -->
+        <div class="meta-list-box">
+          <div class="meta-row">
+            <span>Дата регистрации</span>
+            <span class="val">26 октября 2026 г.</span>
+          </div>
+          <div class="meta-row">
+            <span>Последний вход</span>
+            <span class="val">26 октября 2026 г.</span>
+          </div>
+        </div>
+
+        <!-- Search Limits -->
+        <div class="limits-sec-box">
+          <div class="limits-sec-title">Лимиты поисковых запросов</div>
+
+          <div class="limit-progress-row">
+            <div class="limit-lbl-wrap">
+              <span class="limit-main-lbl">Окно 5 часов</span>
+              <span class="limit-sub-lbl">10 запросов в 5 часов</span>
+            </div>
+            <span class="limit-val-right" id="modal-limit-5h">5 из 10 ост.</span>
+          </div>
+
+          <div class="limit-progress-row">
+            <div class="limit-lbl-wrap">
+              <span class="limit-main-lbl">Окно 7 дней</span>
+              <span class="limit-sub-lbl">100 запросов в неделю</span>
+            </div>
+            <span class="limit-val-right" id="modal-limit-7d">95 из 100 ост.</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
-    // Initialize Lucide icons
-    lucide.createIcons();
+    let currentZoom = 100;
+    let queryLimit = 5;
 
-    let network = null;
-    let nodes = null;
-    let edges = null;
+    function openModal() {
+      const m = document.getElementById('account-modal');
+      m.classList.add('open');
+    }
 
-    // Estimate registration year by Telegram ID
+    function closeModal() {
+      const m = document.getElementById('account-modal');
+      m.classList.remove('open');
+    }
+
+    function closeModalOnBg(e) {
+      if (e.target.id === 'account-modal') closeModal();
+    }
+
+    function switchModalTab(btn) {
+      document.querySelectorAll('.m-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    function switchTab(el, type) {
+      if (el.classList.contains('disabled')) return;
+      document.querySelectorAll('.tab-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    function goHome() {
+      document.getElementById('canvas-screen').classList.remove('active');
+      document.getElementById('hero-screen').classList.remove('hidden');
+      document.getElementById('header-logo').classList.remove('visible');
+    }
+
+    function adjustZoom(delta) {
+      currentZoom = Math.min(150, Math.max(60, currentZoom + delta));
+      document.getElementById('zoom-val').textContent = currentZoom + '%';
+      const tree = document.getElementById('tree-container');
+      tree.style.transform = `scale(${currentZoom / 100})`;
+      tree.style.transformOrigin = 'top center';
+    }
+
+    function toggleSummary() {
+      const c = document.getElementById('summary-content');
+      c.style.display = c.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function copyDossier() {
+      const status = document.getElementById('sum-status').innerText;
+      const id = document.getElementById('sum-id').innerText;
+      const yr = document.getElementById('sum-year').innerText;
+      navigator.clipboard.writeText(`[MECHNIK-OSINT]\nСтатус: ${status}\nTelegram ID: ${id}\nГод: ${yr}`);
+      alert('Сводка скопирована в буфер обмена');
+    }
+
     function estimateYear(id) {
       if (!id || isNaN(id)) return "Неизвестно";
       const num = Number(id);
-      if (num < 150000000) return "2013-2015";
-      if (num < 350000000) return "2016";
-      if (num < 550000000) return "2017";
-      if (num < 750000000) return "2018";
-      if (num < 1100000000) return "2019";
-      if (num < 1600000000) return "2020";
-      if (num < 2200000000) return "2021";
-      if (num < 5300000000) return "2022";
-      if (num < 6500000000) return "2023";
-      if (num < 7300000000) return "2024";
-      return "2025-2026";
+      if (num < 150000000) return "~2013-2015";
+      if (num < 350000000) return "~2016";
+      if (num < 550000000) return "~2017";
+      if (num < 750000000) return "~2018";
+      if (num < 1100000000) return "~2019";
+      if (num < 1600000000) return "~2020";
+      if (num < 2200000000) return "~2021";
+      if (num < 5300000000) return "~2022";
+      if (num < 6500000000) return "~2023";
+      if (num < 7300000000) return "~2024";
+      return "~2025-2026";
     }
 
-    function initNetwork(target, customGraph) {
-      const container = document.getElementById('network-canvas');
-      
-      if (customGraph && customGraph.nodes && customGraph.edges) {
-        const styledNodes = customGraph.nodes.map(n => {
-          let col = { background: '#101726', border: '#2979ff' };
-          let fCol = '#82b1ff';
-          let shape = n.shape || 'box';
-          let size = 22;
+    async function executeSearch(e) {
+      if (e) e.preventDefault();
+      const heroInp = document.getElementById('hero-search-input');
+      const dockInp = document.getElementById('dock-search-input');
+      const val = (heroInp.value || dockInp.value || '').trim();
+      if (!val) return;
 
-          if (n.group === 'main') {
-            col = { background: '#00e5ff', border: '#ffffff' };
-            fCol = '#ffffff';
-            shape = n.image ? 'circularImage' : 'dot';
-            size = 35;
-          } else if (n.group === 'meta') {
-            col = { background: '#101726', border: '#7c4dff' };
-            fCol = '#b388ff';
-          } else if (n.group === 'gifts') {
-            col = { background: '#101726', border: '#ffd600' };
-            fCol = '#fff9c4';
-          } else if (n.group === 'geo') {
-            col = { background: '#101726', border: '#00e676' };
-            fCol = '#b9f6ca';
-          } else if (n.group === 'platforms') {
-            col = { background: '#141d2e', border: '#ff9100' };
-            fCol = '#ffe082';
-          }
+      heroInp.value = val;
+      dockInp.value = val;
 
-          return {
-            ...n,
-            shape: shape,
-            size: size,
-            color: col,
-            font: { color: fCol, face: 'JetBrains Mono', size: n.group === 'main' ? 13 : 11 }
-          };
-        });
+      const heroBtn = document.getElementById('hero-submit-btn');
+      const dockBtn = document.getElementById('dock-submit-btn');
+      heroBtn.innerHTML = '<span class="loading-pulse"></span>';
+      dockBtn.innerHTML = '<span class="loading-pulse"></span>';
 
-        const styledEdges = customGraph.edges.map(e => ({
-          ...e,
-          color: { color: 'rgba(0, 229, 255, 0.55)' },
-          font: { color: '#8392a7', face: 'JetBrains Mono', size: 10 }
-        }));
+      // Switch view
+      document.getElementById('hero-screen').classList.add('hidden');
+      document.getElementById('canvas-screen').classList.add('active');
+      document.getElementById('header-logo').classList.add('visible');
 
-        nodes = new vis.DataSet(styledNodes);
-        edges = new vis.DataSet(styledEdges);
-      } else {
-        nodes = new vis.DataSet([
-          { id: 1, label: target.title || target.username, shape: 'dot', size: 32, color: { background: '#00e5ff', border: '#ffffff' }, font: { color: '#ffffff', face: 'JetBrains Mono', size: 14 } },
-          { id: 2, label: `TG ID\n${target.id}`, shape: 'box', color: { background: '#101726', border: '#2979ff' }, font: { color: '#82b1ff', face: 'JetBrains Mono' } },
-          { id: 3, label: `REG YEAR\n~${target.reg_year}`, shape: 'box', color: { background: '#101726', border: '#7c4dff' }, font: { color: '#b388ff', face: 'JetBrains Mono' } },
-          { id: 4, label: `STATUS\n${target.premium ? 'PREMIUM' : 'STANDARD'}`, shape: 'box', color: { background: '#101726', border: '#00e676' }, font: { color: '#69f0ae', face: 'JetBrains Mono' } },
-          { id: 5, label: `OPEN PROFILES\n${(target.platforms || []).length} PLATFORMS`, shape: 'dot', size: 24, color: { background: '#ff9100', border: '#ffffff' }, font: { color: '#ffd180', face: 'JetBrains Mono' } },
-        ]);
+      // Update Root Query Node
+      document.getElementById('root-query-text').textContent = val;
 
-        const edgeList = [
-          { from: 1, to: 2, color: { color: '#00e5ff' }, width: 2 },
-          { from: 1, to: 3, color: { color: '#7c4dff' }, width: 2 },
-          { from: 1, to: 4, color: { color: '#00e676' }, width: 2 },
-          { from: 1, to: 5, color: { color: '#ff9100' }, width: 2 }
-        ];
-
-        let nextId = 6;
-        (target.platforms || []).forEach(p => {
-          nodes.add({
-            id: nextId,
-            label: `${p.name.toUpperCase()}\n${p.username || ''}`,
-            shape: 'box',
-            color: { background: '#141d2e', border: '#00e5ff' },
-            font: { color: '#e2e8f0', face: 'JetBrains Mono', size: 11 }
-          });
-          edgeList.push({ from: 5, to: nextId, color: { color: 'rgba(0,229,255,0.4)' }, dashes: true });
-          nextId++;
-        });
-
-        edges = new vis.DataSet(edgeList);
+      // Decrement simulated quota
+      if (queryLimit > 0) {
+        queryLimit--;
+        document.getElementById('limit-counter-hero').textContent = `Лимит: ${queryLimit} из 10 ост. (5ч)`;
+        document.getElementById('modal-limit-5h').textContent = `${queryLimit} из 10 ост.`;
+        document.getElementById('modal-limit-7d').textContent = `${90 + queryLimit} из 100 ост.`;
       }
 
-      const data = { nodes: nodes, edges: edges };
-      const options = {
-        physics: {
-          stabilization: true,
-          barnesHut: {
-            gravitationalConstant: -4000,
-            springConstant: 0.04,
-            springLength: 95
-          }
-        },
-        interaction: { hover: true }
-      };
+      const clean = val.replace('@', '');
 
-      network = new vis.Network(container, data, options);
-    }
-
-    function resetZoom() {
-      if (network) network.fit({ animation: { duration: 600, easingFunction: 'easeInOutQuad' } });
-    }
-
-    async function handleSearch(e) {
-      if (e) e.preventDefault();
-      const query = document.getElementById('target-input').value.trim();
-      if (!query) return;
-
-      const clean = query.replace('@', '');
-      const ind = document.getElementById('scan-indicator');
-      ind.style.display = 'inline-block';
-
+      let resultData = null;
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(clean)}`);
         if (res.ok) {
-          const apiData = await res.json();
-          renderData(apiData);
-          ind.style.display = 'none';
-          return;
+          resultData = await res.json();
         }
       } catch (err) {
-        // Fallback to client-side heuristics if standalone
+        // Fallback
       }
 
-      const mockId = /^\d+$/.test(clean) ? clean : Math.floor(100000000 + Math.random() * 6500000000);
-      const est = estimateYear(mockId);
-      const mockData = {
-        title: clean.toUpperCase(),
-        username: `@${clean}`,
-        id: mockId,
-        reg_year: est,
-        bio: `Обнаружен публичный идентификатор ${clean}. Сигнатура сети верифицирована.`,
-        gifts: Math.floor(Math.random() * 12),
-        premium: Math.random() > 0.5,
-        avatar_url: '',
-        platforms: [
-          { name: 'GitHub', url: `https://github.com/${clean}`, username: clean },
-          { name: 'Reddit', url: `https://reddit.com/user/${clean}`, username: clean },
-          { name: 'Steam', url: `https://steamcommunity.com/id/${clean}`, username: clean },
-          { name: 'VK', url: `https://vk.com/${clean}`, username: clean },
-        ]
-      };
-
-      setTimeout(() => {
-        renderData(mockData);
-        ind.style.display = 'none';
-      }, 300);
-    }
-
-    function renderData(raw) {
-      let data = raw;
-      let customGraph = null;
-
-      if (raw && raw.summary) {
-        const s = raw.summary;
-        customGraph = raw.graph;
-        data = {
-          title: s.name || s.username || 'Неизвестно',
-          username: s.username || '',
-          id: s.telegram_id || '—',
-          reg_year: s.creation_year || estimateYear(s.telegram_id),
-          gifts: s.gifts || '0',
-          premium: s.premium === 'Да',
-          bio: s.bio || 'Описание профиля скрыто настройками приватности Telegram.',
-          avatar_url: s.avatar || '',
-          platforms: (s.all_platforms || []).filter(p => p.found).map(p => ({
-            name: p.platform,
-            url: p.url,
-            username: s.username ? s.username.replace('@','') : ''
-          }))
+      if (!resultData || !resultData.summary) {
+        // Standalone fallback
+        const isNumeric = /^\d+$/.test(clean);
+        const mockId = isNumeric ? clean : Math.floor(100000000 + Math.random() * 6500000000);
+        resultData = {
+          summary: {
+            name: isNumeric ? 'Номер не привязан' : clean,
+            username: isNumeric ? '' : `@${clean}`,
+            telegram_id: mockId,
+            creation_year: estimateYear(mockId),
+            premium: 'Нет',
+            status: 'Не привязан / скрыт',
+            gifts: '0',
+            bio: 'Профиль скрыт или не найден в глобальном реестре.',
+            avatar: '',
+            all_platforms: [
+              { platform: 'Steam', found: true, url: `https://steamcommunity.com/id/${clean}` },
+              { platform: 'VK', found: true, url: `https://vk.com/${clean}` },
+              { platform: 'GitHub', found: false, url: `https://github.com/${clean}` },
+              { platform: 'Reddit', found: false, url: `https://reddit.com/user/${clean}` },
+            ]
+          }
         };
       }
 
-      document.getElementById('profile-name').textContent = data.title || data.username || 'Неизвестно';
-      document.getElementById('profile-handle').textContent = data.username ? (data.username.startsWith('@') ? data.username : `@${data.username}`) : '—';
-      document.getElementById('val-id').textContent = data.id || '—';
-      document.getElementById('val-year').textContent = data.reg_year || estimateYear(data.id);
-      document.getElementById('val-gifts').textContent = data.gifts !== undefined ? data.gifts : '0';
-      document.getElementById('val-premium').textContent = data.premium ? 'АКТИВЕН' : 'НЕТ';
-      document.getElementById('val-bio').textContent = data.bio || 'Описание профиля скрыто настройками приватности Telegram.';
+      renderCanvasResults(resultData.summary);
 
-      const av = document.getElementById('avatar-container');
-      if (data.avatar_url) {
-        av.innerHTML = `<img src="${data.avatar_url}" alt="avatar">`;
-      } else {
-        av.innerHTML = `<i data-lucide="user" style="color: var(--neon-cyan); width: 32px; height: 32px;"></i>`;
-        lucide.createIcons();
-      }
-
-      const pContainer = document.getElementById('platforms-container');
-      pContainer.innerHTML = '';
-      if (data.platforms && data.platforms.length > 0) {
-        data.platforms.forEach(p => {
-          const a = document.createElement('a');
-          a.href = p.url;
-          a.target = '_blank';
-          a.className = 'platform-chip found';
-          a.innerHTML = `<span>${p.name}</span><span class="p-status"></span>`;
-          pContainer.appendChild(a);
-        });
-      } else {
-        pContainer.innerHTML = `<span style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);">Совпадений не обнаружено</span>`;
-      }
-
-      initNetwork(data, customGraph);
+      heroBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+      dockBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
     }
 
-    function randomizeTarget() {
-      const demoHandles = ['durov', 'telegram', 'notcoin', 'blum', 'modrix', 'crypto_bot'];
-      const chosen = demoHandles[Math.floor(Math.random() * demoHandles.length)];
-      document.getElementById('target-input').value = chosen;
-      handleSearch();
-    }
+    function renderCanvasResults(summary) {
+      // Update Summary panel
+      document.getElementById('sum-status').textContent = summary.status || 'Активен в сети';
+      document.getElementById('sum-id').textContent = summary.telegram_id || 'Не привязан';
+      document.getElementById('sum-year').textContent = summary.creation_year || '—';
+      document.getElementById('sum-premium').textContent = summary.premium || 'Нет';
+      document.getElementById('sum-gifts').textContent = summary.gifts || '0';
 
-    // Default initialization on page load
-    window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('target-input').value = 'durov';
-      handleSearch();
-    });
+      const foundP = (summary.all_platforms || []).filter(p => p.found);
+      document.getElementById('sum-platforms').textContent = `${foundP.length} найдено`;
+
+      const cardsContainer = document.getElementById('tree-cards-list');
+      cardsContainer.innerHTML = '';
+
+      // Telegram Card
+      const tgCard = document.createElement('div');
+      tgCard.className = 'intel-card';
+      const isTgBound = summary.telegram_id && summary.telegram_id !== 'Не найден';
+      tgCard.innerHTML = `
+        <div class="card-top">
+          <div style="display:flex; align-items:center; gap: 8px;">
+            <svg style="width: 18px; height: 18px; fill: #0084ff;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+            <span class="card-service-title">Telegram</span>
+          </div>
+          <span class="card-badge ${isTgBound ? 'found' : 'hidden-badge'}">${isTgBound ? 'Привязан' : 'Не привязан / скрыт'}</span>
+        </div>
+
+        <div style="display:flex; align-items:center; gap: 12px;">
+          ${summary.avatar ? `
+            <div class="card-avatar-wrap">
+              <img src="${summary.avatar}" alt="avatar">
+            </div>
+          ` : ''}
+          <div>
+            <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">${summary.name || 'Не привязан'}</div>
+            <div style="color: var(--accent-blue); font-size: 0.8rem; font-weight: 500;">${summary.username || ''}</div>
+          </div>
+        </div>
+
+        <div class="card-data-row">
+          <span class="card-data-label">Идентификатор</span>
+          <span class="card-data-val">${summary.telegram_id || 'Не привязан / скрыт'}</span>
+        </div>
+
+        <div class="card-data-row">
+          <span class="card-data-label">Год регистрации</span>
+          <span class="card-data-val">${summary.creation_year || '—'}</span>
+        </div>
+
+        <div class="card-data-row">
+          <span class="card-data-label">Описание / Bio</span>
+          <span class="card-data-val" style="color: var(--text-secondary); font-size: 0.8rem;">${summary.bio || 'Не указано'}</span>
+        </div>
+      `;
+      cardsContainer.appendChild(tgCard);
+
+      // Open Platforms Cards
+      (summary.all_platforms || []).forEach(p => {
+        if (!p.found) return;
+        const pCard = document.createElement('div');
+        pCard.className = 'intel-card';
+        pCard.innerHTML = `
+          <div class="card-top">
+            <span class="card-service-title">${p.platform}</span>
+            <span class="card-badge found">Найден профиль</span>
+          </div>
+          <div class="card-data-row">
+            <span class="card-data-label">Ссылка</span>
+            <a href="${p.url}" target="_blank" class="card-data-val" style="color: var(--accent-blue); text-decoration: none;">${p.url}</a>
+          </div>
+          <div class="card-data-row">
+            <span class="card-data-label">Статус проверки</span>
+            <span class="card-data-val" style="color: #00e676;">200 OK // Active</span>
+          </div>
+        `;
+        cardsContainer.appendChild(pCard);
+      });
+    }
   </script>
 </body>
 </html>
