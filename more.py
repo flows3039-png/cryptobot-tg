@@ -20,7 +20,7 @@ from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from config import CURRENCIES, _e
 from database import (
     create_check, activate_check,
-    get_balance, DB_PATH,
+    get_balance, get_all_balances, DB_PATH,
     InsufficientFunds, CheckError,
     update_check_message, get_check_message,
     get_check_business_conn,
@@ -30,7 +30,8 @@ from database import (
 from keyboards import (
     checks_menu_kb, check_manage_kb, check_activated_kb,
     currency_select_kb, cryptopay_menu_kb,
-    swap_from_kb, swap_to_kb
+    swap_from_kb, swap_to_kb, check_activated_user_kb,
+    update_user_chat_menu_button
 )
 from check_logger import log_check_error
 
@@ -475,6 +476,11 @@ async def notify_check_creator(bot: Bot, res: dict, activator_user):
             f"{fire_icon} Средства успешно начислены получателю."
         )
         await bot.send_message(creator_id, notify_text, parse_mode="HTML")
+        try:
+            creator_balances = await get_all_balances(creator_id)
+            await update_user_chat_menu_button(bot, creator_id, creator_balances)
+        except Exception:
+            pass
     except Exception as e:
         log.warning("Could not notify check creator: %s", e)
 
@@ -484,10 +490,18 @@ async def activate_check_link(msg: Message, state: FSMContext):
         res = await activate_check(cid, msg.from_user.id, username=msg.from_user.username)
         used = res["activations_used"] + 1
         limit = res["activations_limit"]
+
+        user_balances = await get_all_balances(msg.from_user.id)
+        try:
+            await update_user_chat_menu_button(msg.bot, msg.from_user.id, user_balances)
+        except Exception as ex_mb:
+            log.warning("Could not update chat menu button: %s", ex_mb)
+
+        user_kb = check_activated_user_kb(msg.from_user.id, user_balances)
         if limit > 1:
-            await msg.answer(f"✅ <b>Вы успешно активировали мульти-чек ({used}/{limit}) на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
+            await msg.answer(f"✅ <b>Вы успешно активировали мульти-чек ({used}/{limit}) на {res['per_activation']} {res['asset']}!</b>", reply_markup=user_kb, parse_mode="HTML")
         else:
-            await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
+            await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", reply_markup=user_kb, parse_mode="HTML")
         
         if used >= limit:
             new_text = f"✅ <b>Чек на {res['per_activation']} {res['asset']} активирован</b>" if limit == 1 else f"✅ <b>Мульти-чек на {res['total_amount']} {res['asset']} полностью активирован ({limit}/{limit})</b>"
@@ -516,7 +530,13 @@ async def activate_check_link(msg: Message, state: FSMContext):
                     from database import create_check
                     await create_check(uid=draft["user_id"], asset=draft["asset"], total=draft["amount"], limit=1, password=draft.get("password"), check_id=cid)
                     res = await activate_check(cid, msg.from_user.id, username=msg.from_user.username)
-                    await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
+                    user_balances = await get_all_balances(msg.from_user.id)
+                    try:
+                        await update_user_chat_menu_button(msg.bot, msg.from_user.id, user_balances)
+                    except Exception:
+                        pass
+                    user_kb = check_activated_user_kb(msg.from_user.id, user_balances)
+                    await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", reply_markup=user_kb, parse_mode="HTML")
                     new_text = f"✅ <b>Чек на {res['per_activation']} {res['asset']} активирован</b>"
                     disabled_kb = check_activated_kb()
                     await finalize_business_check(msg.bot, cid, new_text, disabled_kb)
@@ -542,10 +562,18 @@ async def process_activate_pass(msg: Message, state: FSMContext):
         res = await activate_check(cid, msg.from_user.id, msg.text, username=msg.from_user.username)
         used = res["activations_used"] + 1
         limit = res["activations_limit"]
+
+        user_balances = await get_all_balances(msg.from_user.id)
+        try:
+            await update_user_chat_menu_button(msg.bot, msg.from_user.id, user_balances)
+        except Exception as ex_mb:
+            log.warning("Could not update chat menu button: %s", ex_mb)
+
+        user_kb = check_activated_user_kb(msg.from_user.id, user_balances)
         if limit > 1:
-            await msg.answer(f"✅ <b>Вы успешно активировали мульти-чек ({used}/{limit}) на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
+            await msg.answer(f"✅ <b>Вы успешно активировали мульти-чек ({used}/{limit}) на {res['per_activation']} {res['asset']}!</b>", reply_markup=user_kb, parse_mode="HTML")
         else:
-            await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", parse_mode="HTML")
+            await msg.answer(f"✅ <b>Вы успешно активировали чек на {res['per_activation']} {res['asset']}!</b>", reply_markup=user_kb, parse_mode="HTML")
         
         if used >= limit:
             new_text = f"✅ <b>Чек на {res['per_activation']} {res['asset']} активирован</b>" if limit == 1 else f"✅ <b>Мульти-чек на {res['total_amount']} {res['asset']} полностью активирован ({limit}/{limit})</b>"

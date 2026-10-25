@@ -73,6 +73,11 @@ def wallet_inline_kb_v2(user_id: int = None, balances: dict = None) -> InlineKey
         [InlineKeyboardButton(text="‹ Назад", callback_data="menu:main", icon_custom_emoji_id="5312212278374861302")]
     ])
 
+def check_activated_user_kb(user_id: int, balances: dict = None) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [webapp_btn("Открыть кошелёк", "wallet", "wallet", balances, user_id)]
+    ])
+
 def wallet_currency_select_kb(action: str) -> InlineKeyboardMarkup:
     buttons = []
     row = []
