@@ -56,7 +56,6 @@ def analyze_phone_number(raw_phone: str) -> dict:
         part3 = digits[9:11]
         formatted = f"+7 ({def_code}) {part1}-{part2}-{part3}"
 
-        # DEF codes lookup
         code_int = int(def_code)
         if 910 <= code_int <= 919 or 980 <= code_int <= 989:
             operator = "МТС (MTS)"
@@ -77,7 +76,6 @@ def analyze_phone_number(raw_phone: str) -> dict:
         else:
             operator = "Сотовая связь РФ"
 
-        # Region estimation by DEF code range
         if def_code in ("915", "916", "925", "926", "999", "995", "968", "969"):
             region = "Москва и Московская область"
         elif def_code in ("911", "921", "931", "981"):
@@ -142,21 +140,17 @@ async def fetch_telegram_public(username: str, session: aiohttp.ClientSession) -
         async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=4.0)) as resp:
             if resp.status == 200:
                 html = await resp.text()
-                # Title
                 m_title = re.search(r'<meta property="og:title" content="([^"]+)">', html)
                 if m_title:
                     clean_title = m_title.group(1).replace("Telegram: Contact @", "").strip()
                     if clean_title:
                         data["title"] = clean_title
-                # Bio / Description
                 m_desc = re.search(r'<meta property="og:description" content="([^"]+)">', html)
                 if m_desc:
                     data["bio"] = m_desc.group(1).strip()
-                # Avatar
                 m_img = re.search(r'<meta property="og:image" content="([^"]+)">', html)
                 if m_img:
                     data["avatar"] = m_img.group(1)
-                # Channel or extra text
                 if "subscribers" in html or "members" in html:
                     m_sub = re.search(r'<div class="tgme_page_extra">([^<]+)</div>', html)
                     if m_sub:
@@ -176,7 +170,6 @@ async def handle_search(request: web.Request) -> web.Response:
     start_time = time.perf_counter()
     clean_q = q.lstrip("@").replace("https://t.me/", "").replace("http://t.me/", "").strip("/").strip()
 
-    # Check if query is a phone number
     phone_info = analyze_phone_number(clean_q)
 
     is_id = clean_q.isdigit() and len(clean_q) >= 6 and not phone_info.get("is_phone")
@@ -188,7 +181,6 @@ async def handle_search(request: web.Request) -> web.Response:
         if username:
             tg_info = await fetch_telegram_public(username, session)
 
-        # Open platforms search
         platforms = []
         if username:
             platforms = [
@@ -206,7 +198,6 @@ async def handle_search(request: web.Request) -> web.Response:
 
     elapsed_ms = int((time.perf_counter() - start_time) * 1000)
 
-    # Determine Telegram ID & Registration Year
     if user_id:
         reg_year = estimate_creation_year(user_id)
         display_id = str(user_id)
@@ -218,7 +209,6 @@ async def handle_search(request: web.Request) -> web.Response:
         name = phone_info["formatted"]
         status = f"{phone_info['operator']} ({phone_info['region']})"
     else:
-        # Realistic ID correlation for username
         pseudo_id = 7100000000 + (abs(hash(username)) % 1500000000)
         reg_year = estimate_creation_year(pseudo_id)
         display_id = str(pseudo_id)
@@ -230,8 +220,6 @@ async def handle_search(request: web.Request) -> web.Response:
         if phone_info.get("is_phone") else "Описание профиля не указано в открытом доступе."
     )
     avatar = tg_info.get("avatar") or ""
-
-    found_platforms = [p for p in platform_results if p["found"]]
 
     summary = {
         "name": name,
@@ -269,12 +257,14 @@ def create_app():
     return app
 
 if __name__ == "__main__":
-    app = create_app()
-    port = int(os.environ.get("PORT", 8080))
-    print(f"Mechnik OSINT running on http://localhost:{port}")
-    try:
-        web.run_app(app, host="0.0.0.0", port=port)
-    except OSError:
-        port = 8081
-        print(f"Mechnik OSINT running on fallback http://localhost:{port}")
-        web.run_app(app, host="0.0.0.0", port=port)
+    base_port = int(os.environ.get("PORT", 8080))
+    for p in range(base_port, base_port + 5):
+        try:
+            print(f"Mechnik OSINT running on http://localhost:{p}")
+            web.run_app(create_app(), host="0.0.0.0", port=p)
+            break
+        except OSError as e:
+            if e.errno in (10048, 98) or "address already in use" in str(e).lower():
+                print(f"Port {p} is busy, trying next port...")
+                continue
+            raise
