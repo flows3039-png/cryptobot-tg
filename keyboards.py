@@ -5,9 +5,19 @@ from config import CURRENCIES, FIAT_CURRENCIES, FIAT_FLAGS, EMOJI
 
 WEBAPP_URL = "https://flows3039-png.github.io/cryptobot-tg/"
 
-def webapp_btn(text: str, emoji_key: str, subpath: str = "") -> InlineKeyboardButton:
+def webapp_btn(text: str, emoji_key: str, subpath: str = "", balances: dict = None, user_id: int = None) -> InlineKeyboardButton:
     from aiogram.types import WebAppInfo
-    url = f"{WEBAPP_URL}?tab={subpath}" if subpath else WEBAPP_URL
+    params = []
+    if subpath:
+        params.append(f"tab={subpath}")
+    if user_id:
+        params.append(f"uid={user_id}")
+    if balances:
+        b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') for k, v in balances.items() if v > 0]
+        if b_parts:
+            params.append(f"b={','.join(b_parts)}")
+    query = ("?" + "&".join(params)) if params else ""
+    url = f"{WEBAPP_URL}{query}"
     return InlineKeyboardButton(
         text=text,
         web_app=WebAppInfo(url=url),
@@ -21,18 +31,19 @@ def btn(text: str, emoji_key: str, callback_data: str) -> InlineKeyboardButton:
         icon_custom_emoji_id=EMOJI.get(emoji_key)
     )
 
-def main_menu_inline() -> InlineKeyboardMarkup:
+def main_menu_inline(user_id: int = None, balances: dict = None) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [webapp_btn("Кошелёк", "wallet", "wallet"), webapp_btn("Обмен", "arrows_diff", "swap")],
-        [btn("P2P", "home_dollar", "menu:p2p"), webapp_btn("Биржа", "arrows_cycle", "exchange")],
+        [webapp_btn("Кошелёк", "wallet", "wallet", balances, user_id), webapp_btn("Обмен", "arrows_diff", "swap", balances, user_id)],
+        [btn("P2P", "home_dollar", "menu:p2p"), webapp_btn("Биржа", "arrows_cycle", "exchange", balances, user_id)],
         [btn("Чеки", "check_btn", "menu:checks"), btn("Счета", "invoice_btn", "menu:invoices")],
         [btn("Crypto Pay", "pay", "menu:pay"), btn("Розыгрыши", "gift", "menu:giveaways")],
         [btn("Подписки", "megaphone", "menu:subs"), btn("Настройки", "settings", "menu:settings")]
     ])
 
 # --- КОШЕЛЁК ---
-def wallet_inline_kb_v2() -> InlineKeyboardMarkup:
+def wallet_inline_kb_v2(user_id: int = None, balances: dict = None) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
+        [webapp_btn("📱 Открыть WebApp Кошелёк", "wallet", "wallet", balances, user_id)],
         [InlineKeyboardButton(text="Пополнить", callback_data="wallet:dep", icon_custom_emoji_id="5318862055980177086"),
          InlineKeyboardButton(text="Отправить", callback_data="wallet:wdr", icon_custom_emoji_id="5319073291061730002")],
         [InlineKeyboardButton(text="История", callback_data="wallet:hist", icon_custom_emoji_id="5312103894875143512")],
