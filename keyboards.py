@@ -5,14 +5,47 @@ from config import CURRENCIES, FIAT_CURRENCIES, FIAT_FLAGS, EMOJI
 
 WEBAPP_URL = "https://flows3039-png.github.io/cryptobot-tg/"
 
-def webapp_btn(text: str, emoji_key: str, subpath: str = "") -> InlineKeyboardButton:
+def webapp_btn(text: str, emoji_key: str, subpath: str = "", balances: dict = None, user_id: int = None) -> InlineKeyboardButton:
     from aiogram.types import WebAppInfo
-    url = f"{WEBAPP_URL}#{subpath}" if subpath else WEBAPP_URL
+    import time
+    params = []
+    if subpath:
+        params.append(f"tab={subpath}")
+    if user_id:
+        params.append(f"uid={user_id}")
+    if balances is not None:
+        b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') if v != 0 else f"{k}:0" for k, v in balances.items()]
+        if not b_parts:
+            b_parts = ["USDT:0", "TON:0", "BTC:0"]
+        params.append(f"b={','.join(b_parts)}")
+    params.append(f"t={int(time.time())}")
+    query = ("?" + "&".join(params)) if params else ""
+    url = f"{WEBAPP_URL}{query}"
     return InlineKeyboardButton(
         text=text,
         web_app=WebAppInfo(url=url),
         icon_custom_emoji_id=EMOJI.get(emoji_key)
     )
+
+async def update_user_chat_menu_button(bot, user_id: int, balances: dict = None):
+    try:
+        from aiogram.types import MenuButtonWebApp, WebAppInfo
+        import time
+        from database import get_all_balances
+        if balances is None:
+            balances = await get_all_balances(user_id)
+        b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') if v != 0 else f"{k}:0" for k, v in balances.items()]
+        if not b_parts:
+            b_parts = ["USDT:0", "TON:0", "BTC:0"]
+        b_str = f"&b={','.join(b_parts)}"
+        ts = int(time.time())
+        url = f"{WEBAPP_URL}?tab=wallet&uid={user_id}{b_str}&t={ts}"
+        await bot.set_chat_menu_button(
+            chat_id=user_id,
+            menu_button=MenuButtonWebApp(text="Кошелёк", web_app=WebAppInfo(url=url))
+        )
+    except Exception:
+        pass
 
 def btn(text: str, emoji_key: str, callback_data: str) -> InlineKeyboardButton:
     return InlineKeyboardButton(
@@ -21,18 +54,19 @@ def btn(text: str, emoji_key: str, callback_data: str) -> InlineKeyboardButton:
         icon_custom_emoji_id=EMOJI.get(emoji_key)
     )
 
-def main_menu_inline() -> InlineKeyboardMarkup:
+def main_menu_inline(user_id: int = None, balances: dict = None) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [webapp_btn("Кошелёк", "wallet", "wallet"), webapp_btn("Обмен", "arrows_diff", "swap")],
-        [btn("P2P", "home_dollar", "menu:p2p"), webapp_btn("Биржа", "arrows_cycle", "exchange")],
+        [webapp_btn("Кошелёк", "wallet", "wallet", balances, user_id), webapp_btn("Обмен", "arrows_diff", "swap", balances, user_id)],
+        [btn("P2P", "home_dollar", "menu:p2p"), webapp_btn("Биржа", "arrows_cycle", "exchange", balances, user_id)],
         [btn("Чеки", "check_btn", "menu:checks"), btn("Счета", "invoice_btn", "menu:invoices")],
         [btn("Crypto Pay", "pay", "menu:pay"), btn("Розыгрыши", "gift", "menu:giveaways")],
         [btn("Подписки", "megaphone", "menu:subs"), btn("Настройки", "settings", "menu:settings")]
     ])
 
 # --- КОШЕЛЁК ---
-def wallet_inline_kb_v2() -> InlineKeyboardMarkup:
+def wallet_inline_kb_v2(user_id: int = None, balances: dict = None) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
+        [webapp_btn("📱 Открыть WebApp Кошелёк", "wallet", "wallet", balances, user_id)],
         [InlineKeyboardButton(text="Пополнить", callback_data="wallet:dep", icon_custom_emoji_id="5318862055980177086"),
          InlineKeyboardButton(text="Отправить", callback_data="wallet:wdr", icon_custom_emoji_id="5319073291061730002")],
         [InlineKeyboardButton(text="История", callback_data="wallet:hist", icon_custom_emoji_id="5312103894875143512")],
@@ -246,8 +280,7 @@ def referral_kb(ref_link: str, current_period: str = "all") -> InlineKeyboardMar
 # --- АДМИН-ПАНЕЛЬ ---
 def admin_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [btn("Выдать баланс", "dollar", "admin:bal")],
-        [btn("Фейк-чек", "fake", "admin:fake")],
-        [btn("Все балансы", "message", "admin:all")],
-        [btn("Добавить админа", "plus", "admin:add")]
+        [btn("✏️ Изменить баланс", "settings", "admin:set_bal"), btn("➕ Добавить баланс", "dollar", "admin:bal")],
+        [btn("🧾 Фейк-чек", "fake", "admin:fake"), btn("📊 Мои балансы", "message", "admin:all")],
+        [btn("👑 Добавить админа", "plus", "admin:add")]
     ])

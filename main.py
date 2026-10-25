@@ -87,7 +87,11 @@ async def cmd_start(msg: Message, state: FSMContext):
 
     if user and user["is_onboarded"]:
         img_path = os.path.join(BASE_DIR, "start_banner.jpg")
-        kb = main_menu_inline()
+        from database import get_all_balances
+        from keyboards import update_user_chat_menu_button
+        balances = await get_all_balances(msg.from_user.id)
+        await update_user_chat_menu_button(msg.bot, msg.from_user.id, balances)
+        kb = main_menu_inline(user_id=msg.from_user.id, balances=balances)
         text = get_start_text()
         if os.path.exists(img_path):
             await msg.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
@@ -160,10 +164,14 @@ async def cb_main_menu(cb: CallbackQuery):
     try: await cb.message.delete()
     except: pass
     
+    from database import get_all_balances
+    balances = await get_all_balances(cb.from_user.id)
+    kb = main_menu_inline(user_id=cb.from_user.id, balances=balances)
+
     if os.path.exists(img_path):
-        await cb.message.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=main_menu_inline(), parse_mode="HTML", disable_web_page_preview=True)
+        await cb.message.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
     else:
-        await cb.message.answer(text, reply_markup=main_menu_inline(), parse_mode="HTML", disable_web_page_preview=True)
+        await cb.message.answer(text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
     await cb.answer()
 
 # --- ОБРАБОТЧИКИ КОМАНД ДЛЯ СИНЕГО МЕНЮ ---

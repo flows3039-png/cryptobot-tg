@@ -61,7 +61,12 @@ async def show_wallet(target, user_id: int, edit: bool = False):
 
     text += f"💵 <b>Общий баланс:</b> ~${total_usd:.2f} {fiat}"
     
-    kb = wallet_inline_kb_v2()
+    kb = wallet_inline_kb_v2(user_id, balances)
+    try:
+        from keyboards import update_user_chat_menu_button
+        await update_user_chat_menu_button(target.bot, user_id, balances)
+    except Exception:
+        pass
 
     if edit:
         try:

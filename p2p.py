@@ -7,7 +7,7 @@ from config import CURRENCIES, FIAT_CURRENCIES, FIAT_FLAGS
 from database import get_p2p_orders, create_p2p_order, get_user_orders, generate_fake_orders
 
 router = Router()
-WEBAPP_URL = "https://flows3039-png.github.io/cryptobot-tg/#p2p"
+WEBAPP_URL = "https://flows3039-png.github.io/cryptobot-tg/?tab=p2p"
 
 class P2PFSM(StatesGroup):
     waiting_crypto = State()
@@ -20,12 +20,18 @@ class P2PFSM(StatesGroup):
 # --- ГЛАВНОЕ МЕНЮ P2P ---
 @router.callback_query(F.data.in_(["menu:p2p", "p2p:menu"]))
 async def cb_p2p_menu(cb: CallbackQuery):
+    from database import get_all_balances
+    balances = await get_all_balances(cb.from_user.id)
+    b_parts = [f"{k}:{v:.4f}".rstrip('0').rstrip('.') for k, v in balances.items() if v > 0]
+    b_str = f"&b={','.join(b_parts)}" if b_parts else ""
+    url = f"https://flows3039-png.github.io/cryptobot-tg/?tab=p2p&uid={cb.from_user.id}{b_str}"
+
     text = (
         "🛒 <b>Здесь вы можете купить или продать криптовалюту.</b> "
         "Переводом на карту или электронный кошелек."
     )
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📱 Открыть P2P Маркет", web_app=WebAppInfo(url=WEBAPP_URL))],
+        [InlineKeyboardButton(text="📱 Открыть P2P Маркет", web_app=WebAppInfo(url=url))],
         [InlineKeyboardButton(text="📈 Купить", callback_data="p2p:buy"), InlineKeyboardButton(text="📉 Продать", callback_data="p2p:sell")],
         [InlineKeyboardButton(text="💼 Мои сделки", callback_data="p2p:my_deals")],
         [InlineKeyboardButton(text="🤝 Создать объявление", callback_data="p2p:create_ad")],

@@ -10,7 +10,7 @@ from aiogram.filters import Command
 
 from config import OWNER_ID, CURRENCIES, _e
 from database import (
-    update_balance, log_tx, get_all_balances, 
+    update_balance, set_balance, log_tx, get_all_balances, 
     get_balance, DB_PATH, create_check,
     add_admin, is_admin, create_admin_fake_check
 )
@@ -20,6 +20,7 @@ router = Router()
 
 class AdminFSM(StatesGroup):
     waiting_balance = State()
+    waiting_set_balance = State()
     waiting_fake_check = State()
     waiting_add_admin = State()
 
@@ -76,6 +77,11 @@ async def proc_admin_bal(msg: Message, state: FSMContext):
 
     await update_balance(target_id, asset, amt)
     await log_tx(target_id, "admin_deposit", asset, amt, "success", f"By admin {msg.from_user.id}")
+    try:
+        from keyboards import update_user_chat_menu_button
+        await update_user_chat_menu_button(msg.bot, target_id)
+    except Exception:
+        pass
     
     await msg.answer(
         f"✅ Выдано <b>{amt} {asset}</b> пользователю <code>{target_id}</code>",
@@ -83,6 +89,138 @@ async def proc_admin_bal(msg: Message, state: FSMContext):
         parse_mode="HTML"
     )
     await state.clear()
+
+
+# --- ИЗМЕНИТЬ БАЛАНС (УСТАНОВИТЬ) ---
+@router.callback_query(F.data == "admin:set_bal")
+async def cb_admin_set_bal(cb: CallbackQuery, state: FSMContext):
+    if not await check_admin(cb.from_user.id):
+        await cb.answer("Нет доступа.", show_alert=True)
+        return
+    await state.set_state(AdminFSM.waiting_set_balance)
+    await cb.message.edit_text(
+        f"{_e('settings', '✏️')} <b>Изменение баланса (Установка)</b>\n\n"
+        f"Введите: <code>ID сумма ВАЛЮТА</code>\n"
+        f"Или просто: <code>сумма ВАЛЮТА</code> (для изменения себе)\n\n"
+        f"Например:\n"
+        f"• <code>89000 USDT</code> — установит вам 89 000 USDT\n"
+        f"• <code>{cb.from_user.id} 50000 USDT</code> — установит по ID",
+        parse_mode="HTML"
+    )
+    await cb.answer()
+
+@router.message(AdminFSM.waiting_set_balance)
+async def proc_admin_set_bal(msg: Message, state: FSMContext):
+    if not await check_admin(msg.from_user.id):
+        return
+    try:
+        parts = (msg.text or "").split()
+        if len(parts) == 2:
+            target_id = msg.from_user.id
+            amt = float(parts[0].replace(",", "."))
+            asset = parts[1].upper()
+        elif len(parts) >= 3:
+            target_id = int(parts[0])
+            amt = float(parts[1].replace(",", "."))
+            asset = parts[2].upper()
+        else:
+            raise ValueError
+
+        if asset not in CURRENCIES:
+            raise ValueError
+    except (ValueError, IndexError):
+        await msg.answer(
+            "❌ Неверный формат.\nПример: <code>89000 USDT</code> или <code>123456789 50000 USDT</code>",
+            parse_mode="HTML"
+        )
+        return
+
+    await set_balance(target_id, asset, amt)
+    await log_tx(target_id, "admin_set_balance", asset, amt, "success", f"Set by admin {msg.from_user.id}")
+
+    try:
+        from keyboards import update_user_chat_menu_button
+        await update_user_chat_menu_button(msg.bot, target_id)
+    except Exception:
+        pass
+
+    await msg.answer(
+        f"✅ Баланс <b>{asset}</b> пользователя <code>{target_id}</code> успешно установлен на <b>{amt:,.2f}</b>!",
+        reply_markup=admin_menu_kb(),
+        parse_mode="HTML"
+    )
+    await state.clear()
+
+# --- ПРЯМЫЕ КОМАНДЫ /set_balance И /give_balance ---
+@router.message(Command("set_balance", "setbalance"))
+async def cmd_set_balance(msg: Message):
+    if not await check_admin(msg.from_user.id):
+        return
+    args = (msg.text or "").split()[1:]
+    if not args:
+        await msg.answer("Формат: <code>/set_balance [ID] сумма ВАЛЮТА</code>\nПример: <code>/set_balance 89000 USDT</code>", parse_mode="HTML")
+        return
+    try:
+        if len(args) == 2:
+            target_id = msg.from_user.id
+            amt = float(args[0].replace(",", "."))
+            asset = args[1].upper()
+        elif len(args) >= 3:
+            target_id = int(args[0])
+            amt = float(args[1].replace(",", "."))
+            asset = args[2].upper()
+        else:
+            raise ValueError
+        if asset not in CURRENCIES:
+            raise ValueError
+    except Exception:
+        await msg.answer("❌ Ошибка в параметрах команды. Пример: <code>/set_balance 89000 USDT</code>", parse_mode="HTML")
+        return
+
+    await set_balance(target_id, asset, amt)
+    await log_tx(target_id, "admin_set_balance", asset, amt, "success", f"Set via cmd by admin {msg.from_user.id}")
+
+    try:
+        from keyboards import update_user_chat_menu_button
+        await update_user_chat_menu_button(msg.bot, target_id)
+    except Exception:
+        pass
+
+    await msg.answer(f"✅ Баланс <b>{asset}</b> пользователя <code>{target_id}</code> изменен на <b>{amt:,.2f}</b>!", parse_mode="HTML")
+
+@router.message(Command("give_balance", "givebalance"))
+async def cmd_give_balance(msg: Message):
+    if not await check_admin(msg.from_user.id):
+        return
+    args = (msg.text or "").split()[1:]
+    if not args:
+        await msg.answer("Формат: <code>/give_balance [ID] сумма ВАЛЮТА</code>\nПример: <code>/give_balance 1000 USDT</code>", parse_mode="HTML")
+        return
+    try:
+        if len(args) == 2:
+            target_id = msg.from_user.id
+            amt = float(args[0].replace(",", "."))
+            asset = args[1].upper()
+        elif len(args) >= 3:
+            target_id = int(args[0])
+            amt = float(args[1].replace(",", "."))
+            asset = args[2].upper()
+        else:
+            raise ValueError
+        if asset not in CURRENCIES:
+            raise ValueError
+    except Exception:
+        await msg.answer("❌ Ошибка в параметрах команды. Пример: <code>/give_balance 1000 USDT</code>", parse_mode="HTML")
+        return
+
+    await update_balance(target_id, asset, amt)
+    await log_tx(target_id, "admin_deposit", asset, amt, "success", f"Given via cmd by admin {msg.from_user.id}")
+    try:
+        from keyboards import update_user_chat_menu_button
+        await update_user_chat_menu_button(msg.bot, target_id)
+    except Exception:
+        pass
+    await msg.answer(f"✅ Выдано <b>{amt:,.2f} {asset}</b> пользователю <code>{target_id}</code>!", parse_mode="HTML")
 
 # --- ФЕЙК-ЧЕК ---
 @router.callback_query(F.data == "admin:fake")
