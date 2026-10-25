@@ -8,1690 +8,1630 @@
   <style>
     @font-face {
       font-family: 'SF Pro Display';
-      src: url('sf-pro.ttf') format('truetype');
+      src: url('./sf-pro.ttf') format('truetype');
       font-weight: 400 700;
+      font-style: normal;
       font-display: swap;
     }
-
     :root {
-      --bg: #14171a;
-      --surface: #1e2329;
-      --card-bg: #181d22;
-      --text: #ffffff;
-      --text-muted: #848e9c;
-      --primary: #0098ea;
-      --primary-hover: #0087d1;
-      --green: #0ecb81;
-      --red: #f6465d;
-      --border: #23272e;
-      --pill-bg: rgba(30, 36, 44, 0.94);
-      --dock-active: #2b3542;
+      --bg-primary: #000000;
+      --bg-secondary: #1c1c1e;
+      --bg-tertiary: #2c2c2e;
+      --bg-card: #18181a;
+      --bg-card-hover: #222224;
+      --text-primary: #ffffff;
+      --text-secondary: #8e8e93;
+      --text-muted: #636366;
+      --accent-blue: #007aff;
+      --accent-green: #34c759;
+      --accent-orange: #ff9f0a;
+      --accent-red: #ff453a;
+      --accent-purple: #bf5af2;
+      --accent-pink: #fb7185;
+      --accent-cyan: #30b0c7;
+      --gray-squircle: #585f6a;
+      --dock-bg: rgba(28, 28, 30, 0.85);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
-
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
+      font-family: var(--font-family);
       user-select: none;
     }
-
     body {
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'SF Pro Text', Roboto, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
       overflow-x: hidden;
-      padding-bottom: 95px;
+      min-height: 100vh;
+      padding-bottom: 90px;
     }
-
-    /* Modal / Popups */
-    .modal-backdrop {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(4px);
-      z-index: 200;
-      display: none;
-      align-items: flex-end;
-      justify-content: center;
+    .app-container {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
     }
-    .modal-backdrop.active {
-      display: flex;
-    }
-    .modal-sheet {
-      width: 100%;
-      max-width: 500px;
-      background: #1c2127;
-      border-top-left-radius: 20px;
-      border-top-right-radius: 20px;
-      padding: 20px 16px 36px;
-      animation: slideUp 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
-    }
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
-    }
-    .modal-title {
-      font-size: 18px;
-      font-weight: 700;
-      text-align: center;
-      margin-bottom: 16px;
-    }
-    .modal-input {
-      width: 100%;
-      background: #14171a;
-      border: 1px solid #2d3540;
-      border-radius: 12px;
-      padding: 12px;
-      color: #fff;
-      font-size: 15px;
-      font-weight: 600;
-      outline: none;
-      margin-bottom: 12px;
-    }
-    .modal-btn {
-      width: 100%;
-      padding: 14px;
-      border-radius: 12px;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    /* Top Banner */
-    .banner {
-      background: #1c2127;
-      border: 1px solid #282f38;
-      border-radius: 14px;
-      margin: 12px 16px;
-      padding: 12px 14px;
+    /* Top Bar */
+    .top-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 14px 18px 8px;
+    }
+    .top-bar .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .top-bar .action-btn {
+      background: none;
+      border: none;
+      color: var(--text-primary);
       cursor: pointer;
-    }
-    .banner-title {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 3px;
-      font-weight: 500;
-    }
-    .banner-text {
-      font-size: 13px;
-      line-height: 1.35;
-      color: #e6e8ea;
-    }
-    .banner-arrow {
-      color: var(--text-muted);
-      font-size: 16px;
-      margin-left: 10px;
-    }
-
-    /* Views */
-    .view {
-      display: none;
-      flex-direction: column;
-      width: 100%;
-      animation: fadeIn 0.15s ease-out;
-    }
-    .view.active {
       display: flex;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* =================== 1. WALLET VIEW =================== */
-    .wallet-header {
-      padding: 24px 16px 16px;
-      text-align: center;
-    }
-    .main-balance-row {
-      display: inline-flex;
       align-items: center;
       justify-content: center;
+      padding: 6px;
+      border-radius: 50%;
+    }
+    /* Tab View */
+    .tab-view {
+      display: none;
+      padding: 10px 16px 20px;
+      animation: fadeIn 0.18s ease-out;
+    }
+    .tab-view.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Wallet Balance */
+    .balance-card {
+      text-align: center;
+      padding: 24px 16px 18px;
+    }
+    .balance-value-row {
+      display: inline-flex;
+      align-items: center;
       gap: 10px;
+      cursor: pointer;
     }
-    .currency-symbol {
-      font-size: 38px;
+    .balance-currency {
+      font-size: 34px;
       font-weight: 700;
-      color: #9aa2ac;
+      color: var(--text-primary);
     }
-    .main-balance {
-      font-size: 48px;
+    .balance-amount {
+      font-size: 42px;
       font-weight: 700;
       letter-spacing: -1px;
     }
-    .eye-btn {
+    .balance-toggle {
       background: none;
       border: none;
-      color: #717a87;
-      cursor: pointer;
+      color: var(--text-secondary);
       display: flex;
       align-items: center;
-      padding: 4px;
+      cursor: pointer;
     }
-    .balance-subtitle {
-      color: var(--text-muted);
-      font-size: 13px;
-      margin-top: 4px;
-    }
-    .balance-subtitle span {
-      color: var(--primary);
-      font-weight: 600;
-    }
-
-    /* Quick Action Round Buttons */
+    /* Quick Action Buttons */
     .quick-actions {
-      display: flex;
-      justify-content: center;
-      gap: 36px;
-      margin: 18px 0 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 14px 0 20px;
     }
-    .action-item {
+    .quick-btn {
+      background: var(--bg-secondary);
+      border: none;
+      border-radius: 16px;
+      padding: 14px 16px;
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .quick-btn:active {
+      background: var(--bg-card-hover);
+      transform: scale(0.98);
+    }
+    .quick-btn-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .quick-btn-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    /* Regional restriction banner */
+    .warning-banner {
+      background: #1e1b12;
+      border: 1px solid rgba(255, 159, 10, 0.25);
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 22px;
+    }
+    .warning-icon {
+      color: var(--accent-orange);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .warning-content h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent-orange);
+      margin-bottom: 3px;
+    }
+    .warning-content p {
+      font-size: 13px;
+      line-height: 1.35;
+      color: #d1b88a;
+    }
+    /* Asset List */
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin: 16px 4px 10px;
+      display: flex;
       align-items: center;
       gap: 8px;
-      background: none;
-      border: none;
-      cursor: pointer;
     }
-    .action-circle {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      background: #2a7dbd;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.1s;
-    }
-    .action-circle:active {
-      transform: scale(0.94);
-    }
-    .action-label {
-      color: #4da6e9;
-      font-size: 13px;
-      font-weight: 500;
-    }
-
-    /* Assets List */
-    .assets-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px 8px;
-    }
-    .assets-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: #2793e6;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .assets-hide-toggle {
-      font-size: 13px;
-      color: #3b9fe8;
-      cursor: pointer;
-    }
-
     .asset-list {
-      display: flex;
-      flex-direction: column;
+      background: var(--bg-secondary);
+      border-radius: 20px;
+      overflow: hidden;
     }
     .asset-item {
       display: flex;
       align-items: center;
-      padding: 14px 16px;
-      border-bottom: 1px solid #1a1e24;
+      justify-content: space-between;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border-color);
       cursor: pointer;
+      transition: background 0.15s;
+    }
+    .asset-item:last-child {
+      border-bottom: none;
     }
     .asset-item:active {
-      background: rgba(255, 255, 255, 0.03);
+      background: var(--bg-card-hover);
     }
-    .asset-icon-svg {
+    .asset-info {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+    .asset-icon-img {
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      margin-right: 14px;
-      flex-shrink: 0;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-    .asset-info {
-      flex: 1;
+      object-fit: cover;
+      background: #2c2c2e;
     }
     .asset-name {
       font-size: 16px;
       font-weight: 600;
-      color: #fff;
+      color: var(--text-primary);
     }
-    .asset-sub {
+    .asset-price-sub {
       font-size: 13px;
-      color: var(--text-muted);
+      color: var(--text-secondary);
       margin-top: 2px;
     }
-    .asset-sub .change-pos { color: var(--green); }
-    .asset-sub .change-neg { color: var(--red); }
-    .asset-vals {
+    .asset-values {
       text-align: right;
     }
-    .asset-crypto {
-      font-size: 15px;
+    .asset-crypto-amount {
+      font-size: 16px;
       font-weight: 600;
-      color: #fff;
+      color: var(--text-primary);
     }
-    .asset-fiat {
+    .asset-fiat-amount {
       font-size: 13px;
-      color: var(--text-muted);
+      color: var(--text-secondary);
       margin-top: 2px;
     }
-
-    /* =================== 2. EXCHANGE VIEW =================== */
-    .exchange-top-bar {
-      padding: 12px 16px;
+    /* "More" (Ещё) Screen */
+    .more-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+    .more-card {
+      background: var(--bg-secondary);
+      border-radius: 18px;
+      padding: 14px 10px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .more-card:active {
+      background: var(--bg-card-hover);
+      transform: scale(0.97);
+    }
+    .squircle-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      margin-bottom: 9px;
+      flex-shrink: 0;
+    }
+    .more-card-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      line-height: 1.25;
+    }
+    .more-list-group {
+      background: var(--bg-secondary);
+      border-radius: 18px;
+      overflow: hidden;
+      margin-bottom: 22px;
+    }
+    .more-list-item {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid var(--border);
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .more-list-item:last-child {
+      border-bottom: none;
+    }
+    .more-list-item:active {
+      background: var(--bg-card-hover);
+    }
+    .more-list-left {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+    .more-list-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .more-list-chevron {
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+    }
+    /* Exchange Screen */
+    .exchange-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 4px 14px;
     }
     .pair-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-    }
-    .pair-name {
+      background: var(--bg-secondary);
+      padding: 8px 14px;
+      border-radius: 20px;
       font-size: 17px;
       font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
     }
-    .pair-stats {
-      padding: 8px 16px;
+    .order-book {
+      background: var(--bg-secondary);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .order-row {
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
-      border-bottom: 1px solid #1c2127;
-      color: var(--text-muted);
-    }
-
-    .exchange-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      padding: 12px 16px;
-      gap: 12px;
-    }
-
-    .buy-sell-tabs {
-      display: flex;
-      background: #191e24;
-      border-radius: 8px;
-      padding: 2px;
-      margin-bottom: 10px;
-    }
-    .bs-tab {
-      flex: 1;
-      padding: 8px 0;
-      text-align: center;
-      font-size: 14px;
-      font-weight: 600;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      color: #88929e;
-      background: none;
-    }
-    .bs-tab.active-buy {
-      background: var(--green);
-      color: #fff;
-    }
-    .bs-tab.active-sell {
-      background: var(--red);
-      color: #fff;
-    }
-
-    .inp-box {
-      background: #191e24;
-      border: 1px solid #282f38;
-      border-radius: 8px;
-      padding: 8px 10px;
-      margin-bottom: 10px;
-    }
-    .inp-label {
-      font-size: 10px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-    }
-    .inp-field {
-      width: 100%;
-      background: none;
-      border: none;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      outline: none;
-      margin-top: 2px;
-    }
-    .pct-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 11px;
-      color: var(--text-muted);
-      margin: 6px 0 10px;
-    }
-    .pct-item {
-      cursor: pointer;
-      padding: 2px 4px;
-    }
-    .pct-item:hover { color: #fff; }
-
-    .trade-btn {
-      width: 100%;
-      padding: 12px 0;
-      background: var(--green);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 4px;
-    }
-
-    /* Orderbook column */
-    .orderbook-col {
-      display: flex;
-      flex-direction: column;
-      font-size: 11px;
+      font-size: 13px;
+      padding: 4px 0;
       font-family: monospace;
     }
-    .ob-header {
+    .order-ask { color: var(--accent-red); }
+    .order-bid { color: var(--accent-green); }
+    .trade-actions {
       display: flex;
-      justify-content: space-between;
-      color: var(--text-muted);
-      padding-bottom: 6px;
-      font-family: sans-serif;
+      gap: 10px;
+      margin-bottom: 16px;
     }
-    .ob-row {
+    .trade-tab-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+    }
+    .trade-tab-btn.active.buy {
+      background: var(--accent-green);
+      color: #fff;
+    }
+    .trade-tab-btn.active.sell {
+      background: var(--accent-red);
+      color: #fff;
+    }
+    .form-input-group {
+      background: var(--bg-secondary);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
       display: flex;
       justify-content: space-between;
-      padding: 3px 0;
+      align-items: center;
+    }
+    .form-input-group input {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 600;
+      outline: none;
+      width: 70%;
+    }
+    .form-input-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    .percent-chips {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .percent-chip {
+      flex: 1;
+      padding: 8px 0;
+      background: var(--bg-secondary);
+      border: none;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
     }
-    .ob-row:hover { background: rgba(255, 255, 255, 0.05); }
-    .ob-ask { color: var(--red); }
-    .ob-bid { color: var(--green); }
-    .ob-mid {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--green);
-      text-align: center;
-      padding: 8px 0;
+    .percent-chip:active {
+      background: var(--bg-card-hover);
+      color: #fff;
     }
-
-    /* Orders Bottom Section */
-    .orders-section {
-      padding: 16px;
-      border-top: 1px solid #1c2127;
-      margin-top: 10px;
-    }
-    .orders-tabs {
-      display: flex;
-      gap: 16px;
-      border-bottom: 1px solid #23272e;
-      padding-bottom: 8px;
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-    .order-tab.active {
-      color: var(--text);
-      font-weight: 600;
-      position: relative;
-    }
-    .order-tab.active::after {
-      content: '';
-      position: absolute;
-      bottom: -9px;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: var(--primary);
-    }
-    .empty-state {
-      padding: 36px 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: #636b76;
-      font-size: 13px;
-      gap: 8px;
-    }
-
-    /* =================== 3. SWAP VIEW =================== */
-    .swap-container {
-      padding: 24px 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .swap-card {
+    .primary-btn {
       width: 100%;
-      background: var(--card-bg);
-      border: 1px solid #232a32;
+      padding: 16px;
       border-radius: 16px;
-      padding: 18px 16px;
+      border: none;
+      background: var(--accent-blue);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .primary-btn:active {
+      opacity: 0.85;
+    }
+    .primary-btn.green { background: var(--accent-green); }
+    .primary-btn.red { background: var(--accent-red); }
+    /* Swap Screen */
+    .swap-box {
+      background: var(--bg-secondary);
+      border-radius: 20px;
+      padding: 18px;
+      margin-bottom: 8px;
       position: relative;
     }
     .swap-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-top: 10px;
     }
-    .swap-label-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 8px;
+    .swap-amount-input {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 32px;
+      font-weight: 700;
+      outline: none;
+      width: 60%;
     }
-    .swap-coin-btn {
+    .swap-coin-pill {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 18px;
-      font-weight: 700;
-      color: #fff;
+      background: var(--bg-tertiary);
+      padding: 6px 12px 6px 8px;
+      border-radius: 20px;
       cursor: pointer;
     }
-    .swap-input {
-      background: none;
-      border: none;
-      font-size: 28px;
-      font-weight: 700;
-      color: #fff;
-      text-align: right;
-      width: 50%;
-      outline: none;
-    }
     .swap-divider {
-      position: relative;
-      margin: 16px 0;
-      height: 1px;
-      background: #252d36;
       display: flex;
-      align-items: center;
       justify-content: center;
+      position: relative;
+      margin: -16px 0;
+      z-index: 2;
     }
-    .swap-switch-circle {
-      position: absolute;
-      width: 36px;
-      height: 36px;
-      background: #232e3a;
-      border: 2px solid var(--bg);
+    .swap-switch-btn {
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
-      color: #3b9fe8;
+      background: var(--bg-tertiary);
+      border: 3px solid var(--bg-primary);
+      color: var(--text-primary);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: transform 0.2s;
     }
-    .swap-switch-circle:active {
-      transform: scale(0.9) rotate(180deg);
+    .swap-switch-btn:active {
+      transform: rotate(180deg);
     }
-    .swap-action-btn {
-      width: 100%;
-      margin-top: 24px;
-      padding: 16px;
-      border-radius: 14px;
-      background: #3992d9;
-      color: #fff;
-      font-size: 16px;
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-      transition: opacity 0.1s;
+    .swap-info-card {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin: 16px 0 24px;
     }
-    .swap-action-btn:active {
-      opacity: 0.85;
-    }
-
-    /* =================== 4. P2P VIEW =================== */
-    .p2p-header {
-      padding: 24px 16px;
-      text-align: center;
+    .swap-info-row {
       display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .p2p-logo {
-      width: 64px;
-      height: 64px;
-      border-radius: 20px;
-      background: #2b7ebb;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 30px;
-      margin-bottom: 14px;
-    }
-    .p2p-title {
-      font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .p2p-desc {
+      justify-content: space-between;
       font-size: 13px;
-      color: var(--text-muted);
-      line-height: 1.4;
-      max-width: 320px;
-    }
-    .profile-card {
-      margin: 10px 16px;
-      background: #1c2127;
-      border-radius: 12px;
-      padding: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-    }
-    .profile-card-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 15px;
-      font-weight: 600;
-    }
-    .p2p-filters {
-      display: flex;
-      gap: 8px;
-      padding: 8px 16px;
-      overflow-x: auto;
-    }
-    .p2p-filter-pill {
-      background: #1c2127;
-      border: 1px solid #29303a;
-      border-radius: 20px;
-      padding: 6px 12px;
-      font-size: 12px;
-      color: #c1c8d1;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
-    /* Order list for P2P */
-    .p2p-order-item {
-      background: #181d22;
-      border-radius: 14px;
-      margin: 8px 16px;
-      padding: 14px;
-      border: 1px solid #232a32;
-    }
-    .p2p-order-top {
-      display: flex;
-      justify-content: space-between;
+      color: var(--text-secondary);
       margin-bottom: 6px;
     }
-    .p2p-order-user {
-      font-size: 14px;
+    .swap-info-row:last-child {
+      margin-bottom: 0;
+    }
+    .swap-info-value {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    /* P2P Screen */
+    .p2p-type-switch {
+      display: flex;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 3px;
+      margin-bottom: 14px;
+    }
+    .p2p-type-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
       font-weight: 600;
+      cursor: pointer;
+      background: none;
+      color: var(--text-secondary);
+    }
+    .p2p-type-btn.active {
+      background: var(--bg-tertiary);
       color: #fff;
     }
-    .p2p-order-price {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--green);
+    .p2p-chips-scroll {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      scrollbar-width: none;
     }
-    .p2p-order-details {
-      font-size: 12px;
-      color: var(--text-muted);
+    .p2p-chips-scroll::-webkit-scrollbar { display: none; }
+    .p2p-chip {
+      padding: 7px 14px;
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .p2p-chip.active {
+      background: var(--text-primary);
+      color: var(--bg-primary);
+    }
+    .p2p-order-card {
+      background: var(--bg-secondary);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 10px;
+    }
+    .p2p-order-user {
       display: flex;
       justify-content: space-between;
       margin-bottom: 10px;
     }
-    .p2p-buy-btn {
-      width: 100%;
-      background: var(--green);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 0;
+    .p2p-username {
+      font-size: 15px;
       font-weight: 600;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    /* =================== 5. MORE VIEW =================== */
-    .more-container {
-      padding: 16px;
-    }
-    .grid-section-title {
-      font-size: 13px;
-      color: #8c96a3;
-      margin: 18px 0 10px;
-      font-weight: 500;
       display: flex;
       align-items: center;
       gap: 6px;
     }
-    .icon-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px 10px;
+    .p2p-user-stats {
+      font-size: 12px;
+      color: var(--text-secondary);
     }
-    .grid-item {
+    .p2p-price-row {
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      cursor: pointer;
-    }
-    .grid-icon-box {
-      width: 58px;
-      height: 58px;
-      border-radius: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      color: #fff;
-      margin-bottom: 6px;
-      transition: transform 0.1s;
-    }
-    .grid-item:active .grid-icon-box {
-      transform: scale(0.93);
-    }
-    .grid-label {
-      font-size: 11px;
-      color: #d1d5db;
-      text-align: center;
-      line-height: 1.2;
-    }
-
-    /* Links */
-    .link-row {
-      display: flex;
-      align-items: center;
       justify-content: space-between;
-      padding: 14px 0;
-      border-bottom: 1px solid #1a1e24;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+    .p2p-price {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .p2p-limits {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .p2p-badge-pay {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .p2p-action-btn {
+      padding: 10px 20px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 700;
+      font-size: 14px;
       cursor: pointer;
-    }
-    .link-row-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 14px;
       color: #fff;
-      font-weight: 500;
     }
-    .link-row-arrow {
-      color: #636d7a;
-      font-size: 14px;
-    }
-
-    /* =================== BOTTOM DOCK =================== */
-    .bottom-dock-wrapper {
+    .p2p-action-btn.buy { background: var(--accent-green); }
+    .p2p-action-btn.sell { background: var(--accent-red); }
+    /* Floating Dock */
+    .dock {
       position: fixed;
-      bottom: 12px;
+      bottom: 0;
       left: 0;
       right: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      pointer-events: none;
-      z-index: 100;
-    }
-    .bottom-dock {
-      pointer-events: auto;
-      background: var(--pill-bg);
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--dock-bg);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 28px;
+      border-top: 1px solid var(--border-color);
       display: flex;
-      align-items: center;
-      padding: 4px 6px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      justify-content: space-around;
+      padding: 8px 6px calc(env(safe-area-inset-bottom, 10px) + 6px);
+      z-index: 100;
     }
-    .dock-tab {
+    .dock-item {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: none;
-      background: none;
-      color: #838d99;
-      cursor: pointer;
-      gap: 3px;
-      transition: all 0.15s ease;
-      min-width: 58px;
-    }
-    .dock-tab.active {
-      background: var(--dock-active);
-      color: #2ea5ff;
-    }
-    .dock-tab svg {
-      width: 20px;
-      height: 20px;
-      fill: currentColor;
-    }
-    .dock-title {
-      font-size: 10px;
-      font-weight: 600;
-    }
-    .dock-footer {
+      gap: 4px;
       font-size: 11px;
-      color: #626c78;
-      margin-top: 6px;
       font-weight: 500;
+      cursor: pointer;
+      flex: 1;
+      padding: 4px 0;
+      transition: color 0.15s;
+    }
+    .dock-item.active {
+      color: var(--accent-blue);
+    }
+    .dock-item svg {
+      width: 24px;
+      height: 24px;
+    }
+    /* Modal Backdrop */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal-sheet {
+      background: var(--bg-secondary);
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 20px 20px calc(env(safe-area-inset-bottom, 16px) + 20px);
+      animation: slideUp 0.22s cubic-bezier(0.1, 0.9, 0.2, 1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .modal-close {
+      background: var(--bg-tertiary);
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .qr-box {
+      background: #fff;
+      padding: 16px;
+      border-radius: 18px;
+      width: 200px;
+      height: 200px;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qr-box img {
+      width: 100%;
+      height: 100%;
+    }
+    .address-box {
+      background: var(--bg-tertiary);
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 13px;
+      word-break: break-all;
+      text-align: center;
+      margin-bottom: 16px;
+      color: #fff;
     }
   </style>
 </head>
 <body>
+  <div class="app-container">
 
-  <!-- ================= 1. КОШЕЛЁК ================= -->
-  <div id="view-wallet" class="view active">
-    <div class="wallet-header">
-      <div class="main-balance-row">
-        <span class="currency-symbol">₽</span>
-        <span id="wallet-balance-num" class="main-balance">0</span>
-        <button class="eye-btn" onclick="toggleBalanceVisibility()">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-            <circle cx="12" cy="12" r="3"></circle>
-          </svg>
+    <!-- TAB 1: WALLET (Кошелёк) -->
+    <div id="tab-wallet" class="tab-view active">
+      <div class="top-bar">
+        <h1 class="page-title">Кошелёк</h1>
+        <button class="action-btn" onclick="openQrScanner()">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.5 13C7.89782 13 8.59712 13.0002 9.14844 13.2285C9.88321 13.533 10.467 14.1168 10.7715 14.8516C10.9998 15.4029 11 16.1022 11 17.5C11 18.8978 10.9998 19.5971 10.7715 20.1484L10.6445 20.416C10.3188 21.0244 9.79155 21.505 9.14844 21.7715L8.93359 21.8467C8.41133 21.9998 7.72337 22 6.5 22C5.10218 22 4.40288 21.9998 3.85156 21.7715C3.20845 21.505 2.68121 21.0244 2.35547 20.416L2.22852 20.1484C2.00015 19.5971 2 18.8978 2 17.5C2 16.2766 2.00023 15.5887 2.15332 15.0664L2.22852 14.8516C2.49501 14.2085 2.97559 13.6812 3.58398 13.3555L3.85156 13.2285C4.40288 13.0002 5.10218 13 6.5 13ZM6.5 15C5.77406 15 5.32957 15.0006 4.99512 15.0234C4.68022 15.0449 4.60939 15.0794 4.61719 15.0762C4.37226 15.1777 4.17766 15.3723 4.07617 15.6172C4.07935 15.6094 4.04492 15.6802 4.02344 15.9951C4.00065 16.3296 4 16.7741 4 17.5C4 18.2259 4.00065 18.6704 4.02344 19.0049C4.04492 19.3198 4.07935 19.3906 4.07617 19.3828C4.17766 19.6277 4.37226 19.8223 4.61719 19.9238C4.60939 19.9207 4.68022 19.9551 4.99512 19.9766C5.32957 19.9994 5.77406 20 6.5 20C7.22594 20 7.67043 19.9994 8.00488 19.9766C8.31978 19.9551 8.39061 19.9207 8.38281 19.9238C8.62774 19.8223 8.82234 19.6277 8.92383 19.3828C8.92065 19.3906 8.95508 19.3198 8.97656 19.0049C8.99935 18.6704 9 18.2259 9 17.5C9 16.7741 8.99935 16.3296 8.97656 15.9951C8.95508 15.6802 8.92065 15.6094 8.92383 15.6172C8.82234 15.3723 8.62774 15.1777 8.38281 15.0762C8.39061 15.0794 8.31978 15.0449 8.00488 15.0234C7.67043 15.0006 7.22594 15 6.5 15Z" fill="currentColor"/><path d="M15 18.5C15.8284 18.5 16.5 19.1716 16.5 20C16.5 20.8284 15.8284 21.5 15 21.5C14.1716 21.5 13.5 20.8284 13.5 20C13.5 19.1716 14.1716 18.5 15 18.5Z" fill="currentColor"/><path d="M20 18.5C20.8284 18.5 21.5 19.1716 21.5 20C21.5 20.8284 20.8284 21.5 20 21.5C19.1716 21.5 18.5 20.8284 18.5 20C18.5 19.1716 19.1716 18.5 20 18.5Z" fill="currentColor"/><path d="M15 13.5C15.8284 13.5 16.5 14.1716 16.5 15C16.5 15.8284 15.8284 16.5 15 16.5C14.1716 16.5 13.5 15.8284 13.5 15C13.5 14.1716 14.1716 13.5 15 13.5Z" fill="currentColor"/><path d="M20 13.5C20.8284 13.5 21.5 14.1716 21.5 15C21.5 15.8284 20.8284 16.5 20 16.5C19.1716 16.5 18.5 15.8284 18.5 15C18.5 14.1716 19.1716 13.5 20 13.5Z" fill="currentColor"/><path d="M6.5 2C7.89782 2 8.59712 2.00015 9.14844 2.22852C9.88321 2.53299 10.467 3.11679 10.7715 3.85156C10.9998 4.40288 11 5.10218 11 6.5C11 7.89782 10.9998 8.59712 10.7715 9.14844L10.6445 9.41602C10.3188 10.0244 9.79155 10.505 9.14844 10.7715L8.93359 10.8467C8.41133 10.9998 7.72337 11 6.5 11C5.10218 11 4.40288 10.9998 3.85156 10.7715C3.20845 10.505 2.68121 10.0244 2.35547 9.41602L2.22852 9.14844C2.00015 8.59712 2 7.89782 2 6.5C2 5.27663 2.00023 4.58867 2.15332 4.06641L2.22852 3.85156C2.49501 3.20845 2.97559 2.68121 3.58398 2.35547L3.85156 2.22852C4.40288 2.00015 5.10218 2 6.5 2ZM6.5 4C5.77406 4 5.32957 4.00065 4.99512 4.02344C4.68022 4.04492 4.60939 4.07935 4.61719 4.07617C4.37226 4.17766 4.17766 4.37226 4.07617 4.61719C4.07935 4.60939 4.04492 4.68022 4.02344 4.99512C4.00065 5.32957 4 5.77406 4 6.5C4 7.22594 4.00065 7.67043 4.02344 8.00488C4.04492 8.31978 4.07935 8.39061 4.07617 8.38281C4.17766 8.62774 4.37226 8.82234 4.61719 8.92383C4.60939 8.92065 4.68022 8.95508 4.99512 8.97656C5.32957 8.99935 5.77406 9 6.5 9C7.22594 9 7.67043 8.99935 8.00488 8.97656C8.31978 8.95508 8.39061 8.92065 8.38281 8.92383C8.62774 8.82234 8.82234 8.62774 8.92383 8.38281C8.92065 8.39061 8.95508 8.31978 8.97656 8.00488C8.99935 7.67043 9 7.22594 9 6.5C9 5.77406 8.99935 5.32957 8.97656 4.99512C8.95508 4.68022 8.92065 4.60939 8.92383 4.61719C8.82234 4.37226 8.62774 4.17766 8.38281 4.07617C8.39061 4.07935 8.31978 4.04492 8.00488 4.02344C7.67043 4.00065 7.22594 4 6.5 4Z" fill="currentColor"/><path d="M17.5 2C18.8978 2 19.5971 2.00015 20.1484 2.22852C20.8832 2.53299 21.467 3.11679 21.7715 3.85156C21.9998 4.40288 22 5.10218 22 6.5C22 7.89782 21.9998 8.59712 21.7715 9.14844L21.6445 9.41602C21.3188 10.0244 20.7915 10.505 20.1484 10.7715L19.9336 10.8467C19.4113 10.9998 18.7234 11 17.5 11C16.1022 11 15.4029 10.9998 14.8516 10.7715C14.2085 10.505 13.6812 10.0244 13.3555 9.41602L13.2285 9.14844C13.0002 8.59712 13 7.89782 13 6.5C13 5.27663 13.0002 4.58867 13.1533 4.06641L13.2285 3.85156C13.495 3.20845 13.9756 2.68121 14.584 2.35547L14.8516 2.22852C15.4029 2.00015 16.1022 2 17.5 2ZM17.5 4C16.7741 4 16.3296 4.00065 15.9951 4.02344C15.6802 4.04492 15.6094 4.07935 15.6172 4.07617C15.3723 4.17766 15.1777 4.37226 15.0762 4.61719C15.0794 4.60939 15.0449 4.68022 15.0234 4.99512C15.0006 5.32957 15 5.77406 15 6.5C15 7.22594 15.0006 7.67043 15.0234 8.00488C15.0449 8.31978 15.0794 8.39061 15.0762 8.38281C15.1777 8.62774 15.3723 8.82234 15.6172 8.92383C15.6094 8.92065 15.6802 8.95508 15.9951 8.97656C16.3296 8.99935 16.7741 9 17.5 9C18.2259 9 18.6704 8.99935 19.0049 8.97656C19.3198 8.95508 19.3906 8.92065 19.3828 8.92383C19.6277 8.82234 19.8223 8.62774 19.9238 8.38281C19.9207 8.39061 19.9551 8.31978 19.9766 8.00488C19.9994 7.67043 20 7.22594 20 6.5C20 5.77406 19.9994 5.32957 19.9766 4.99512C19.9551 4.68022 19.9207 4.60939 19.9238 4.61719C19.8223 4.37226 19.6277 4.17766 19.3828 4.07617C19.3906 4.07935 19.3198 4.04492 19.0049 4.02344C18.6704 4.00065 18.2259 4 17.5 4Z" fill="currentColor"/></svg>
         </button>
       </div>
-      <div class="balance-subtitle">Общий баланс в <span>RUB</span></div>
-    </div>
 
-    <!-- Quick Buttons -->
-    <div class="quick-actions">
-      <button class="action-item" onclick="openDepositModal()">
-        <div class="action-circle" style="background:#22c55e;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <polyline points="19 12 12 19 5 12"></polyline>
-          </svg>
+      <div class="balance-card">
+        <div class="balance-value-row" onclick="toggleBalanceVisibility()">
+          <span class="balance-currency">₽</span>
+          <span id="total-balance-display" class="balance-amount">0</span>
+          <button class="balance-toggle" id="balance-eye-btn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
         </div>
-        <span class="action-label" style="color:#4ade80;">Пополнить</span>
-      </button>
-
-      <button class="action-item" onclick="openWithdrawModal()">
-        <div class="action-circle">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="7" y1="17" x2="17" y2="7"></line>
-            <polyline points="7 7 17 7 17 17"></polyline>
-          </svg>
-        </div>
-        <span class="action-label">Вывести</span>
-      </button>
-
-      <button class="action-item" onclick="openHistoryModal()">
-        <div class="action-circle">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-        </div>
-        <span class="action-label">История</span>
-      </button>
-    </div>
-
-    <!-- Banner -->
-    <div class="banner">
-      <div>
-        <div class="banner-title">Региональное ограничение</div>
-        <div class="banner-text">Сервис недоступен в вашем регионе.<br>Средства можно вывести в любой момент.</div>
-      </div>
-      <div class="banner-arrow">›</div>
-    </div>
-
-    <!-- Assets List -->
-    <div class="assets-header">
-      <div class="assets-title">Мои активы ›</div>
-      <div class="assets-hide-toggle" onclick="toggleSmallBalances()">Скрыть мелкие балансы</div>
-    </div>
-
-    <div class="asset-list" id="asset-list-container">
-      <!-- Dynamic Assets -->
-    </div>
-  </div>
-
-  <!-- ================= 2. БИРЖА ================= -->
-  <div id="view-exchange" class="view">
-    <div class="exchange-top-bar">
-      <div class="pair-badge" onclick="switchPairModal()">
-        <svg class="asset-icon-svg" style="width:24px;height:24px;" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#2775ca"/><path d="M16 6v20M20 10h-6a4 4 0 000 8h4a4 4 0 010 8h-6" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
-        <span class="pair-name" id="current-pair-title">USDC / USDT</span>
-        <span style="color:#78828f;">▼</span>
-      </div>
-      <div style="font-size:18px; color:#848e9c; cursor:pointer;" onclick="switchPairModal()">⇄</div>
-    </div>
-
-    <div class="pair-stats">
-      <div>Изменение за 24ч: <span style="color:var(--red); font-weight:600;" id="pair-change">-0.0002 -0.02%</span></div>
-      <div>Объём 24ч: <span style="color:#fff; font-weight:600;">10 572.75 USDT</span></div>
-    </div>
-
-    <div class="banner" style="margin:8px 16px;">
-      <div>
-        <div class="banner-title">Региональное ограничение</div>
-        <div class="banner-text">Сервис недоступен в вашем регионе.</div>
-      </div>
-      <div class="banner-arrow">›</div>
-    </div>
-
-    <div class="exchange-grid">
-      <!-- Left Trading Column -->
-      <div class="trading-col">
-        <div class="buy-sell-tabs">
-          <button class="bs-tab active-buy" id="btn-buy" onclick="setOrderSide('buy')">Купить</button>
-          <button class="bs-tab" id="btn-sell" onclick="setOrderSide('sell')">Продать</button>
-        </div>
-
-        <div class="inp-box">
-          <div class="inp-label">Тип ордера</div>
-          <div style="font-size:13px; font-weight:600; padding-top:2px;">Лимитный ордер ▼</div>
-        </div>
-
-        <div class="inp-box">
-          <div class="inp-label">Цена (USDT)</div>
-          <input type="number" step="0.0001" class="inp-field" id="trade-price" value="0.9946" oninput="calculateTotal()">
-        </div>
-
-        <div class="inp-box">
-          <div class="inp-label">Сумма</div>
-          <input type="number" step="0.01" class="inp-field" id="trade-amount" placeholder="0" oninput="calculateTotal()">
-        </div>
-
-        <div class="pct-row">
-          <span class="pct-item" onclick="setTradePercent(0)">0%</span>
-          <span class="pct-item" onclick="setTradePercent(25)">25%</span>
-          <span class="pct-item" onclick="setTradePercent(50)">50%</span>
-          <span class="pct-item" onclick="setTradePercent(75)">75%</span>
-          <span class="pct-item" onclick="setTradePercent(100)">100%</span>
-        </div>
-
-        <div class="inp-box">
-          <div class="inp-label">Всего</div>
-          <input type="number" class="inp-field" id="trade-total" placeholder="0" readonly>
-        </div>
-
-        <div style="font-size:11px; color:var(--text-muted); line-height:1.4; margin-bottom:8px;">
-          <div>Доступно: <b style="color:#fff;" id="trade-available-balance">100 USDT</b></div>
-          <div>Макс. покупка: <b style="color:#fff;" id="trade-max-calc">100.54 USDC</b></div>
-        </div>
-
-        <button class="trade-btn active" id="btn-submit-order" onclick="placeExchangeOrder()">Купить USDC</button>
       </div>
 
-      <!-- Right Orderbook Column -->
-      <div class="orderbook-col">
-        <div class="ob-header">
+      <div class="quick-actions">
+        <button class="quick-btn" onclick="openWithdrawModal()">
+          <div class="quick-btn-icon" style="background: var(--accent-orange);">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+          </div>
+          <span class="quick-btn-title">Вывести</span>
+        </button>
+        <button class="quick-btn" onclick="openHistoryModal()">
+          <div class="quick-btn-icon" style="background: var(--accent-blue);">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          </div>
+          <span class="quick-btn-title">История</span>
+        </button>
+      </div>
+
+      <div class="warning-banner">
+        <div class="warning-icon">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+        </div>
+        <div class="warning-content">
+          <h4>Crypto Pay: Ограничения в регионе</h4>
+          <p>Согласно местному законодательству, приём платежей недоступен в вашем регионе.</p>
+        </div>
+      </div>
+
+      <div class="section-title">Активы</div>
+      <div class="asset-list" id="wallet-assets-list">
+        <!-- Rendered by JavaScript using real .webp coin icons -->
+      </div>
+    </div>
+
+    <!-- TAB 2: EXCHANGE (Биржа) -->
+    <div id="tab-exchange" class="tab-view">
+      <div class="exchange-header">
+        <div class="pair-badge" onclick="switchExchangePair()">
+          <span id="current-pair-text">USDC / USDT</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+        <div style="font-size: 13px; color: var(--accent-green); font-weight: 600;">+0.01%</div>
+      </div>
+
+      <div class="order-book">
+        <div style="font-size: 11px; color: var(--text-secondary); display: flex; justify-content: space-between; margin-bottom: 8px;">
           <span>Цена (USDT)</span>
-          <span>Сумма</span>
+          <span>Количество (USDC)</span>
         </div>
-        <!-- Asks -->
-        <div class="ob-row ob-ask" onclick="selectObPrice(1.0099)"><span>1.0099</span><span>9.90</span></div>
-        <div class="ob-row ob-ask" onclick="selectObPrice(1.0047)"><span>1.0047</span><span>15K</span></div>
-        <div class="ob-row ob-ask" onclick="selectObPrice(1.0045)"><span>1.0045</span><span>7.61K</span></div>
-        <div class="ob-row ob-ask" onclick="selectObPrice(1.0040)"><span>1.0040</span><span>7.06K</span></div>
-        <div class="ob-row ob-ask" onclick="selectObPrice(1.0000)"><span>1.0000</span><span>8.51K</span></div>
-        <div class="ob-row ob-ask" onclick="selectObPrice(0.9947)"><span>0.9947</span><span>159.33</span></div>
-
-        <!-- Mid Price -->
-        <div class="ob-mid" id="ob-mid-price">0.9946 <span style="font-size:10px; color:var(--text-muted); display:block;">$0.9934</span></div>
-
-        <!-- Bids -->
-        <div class="ob-row ob-bid" onclick="selectObPrice(0.9946)"><span>0.9946</span><span>6.85K</span></div>
-        <div class="ob-row ob-bid" onclick="selectObPrice(0.9945)"><span>0.9945</span><span>7.73K</span></div>
-        <div class="ob-row ob-bid" onclick="selectObPrice(0.9942)"><span>0.9942</span><span>7.78</span></div>
-        <div class="ob-row ob-bid" onclick="selectObPrice(0.9940)"><span>0.9940</span><span>1.30</span></div>
-        <div class="ob-row ob-bid" onclick="selectObPrice(0.9937)"><span>0.9937</span><span>81.46</span></div>
-        <div class="ob-row ob-bid" onclick="selectObPrice(0.9934)"><span>0.9934</span><span>2.12K</span></div>
+        <div id="order-book-asks">
+          <div class="order-row order-ask"><span>1.0004</span><span>14,520.00</span></div>
+          <div class="order-row order-ask"><span>1.0003</span><span>38,100.50</span></div>
+          <div class="order-row order-ask"><span>1.0002</span><span>9,410.00</span></div>
+          <div class="order-row order-ask"><span>1.0001</span><span>52,000.00</span></div>
+        </div>
+        <div style="padding: 6px 0; font-size: 18px; font-weight: 700; color: var(--accent-green); text-align: center;">
+          1.0000 USDT
+        </div>
+        <div id="order-book-bids">
+          <div class="order-row order-bid"><span>0.9999</span><span>64,200.00</span></div>
+          <div class="order-row order-bid"><span>0.9998</span><span>12,850.00</span></div>
+          <div class="order-row order-bid"><span>0.9997</span><span>45,110.00</span></div>
+          <div class="order-row order-bid"><span>0.9996</span><span>29,300.00</span></div>
+        </div>
       </div>
+
+      <div class="trade-actions">
+        <button id="trade-buy-tab" class="trade-tab-btn active buy" onclick="setTradeMode('buy')">Купить</button>
+        <button id="trade-sell-tab" class="trade-tab-btn" onclick="setTradeMode('sell')">Продать</button>
+      </div>
+
+      <div class="form-input-group">
+        <span class="form-input-label">Цена</span>
+        <input type="number" id="trade-price-input" value="1.0000" step="0.0001">
+      </div>
+
+      <div class="form-input-group">
+        <span class="form-input-label">Количество</span>
+        <input type="number" id="trade-amount-input" placeholder="0.00">
+      </div>
+
+      <div class="percent-chips">
+        <button class="percent-chip" onclick="setTradePercent(25)">25%</button>
+        <button class="percent-chip" onclick="setTradePercent(50)">50%</button>
+        <button class="percent-chip" onclick="setTradePercent(75)">75%</button>
+        <button class="percent-chip" onclick="setTradePercent(100)">100%</button>
+      </div>
+
+      <button id="trade-submit-btn" class="primary-btn green" onclick="executeTradeOrder()">
+        Купить USDC
+      </button>
     </div>
 
-    <!-- Bottom Orders List -->
-    <div class="orders-section">
-      <div class="orders-tabs">
-        <span class="order-tab active" id="tab-open-orders">Открытые ордера (<span id="orders-count">0</span>)</span>
-        <span class="order-tab">История</span>
-        <span class="order-tab">Сделки</span>
+    <!-- TAB 3: SWAP (Обмен) -->
+    <div id="tab-swap" class="tab-view">
+      <div class="top-bar" style="padding-left: 4px; margin-bottom: 8px;">
+        <h1 class="page-title">Обмен</h1>
       </div>
-      <div class="empty-state" id="orders-empty-state">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="9" y1="13" x2="15" y2="13"></line>
-          <line x1="9" y1="17" x2="13" y2="17"></line>
-        </svg>
-        <div>Открытых ордеров пока нет.</div>
-      </div>
-      <div id="active-orders-list" style="display:none; padding-top:12px;"></div>
-    </div>
-  </div>
 
-  <!-- ================= 3. ОБМЕН (SWAP) ================= -->
-  <div id="view-swap" class="view">
-    <div class="swap-container">
-      <div class="swap-card">
-        <div class="swap-label-row">
-          <span>Вы отправляете</span>
-          <span style="color:#3da7f2; cursor:pointer;" onclick="setSwapMax()">Кошелёк <span id="swap-from-bal">100</span> МАКС</span>
-        </div>
+      <div class="swap-box">
+        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;">Отдаёте</div>
         <div class="swap-row">
-          <div class="swap-coin-btn" onclick="openSwapCoinPicker('from')">
-            <span id="swap-from-icon" style="display:inline-flex;align-items:center;"></span>
-            <span id="swap-from-sym">GRAM</span>
-            <span style="color:#6f7884; font-size:14px;">›</span>
-          </div>
-          <input type="number" class="swap-input" id="swap-from-amt" placeholder="0" oninput="calculateSwap()">
-        </div>
-
-        <div class="swap-divider">
-          <div class="swap-switch-circle" onclick="switchSwapCoins()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <polyline points="19 12 12 19 5 12"></polyline>
-            </svg>
+          <input type="number" id="swap-from-amount" class="swap-amount-input" value="100" oninput="calculateSwap()">
+          <div class="swap-coin-pill" onclick="openSwapPicker('from')">
+            <img id="swap-from-icon" src="./images/coins/GRAM.webp" width="24" height="24" style="border-radius: 50%;">
+            <span id="swap-from-symbol" style="font-weight: 700; font-size: 16px;">GRAM</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </div>
         </div>
+      </div>
 
-        <div class="swap-label-row">
-          <span>Вы получаете</span>
-        </div>
+      <div class="swap-divider">
+        <button class="swap-switch-btn" onclick="switchSwapCurrencies()">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 14C19.5523 14 20 14.4478 20 15C20 15.5523 19.5523 16 19 16H7.41406L9.70703 18.293C10.0975 18.6835 10.0975 19.3166 9.70703 19.7071C9.31652 20.0976 8.68348 20.0976 8.29297 19.7071L4.29297 15.7071C4.00699 15.4211 3.92143 14.9909 4.07617 14.6172C4.23098 14.2436 4.59558 14 5 14H19Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M14.293 4.29302C14.6835 3.90249 15.3165 3.90249 15.707 4.29302L19.707 8.29302C19.993 8.57901 20.0786 9.0092 19.9238 9.38286C19.769 9.75642 19.4044 10 19 10H5C4.44774 10 4.00004 9.5523 4 9.00005C4 8.44776 4.44772 8.00005 5 8.00005H16.5859L14.293 5.70708C13.9025 5.31657 13.9025 4.68354 14.293 4.29302Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M19 14C19.5523 14 20 14.4478 20 15C20 15.5523 19.5523 16 19 16H7.41406L9.70703 18.293C10.0975 18.6835 10.0975 19.3166 9.70703 19.7071C9.31652 20.0976 8.68348 20.0976 8.29297 19.7071L4.29297 15.7071C4.00699 15.4211 3.92143 14.9909 4.07617 14.6172C4.23098 14.2436 4.59558 14 5 14H19Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M14.293 4.29302C14.6835 3.90249 15.3165 3.90249 15.707 4.29302L19.707 8.29302C19.993 8.57901 20.0786 9.0092 19.9238 9.38286C19.769 9.75642 19.4044 10 19 10H5C4.44774 10 4.00004 9.5523 4 9.00005C4 8.44776 4.44772 8.00005 5 8.00005H16.5859L14.293 5.70708C13.9025 5.31657 13.9025 4.68354 14.293 4.29302Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+        </button>
+      </div>
+
+      <div class="swap-box" style="margin-top: 8px;">
+        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;">Получаете</div>
         <div class="swap-row">
-          <div class="swap-coin-btn" onclick="openSwapCoinPicker('to')">
-            <span id="swap-to-icon" style="display:inline-flex;align-items:center;"></span>
-            <span id="swap-to-sym">USDT</span>
-            <span style="color:#6f7884; font-size:14px;">›</span>
+          <input type="number" id="swap-to-amount" class="swap-amount-input" value="0.94" readonly>
+          <div class="swap-coin-pill" onclick="openSwapPicker('to')">
+            <img id="swap-to-icon" src="./images/coins/USDT.webp" width="24" height="24" style="border-radius: 50%;">
+            <span id="swap-to-symbol" style="font-weight: 700; font-size: 16px;">USDT</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </div>
-          <input type="number" class="swap-input" id="swap-to-amt" placeholder="0" readonly>
         </div>
       </div>
 
-      <div style="font-size:12px; color:var(--text-muted); margin-top:14px; text-align:center;" id="swap-rate-preview">
-        1 GRAM ≈ 1.26 USDT (Комиссия 1%)
-      </div>
-
-      <button class="swap-action-btn" onclick="executeSwap()">Обменять</button>
-    </div>
-  </div>
-
-  <!-- ================= 4. P2P ================= -->
-  <div id="view-p2p" class="view">
-    <div class="p2p-header">
-      <div class="p2p-logo">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="2" y="5" width="20" height="14" rx="2"></rect>
-          <line x1="2" y1="10" x2="22" y2="10"></line>
-        </svg>
-      </div>
-      <div class="p2p-title">P2P Маркет</div>
-      <div class="p2p-desc">Здесь вы можете купить или продать криптовалюту переводом на карту или электронный кошелёк.</div>
-    </div>
-
-    <!-- Restriction banner -->
-    <div class="banner">
-      <div>
-        <div class="banner-title">Доступ ограничен</div>
-        <div class="banner-text">P2P недоступен, пока действует ограничение аккаунта.</div>
-      </div>
-      <div class="banner-arrow">›</div>
-    </div>
-
-    <div class="profile-card" onclick="openP2PProfile()">
-      <div class="profile-card-left">
-        <span style="color:#3ba2ef;">👤</span>
-        <span>Мой профиль</span>
-      </div>
-      <div class="banner-arrow">›</div>
-    </div>
-
-    <div class="p2p-filters">
-      <div class="p2p-filter-pill active" onclick="filterP2P('all')">Все валюты</div>
-      <div class="p2p-filter-pill" onclick="filterP2P('RUB')">🇷🇺 RUB</div>
-      <div class="p2p-filter-pill" onclick="filterP2P('USD')">🇺🇸 USD</div>
-      <div class="p2p-filter-pill" onclick="filterP2P('EUR')">🇪🇺 EUR</div>
-    </div>
-
-    <!-- P2P Live Orders List -->
-    <div id="p2p-orders-container" style="padding-bottom:12px;"></div>
-  </div>
-
-  <!-- ================= 5. ЕЩЁ ================= -->
-  <div id="view-more" class="view">
-    <div class="more-container">
-      <div class="grid-section-title">
-        <span>👛</span> Кошелёк
-      </div>
-      <div class="icon-grid">
-        <div class="grid-item" onclick="openDepositModal()">
-          <div class="grid-icon-box" style="background:#585f6a;">↙</div>
-          <div class="grid-label">Пополнить</div>
+      <div class="swap-info-card">
+        <div class="swap-info-row">
+          <span>Курс</span>
+          <span class="swap-info-value" id="swap-rate-label">1 GRAM ≈ 0.0094 USDT</span>
         </div>
-        <div class="grid-item" onclick="openWithdrawModal()">
-          <div class="grid-icon-box" style="background:#f59e0b;">↗</div>
-          <div class="grid-label">Вывести</div>
-        </div>
-        <div class="grid-item" onclick="showStub('QR Pay')">
-          <div class="grid-icon-box" style="background:#64748b;">⠶</div>
-          <div class="grid-label">QR Pay</div>
-        </div>
-        <div class="grid-item" onclick="openHistoryModal()">
-          <div class="grid-icon-box" style="background:#0ea5e9;">🗓</div>
-          <div class="grid-label">История</div>
-        </div>
-        <div class="grid-item" onclick="showStub('Crypto Pay')">
-          <div class="grid-icon-box" style="background:#38bdf8; font-weight:700; font-size:17px;">Pay</div>
-          <div class="grid-label">Crypto Pay</div>
-        </div>
-        <div class="grid-item" onclick="showStub('Книга адресов')">
-          <div class="grid-icon-box" style="background:#64748b;">🔖</div>
-          <div class="grid-label">Книга адресов</div>
-        </div>
-        <div class="grid-item" onclick="showStub('Комиссии')">
-          <div class="grid-icon-box" style="background:#64748b;">%</div>
-          <div class="grid-label">Комиссии</div>
+        <div class="swap-info-row">
+          <span>Комиссия сети</span>
+          <span class="swap-info-value" style="color: var(--accent-green);">Без комиссии</span>
         </div>
       </div>
 
-      <div class="grid-section-title">
-        <span>🔄</span> Торговля
-      </div>
-      <div class="icon-grid">
-        <div class="grid-item" onclick="switchTab('swap')">
-          <div class="grid-icon-box" style="background:#c084fc;">⇄</div>
-          <div class="grid-label">Обмен</div>
-        </div>
-        <div class="grid-item" onclick="switchTab('exchange')">
-          <div class="grid-icon-box" style="background:#fb7185;">📊</div>
-          <div class="grid-label">Биржа</div>
-        </div>
-        <div class="grid-item" onclick="switchTab('p2p')">
-          <div class="grid-icon-box" style="background:#38bdf8;">🤝</div>
-          <div class="grid-label">P2P Маркет</div>
-        </div>
-        <div class="grid-item" onclick="showStub('P2C')">
-          <div class="grid-icon-box" style="background:#6366f1;">🛍</div>
-          <div class="grid-label">P2C</div>
-        </div>
-      </div>
-
-      <div class="grid-section-title">
-        <span>👤</span> Аккаунт
-      </div>
-      <div class="icon-grid">
-        <div class="grid-item" onclick="showStub('Настройки')">
-          <div class="grid-icon-box" style="background:#6b7280;">⚙️</div>
-          <div class="grid-label">Настройки</div>
-        </div>
-        <div class="grid-item" onclick="showStub('Безопасность')">
-          <div class="grid-icon-box" style="background:#22c55e;">🔒</div>
-          <div class="grid-label">Безопасность</div>
-        </div>
-        <div class="grid-item" onclick="showStub('Верификация')">
-          <div class="grid-icon-box" style="background:#06b6d4;">🛡</div>
-          <div class="grid-label">Верификация</div>
-        </div>
-        <div class="grid-item" onclick="showStub('Уведомления')">
-          <div class="grid-icon-box" style="background:#f97316;">🔔</div>
-          <div class="grid-label">Уведомления</div>
-        </div>
-      </div>
-
-      <div class="grid-section-title" style="margin-top:24px;">
-        <span>❓</span> Помощь
-      </div>
-      <div class="link-row" onclick="window.open('https://help.cr.bot', '_blank')">
-        <div class="link-row-left"><span>ℹ️</span> Справка Crypto Bot</div>
-        <div class="link-row-arrow">↗</div>
-      </div>
-      <div class="link-row" onclick="window.open('https://t.me/CryptoBotSupport', '_blank')">
-        <div class="link-row-left"><span>💬</span> Написать в поддержку</div>
-        <div class="link-row-arrow">↗</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= MODAL: DEPOSIT ================= -->
-  <div class="modal-backdrop" id="modal-deposit" onclick="closeModals(event)">
-    <div class="modal-sheet" onclick="event.stopPropagation()">
-      <div class="modal-title">Пополнение баланса</div>
-      <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Выберите актив для пополнения:</div>
-      <select class="modal-input" id="dep-asset-select">
-        <option value="USDT">USDT (Tether)</option>
-        <option value="TON">TON (Toncoin)</option>
-        <option value="GRAM">GRAM (Gram)</option>
-        <option value="SOL">SOL (Solana)</option>
-        <option value="BTC">BTC (Bitcoin)</option>
-        <option value="ETH">ETH (Ethereum)</option>
-      </select>
-      <div style="font-size:13px; color:var(--text-muted); margin-bottom:6px;">Сумма:</div>
-      <input type="number" class="modal-input" id="dep-amount-input" placeholder="100">
-      <button class="modal-btn" onclick="submitDeposit()">Пополнить</button>
-    </div>
-  </div>
-
-  <!-- ================= MODAL: WITHDRAW ================= -->
-  <div class="modal-backdrop" id="modal-withdraw" onclick="closeModals(event)">
-    <div class="modal-sheet" onclick="event.stopPropagation()">
-      <div class="modal-title">Вывод криптовалюты</div>
-      <select class="modal-input" id="wdr-asset-select">
-        <option value="USDT">USDT (Tether)</option>
-        <option value="TON">TON (Toncoin)</option>
-        <option value="GRAM">GRAM (Gram)</option>
-      </select>
-      <input type="text" class="modal-input" id="wdr-address-input" placeholder="Адрес получателя...">
-      <input type="number" class="modal-input" id="wdr-amount-input" placeholder="Сумма вывода...">
-      <button class="modal-btn" onclick="submitWithdraw()">Подтвердить вывод</button>
-    </div>
-  </div>
-
-  <!-- ================= MODAL: HISTORY ================= -->
-  <div class="modal-backdrop" id="modal-history" onclick="closeModals(event)">
-    <div class="modal-sheet" onclick="event.stopPropagation()">
-      <div class="modal-title">История транзакций</div>
-      <div id="history-items-list" style="max-height:300px; overflow-y:auto;">
-        <!-- Filled dynamically -->
-      </div>
-      <button class="modal-btn" style="margin-top:12px; background:#282f38;" onclick="closeModals()">Закрыть</button>
-    </div>
-  </div>
-
-  <!-- ================= FLOATING BOTTOM DOCK ================= -->
-  <div class="bottom-dock-wrapper">
-    <div class="bottom-dock">
-      <button class="dock-tab active" id="dock-wallet" onclick="switchTab('wallet')">
-        <svg viewBox="0 0 24 24"><path d="M21 7.28V5c0-1.1-.9-2-2-2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-2.28c.59-.35 1-.99 1-1.72V9c0-.73-.41-1.37-1-1.72zM20 9v6h-7V9h7zM5 5h14v2h-6c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h6v2H5V5z"/><circle cx="16" cy="12" r="1.5"/></svg>
-        <span class="dock-title">Кошелёк</span>
-      </button>
-
-      <button class="dock-tab" id="dock-exchange" onclick="switchTab('exchange')">
-        <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5V9.2zM10.5 5h3v14h-3V5zm5.5 8h3v6h-3v-6z"/></svg>
-        <span class="dock-title">Биржа</span>
-      </button>
-
-      <button class="dock-tab" id="dock-swap" onclick="switchTab('swap')">
-        <svg viewBox="0 0 24 24"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
-        <span class="dock-title">Обмен</span>
-      </button>
-
-      <button class="dock-tab" id="dock-p2p" onclick="switchTab('p2p')">
-        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
-        <span class="dock-title">P2P</span>
-      </button>
-
-      <button class="dock-tab" id="dock-more" onclick="switchTab('more')">
-        <svg viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
-        <span class="dock-title">Ещё</span>
+      <button class="primary-btn" onclick="executeSwap()">
+        Обменять
       </button>
     </div>
-    <div class="dock-footer">@send</div>
+
+    <!-- TAB 4: P2P MARKET -->
+    <div id="tab-p2p" class="tab-view">
+      <div class="top-bar" style="padding-left: 4px; margin-bottom: 8px;">
+        <h1 class="page-title">P2P Маркет</h1>
+      </div>
+
+      <div class="p2p-type-switch">
+        <button id="p2p-buy-tab" class="p2p-type-btn active" onclick="setP2PType('buy')">Купить</button>
+        <button id="p2p-sell-tab" class="p2p-type-btn" onclick="setP2PType('sell')">Продать</button>
+      </div>
+
+      <div class="p2p-chips-scroll" id="p2p-asset-chips">
+        <div class="p2p-chip active" onclick="selectP2PAsset('USDT', this)">USDT</div>
+        <div class="p2p-chip" onclick="selectP2PAsset('TON', this)">TON</div>
+        <div class="p2p-chip" onclick="selectP2PAsset('BTC', this)">BTC</div>
+        <div class="p2p-chip" onclick="selectP2PAsset('ETH', this)">ETH</div>
+        <div class="p2p-chip" onclick="selectP2PAsset('GRAM', this)">GRAM</div>
+      </div>
+
+      <div id="p2p-orders-container">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- TAB 5: MORE (Ещё) - EXACT SCREENSHOT REPLICA -->
+    <div id="tab-more" class="tab-view">
+      <div class="top-bar" style="padding-left: 4px; margin-bottom: 12px;">
+        <h1 class="page-title">Ещё</h1>
+      </div>
+
+      <!-- Section: Кошелёк -->
+      <div class="section-title">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.6564 2.00067C16.7948 2.00479 17.8345 2.20847 18.9142 2.78583C19.9032 3.31477 20.685 4.09759 21.214 5.08661C21.7973 6.17728 22.0001 7.22691 22.0001 9.40985V14.5905C22.0001 16.7735 21.7973 17.8231 21.214 18.9138C20.685 19.9028 19.9032 20.6856 18.9142 21.2145C17.8236 21.7978 16.7737 21.9997 14.5909 21.9997H9.41028C7.22751 21.9997 6.1776 21.7977 5.08704 21.2145C4.09796 20.6856 3.31522 19.9028 2.78625 18.9138C2.2089 17.8341 2.00515 16.7944 2.0011 14.6559L2.00012 9.34442C2.00424 7.20595 2.2089 6.16625 2.78625 5.08661C3.31522 4.09753 4.09796 3.31479 5.08704 2.78583C6.15575 2.21435 7.18539 2.0087 9.2804 2.00067H14.6564ZM9.35461 4.00067C7.55205 4.00349 6.81335 4.14134 6.07532 4.52606L6.0304 4.5495C5.38985 4.89207 4.89249 5.38943 4.54993 6.02997L4.52649 6.07587C4.14183 6.81384 4.00387 7.55176 4.0011 9.35419V14.8054C4.01172 16.4933 4.15326 17.2095 4.52649 17.9255L4.54993 17.9704C4.89249 18.6109 5.38985 19.1083 6.0304 19.4509L6.07532 19.4743C6.82095 19.863 7.56684 20.0007 9.41028 20.0007H14.5909C16.4341 20.0007 17.1794 19.8629 17.9249 19.4743L17.9708 19.4509C18.6114 19.1083 19.1087 18.6109 19.4513 17.9704C19.613 17.6679 19.7326 17.369 19.8185 17.0007H15.3341C12.5728 17.0007 10.3343 14.7619 10.3341 12.0007C10.3341 9.23926 12.5727 7.00067 15.3341 7.00067H19.8185C19.7369 6.6506 19.6245 6.36315 19.4747 6.07587L19.4513 6.02997C19.1087 5.38943 18.6114 4.89207 17.9708 4.5495L17.9249 4.52606C17.187 4.14144 16.449 4.00345 14.6466 4.00067H9.35461ZM15.3341 9.00067C13.6773 9.00067 12.3341 10.3438 12.3341 12.0007C12.3343 13.6573 13.6774 15.0007 15.3341 15.0007H19.9982L19.9991 14.8679C19.9999 14.7782 20.0001 14.6858 20.0001 14.5905V9.26923C19.9998 9.17694 19.9993 9.08741 19.9982 9.00067H15.3341ZM15.4337 10.6003C16.1884 10.6003 16.8007 11.2119 16.8009 11.9665C16.8009 12.7213 16.1885 13.3337 15.4337 13.3337C14.679 13.3336 14.0675 12.7212 14.0675 11.9665C14.0677 11.2119 14.6791 10.6003 15.4337 10.6003Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+        <span>Кошелёк</span>
+      </div>
+      <div class="more-grid">
+        <div class="more-card" onclick="openDepositModal()">
+          <div class="squircle-icon" style="background: #34c759;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="7" x2="7" y2="17"></line><polyline points="17 17 7 17 7 7"></polyline></svg>
+          </div>
+          <span class="more-card-title">Пополнить</span>
+        </div>
+
+        <div class="more-card" onclick="openWithdrawModal()">
+          <div class="squircle-icon" style="background: #ff9f0a;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+          </div>
+          <span class="more-card-title">Вывести</span>
+        </div>
+
+        <div class="more-card" onclick="openQrScanner()">
+          <div class="squircle-icon" style="background: #007aff;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.5 13C7.89782 13 8.59712 13.0002 9.14844 13.2285C9.88321 13.533 10.467 14.1168 10.7715 14.8516C10.9998 15.4029 11 16.1022 11 17.5C11 18.8978 10.9998 19.5971 10.7715 20.1484L10.6445 20.416C10.3188 21.0244 9.79155 21.505 9.14844 21.7715L8.93359 21.8467C8.41133 21.9998 7.72337 22 6.5 22C5.10218 22 4.40288 21.9998 3.85156 21.7715C3.20845 21.505 2.68121 21.0244 2.35547 20.416L2.22852 20.1484C2.00015 19.5971 2 18.8978 2 17.5C2 16.2766 2.00023 15.5887 2.15332 15.0664L2.22852 14.8516C2.49501 14.2085 2.97559 13.6812 3.58398 13.3555L3.85156 13.2285C4.40288 13.0002 5.10218 13 6.5 13ZM6.5 15C5.77406 15 5.32957 15.0006 4.99512 15.0234C4.68022 15.0449 4.60939 15.0794 4.61719 15.0762C4.37226 15.1777 4.17766 15.3723 4.07617 15.6172C4.07935 15.6094 4.04492 15.6802 4.02344 15.9951C4.00065 16.3296 4 16.7741 4 17.5C4 18.2259 4.00065 18.6704 4.02344 19.0049C4.04492 19.3198 4.07935 19.3906 4.07617 19.3828C4.17766 19.6277 4.37226 19.8223 4.61719 19.9238C4.60939 19.9207 4.68022 19.9551 4.99512 19.9766C5.32957 19.9994 5.77406 20 6.5 20C7.22594 20 7.67043 19.9994 8.00488 19.9766C8.31978 19.9551 8.39061 19.9207 8.38281 19.9238C8.62774 19.8223 8.82234 19.6277 8.92383 19.3828C8.92065 19.3906 8.95508 19.3198 8.97656 19.0049C8.99935 18.6704 9 18.2259 9 17.5C9 16.7741 8.99935 16.3296 8.97656 15.9951C8.95508 15.6802 8.92065 15.6094 8.92383 15.6172C8.82234 15.3723 8.62774 15.1777 8.38281 15.0762C8.39061 15.0794 8.31978 15.0449 8.00488 15.0234C7.67043 15.0006 7.22594 15 6.5 15Z" fill="currentColor"/><path d="M15 18.5C15.8284 18.5 16.5 19.1716 16.5 20C16.5 20.8284 15.8284 21.5 15 21.5C14.1716 21.5 13.5 20.8284 13.5 20C13.5 19.1716 14.1716 18.5 15 18.5Z" fill="currentColor"/><path d="M20 18.5C20.8284 18.5 21.5 19.1716 21.5 20C21.5 20.8284 20.8284 21.5 20 21.5C19.1716 21.5 18.5 20.8284 18.5 20C18.5 19.1716 19.1716 18.5 20 18.5Z" fill="currentColor"/><path d="M15 13.5C15.8284 13.5 16.5 14.1716 16.5 15C16.5 15.8284 15.8284 16.5 15 16.5C14.1716 16.5 13.5 15.8284 13.5 15C13.5 14.1716 14.1716 13.5 15 13.5Z" fill="currentColor"/><path d="M20 13.5C20.8284 13.5 21.5 14.1716 21.5 15C21.5 15.8284 20.8284 16.5 20 16.5C19.1716 16.5 18.5 15.8284 18.5 15C18.5 14.1716 19.1716 13.5 20 13.5Z" fill="currentColor"/><path d="M6.5 2C7.89782 2 8.59712 2.00015 9.14844 2.22852C9.88321 2.53299 10.467 3.11679 10.7715 3.85156C10.9998 4.40288 11 5.10218 11 6.5C11 7.89782 10.9998 8.59712 10.7715 9.14844L10.6445 9.41602C10.3188 10.0244 9.79155 10.505 9.14844 10.7715L8.93359 10.8467C8.41133 10.9998 7.72337 11 6.5 11C5.10218 11 4.40288 10.9998 3.85156 10.7715C3.20845 10.505 2.68121 10.0244 2.35547 9.41602L2.22852 9.14844C2.00015 8.59712 2 7.89782 2 6.5C2 5.27663 2.00023 4.58867 2.15332 4.06641L2.22852 3.85156C2.49501 3.20845 2.97559 2.68121 3.58398 2.35547L3.85156 2.22852C4.40288 2.00015 5.10218 2 6.5 2ZM6.5 4C5.77406 4 5.32957 4.00065 4.99512 4.02344C4.68022 4.04492 4.60939 4.07935 4.61719 4.07617C4.37226 4.17766 4.17766 4.37226 4.07617 4.61719C4.07935 4.60939 4.04492 4.68022 4.02344 4.99512C4.00065 5.32957 4 5.77406 4 6.5C4 7.22594 4.00065 7.67043 4.02344 8.00488C4.04492 8.31978 4.07935 8.39061 4.07617 8.38281C4.17766 8.62774 4.37226 8.82234 4.61719 8.92383C4.60939 8.92065 4.68022 8.95508 4.99512 8.97656C5.32957 8.99935 5.77406 9 6.5 9C7.22594 9 7.67043 8.99935 8.00488 8.97656C8.31978 8.95508 8.39061 8.92065 8.38281 8.92383C8.62774 8.82234 8.82234 8.62774 8.92383 8.38281C8.92065 8.39061 8.95508 8.31978 8.97656 8.00488C8.99935 7.67043 9 7.22594 9 6.5C9 5.77406 8.99935 5.32957 8.97656 4.99512C8.95508 4.68022 8.92065 4.60939 8.92383 4.61719C8.82234 4.37226 8.62774 4.17766 8.38281 4.07617C8.39061 4.07935 8.31978 4.04492 8.00488 4.02344C7.67043 4.00065 7.22594 4 6.5 4Z" fill="currentColor"/><path d="M17.5 2C18.8978 2 19.5971 2.00015 20.1484 2.22852C20.8832 2.53299 21.467 3.11679 21.7715 3.85156C21.9998 4.40288 22 5.10218 22 6.5C22 7.89782 21.9998 8.59712 21.7715 9.14844L21.6445 9.41602C21.3188 10.0244 20.7915 10.505 20.1484 10.7715L19.9336 10.8467C19.4113 10.9998 18.7234 11 17.5 11C16.1022 11 15.4029 10.9998 14.8516 10.7715C14.2085 10.505 13.6812 10.0244 13.3555 9.41602L13.2285 9.14844C13.0002 8.59712 13 7.89782 13 6.5C13 5.27663 13.0002 4.58867 13.1533 4.06641L13.2285 3.85156C13.495 3.20845 13.9756 2.68121 14.584 2.35547L14.8516 2.22852C15.4029 2.00015 16.1022 2 17.5 2ZM17.5 4C16.7741 4 16.3296 4.00065 15.9951 4.02344C15.6802 4.04492 15.6094 4.07935 15.6172 4.07617C15.3723 4.17766 15.1777 4.37226 15.0762 4.61719C15.0794 4.60939 15.0449 4.68022 15.0234 4.99512C15.0006 5.32957 15 5.77406 15 6.5C15 7.22594 15.0006 7.67043 15.0234 8.00488C15.0449 8.31978 15.0794 8.39061 15.0762 8.38281C15.1777 8.62774 15.3723 8.82234 15.6172 8.92383C15.6094 8.92065 15.6802 8.95508 15.9951 8.97656C16.3296 8.99935 16.7741 9 17.5 9C18.2259 9 18.6704 8.99935 19.0049 8.97656C19.3198 8.95508 19.3906 8.92065 19.3828 8.92383C19.6277 8.82234 19.8223 8.62774 19.9238 8.38281C19.9207 8.39061 19.9551 8.31978 19.9766 8.00488C19.9994 7.67043 20 7.22594 20 6.5C20 5.77406 19.9994 5.32957 19.9766 4.99512C19.9551 4.68022 19.9207 4.60939 19.9238 4.61719C19.8223 4.37226 19.6277 4.17766 19.3828 4.07617C19.3906 4.07935 19.3198 4.04492 19.0049 4.02344C18.6704 4.00065 18.2259 4 17.5 4Z" fill="currentColor"/></svg>
+          </div>
+          <span class="more-card-title">Оплата по QR</span>
+        </div>
+
+        <div class="more-card" onclick="openHistoryModal()">
+          <div class="squircle-icon" style="background: #007aff;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          </div>
+          <span class="more-card-title">История</span>
+        </div>
+
+        <div class="more-card" onclick="openChecksModal()">
+          <div class="squircle-icon" style="background: #fb7185;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.9184 9.41839C12.3089 9.02787 12.9419 9.02787 13.3325 9.41839L14.5825 10.6674C14.973 11.0579 14.973 11.6919 14.5825 12.0825C14.1919 12.473 13.558 12.473 13.1674 12.0825L11.9184 10.8325C11.5279 10.4419 11.5279 9.80892 11.9184 9.41839Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M11.4819 2.35394C12.4582 1.37763 14.0417 1.37763 15.018 2.35394L16.27 3.60589C16.6043 3.94046 16.7491 4.41545 16.6655 4.87249L16.6147 5.06683L16.3237 5.94085C16.2298 6.22242 16.2308 6.52745 16.3247 6.80902C16.4613 7.21834 16.7824 7.53973 17.1918 7.6762C17.4733 7.76987 17.7777 7.77 18.059 7.6762L18.9331 7.38519L19.1274 7.33538C19.5844 7.25181 20.0595 7.39551 20.394 7.72991L21.6459 8.98187C22.6222 9.95814 22.6222 11.5407 21.6459 12.517L12.8403 21.3237C12.3567 21.8072 11.7201 22.1082 11.0395 22.1752C10.1589 22.2618 9.28533 21.9493 8.65962 21.3237L7.67622 20.3412C7.32659 19.9915 7.20439 19.4726 7.36079 19.0034L7.67622 18.059C7.77006 17.7775 7.77007 17.4724 7.67622 17.1909C7.53969 16.7816 7.21826 16.4603 6.80903 16.3237C6.52761 16.2299 6.22228 16.2299 5.94087 16.3237L4.99556 16.6381C4.52652 16.7943 4.00933 16.6731 3.65962 16.3237L2.67622 15.3403C2.05061 14.7146 1.73818 13.8409 1.82466 12.9604C1.8917 12.2799 2.19278 11.6432 2.67622 11.1596L11.4819 2.35394ZM13.604 3.768C13.4087 3.57274 13.0912 3.57274 12.8959 3.768L10.2885 6.37444L11.4565 7.54241C11.847 7.93294 11.847 8.56595 11.4565 8.95648C11.066 9.34699 10.433 9.347 10.0424 8.95648L8.87446 7.78851L4.09028 12.5737C3.93401 12.7301 3.83656 12.9366 3.81489 13.1567C3.78704 13.4413 3.88805 13.7239 4.09028 13.9262L4.76997 14.6059L5.30903 14.4272C6.00106 14.1965 6.74884 14.1965 7.44087 14.4272C8.44757 14.7628 9.23808 15.5523 9.57368 16.559C9.80426 17.251 9.80434 17.9999 9.57368 18.6918L9.39399 19.2299L10.0737 19.9096C10.276 20.1119 10.5585 20.2129 10.8432 20.185C11.0632 20.1634 11.2688 20.0658 11.4252 19.9096L16.2094 15.1244L15.0434 13.9575C14.6529 13.5669 14.6529 12.9339 15.0434 12.5434C15.4339 12.1529 16.0669 12.1529 16.4575 12.5434L17.6245 13.7094L20.2319 11.103C20.427 10.9077 20.4271 10.5912 20.2319 10.3959L19.2299 9.39398L18.6918 9.57366C17.9998 9.80433 17.2511 9.80427 16.559 9.57366C15.5524 9.23812 14.7619 8.44836 14.4262 7.44183C14.1956 6.74983 14.1956 6.00103 14.4262 5.30902L14.6059 4.76995L13.604 3.768Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+          </div>
+          <span class="more-card-title">Чеки</span>
+        </div>
+
+        <div class="more-card" onclick="openAddressBookModal()">
+          <div class="squircle-icon" style="background: #8e8e93;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M10.7147 14.7572C11.4581 14.1336 12.5419 14.1336 13.2853 14.7572L16.0288 17.0585C16.8973 17.7869 17.444 18.2429 17.8593 18.5318C17.8891 18.5525 17.9167 18.5713 17.9424 18.5883C17.9458 18.5578 17.9492 18.5245 17.9524 18.4884C17.998 17.9845 18 17.2726 18 16.1391V9.4C18 8.24689 17.9984 7.50235 17.9521 6.93567C17.9078 6.39235 17.8324 6.19091 17.782 6.09202C17.5903 5.71569 17.2843 5.40973 16.908 5.21799C16.8091 5.1676 16.6077 5.09225 16.0643 5.04785C15.4977 5.00156 14.7531 5 13.6 5H10.4C9.24689 5 8.50235 5.00156 7.93567 5.04785C7.39235 5.09225 7.19091 5.1676 7.09202 5.21799C6.71569 5.40973 6.40973 5.71569 6.21799 6.09202C6.1676 6.19091 6.09225 6.39235 6.04785 6.93567C6.00156 7.50235 6 8.24689 6 9.4V16.1391C6 17.2726 6.00198 17.9845 6.04757 18.4884C6.05084 18.5245 6.05422 18.5578 6.05765 18.5883C6.08326 18.5713 6.11091 18.5525 6.14067 18.5318C6.55602 18.2429 7.10272 17.7869 7.97119 17.0585L10.7147 14.7572ZM12 16.2895L14.7435 18.5908C16.4193 19.9965 17.2573 20.6993 17.9653 20.7116C18.5808 20.7223 19.167 20.4489 19.5544 19.9705C20 19.4201 20 18.3264 20 16.1391V9.4C20 7.15979 20 6.03969 19.564 5.18404C19.1805 4.43139 18.5686 3.81947 17.816 3.43597C16.9603 3 15.8402 3 13.6 3H10.4C8.15979 3 7.03969 3 6.18404 3.43597C5.43139 3.81947 4.81947 4.43139 4.43597 5.18404C4 6.03969 4 7.15979 4 9.4V16.1391C4 18.3264 4 19.4201 4.44565 19.9705C4.83303 20.4489 5.41916 20.7223 6.03467 20.7116C6.74275 20.6993 7.58067 19.9965 9.25651 18.5908L12 16.2895Z" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+          </div>
+          <span class="more-card-title">Адресная книга</span>
+        </div>
+      </div>
+
+      <!-- Section: Аккаунт -->
+      <div class="section-title">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/></svg>
+        <span>Аккаунт</span>
+      </div>
+      <div class="more-grid">
+        <div class="more-card" onclick="openSettingsModal()">
+          <div class="squircle-icon" style="background: #8e8e93;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.0033 1C12.3247 1.00048 12.6462 1.01514 12.9653 1.04297C13.4397 1.0839 13.8748 1.27217 14.226 1.5752C14.5889 1.88839 14.8496 2.30869 14.9731 2.77539L15.3676 4.29395C15.3995 4.41322 15.4714 4.51006 15.6576 4.60254C15.9762 4.75976 16.2832 4.93712 16.5776 5.13379C16.754 5.25142 16.8731 5.26533 16.9936 5.23145L18.5072 4.81543C18.9691 4.68946 19.4635 4.7026 19.9164 4.85938C20.3542 5.01098 20.7354 5.29308 21.0092 5.68262C21.3821 6.21454 21.706 6.77452 21.976 7.35547C22.1774 7.78717 22.2316 8.25841 22.144 8.71387C22.0532 9.18531 21.8169 9.62058 21.477 9.95605L20.3559 11.0654C20.2698 11.1502 20.2214 11.2615 20.2358 11.4746C20.2574 11.8263 20.2578 12.1797 20.2358 12.5342C20.2223 12.7418 20.2695 12.8504 20.3549 12.9336L20.3608 12.9385L21.475 14.043C21.8164 14.3797 22.0531 14.8147 22.144 15.2861C22.2316 15.7413 22.1778 16.213 21.977 16.6436C21.7042 17.2288 21.38 17.7889 21.0092 18.3164C20.7357 18.7062 20.3538 18.9889 19.9154 19.1406C19.4621 19.2974 18.9674 19.3104 18.5063 19.1836L16.9897 18.7676C16.8734 18.7351 16.7539 18.749 16.5795 18.8652C16.2843 19.0626 15.9773 19.2396 15.6615 19.3955C15.4713 19.4899 15.4006 19.5866 15.3695 19.7061L14.9711 21.2236C14.8507 21.6879 14.5916 22.1106 14.2279 22.4248C13.8768 22.7283 13.4406 22.9172 12.9682 22.958C12.3255 23.0145 11.6802 23.0142 11.0404 22.958C10.5651 22.9171 10.1291 22.7284 9.77775 22.4248C9.41459 22.111 9.15502 21.6894 9.03361 21.2256L8.63615 19.7061C8.60419 19.587 8.53264 19.4901 8.34806 19.3984C8.02732 19.2408 7.72076 19.063 7.42912 18.8672C7.25101 18.7484 7.13162 18.7357 7.01115 18.7695L5.49748 19.1846C5.03555 19.3106 4.54129 19.2974 4.0883 19.1406C3.65033 18.989 3.26895 18.7068 2.99455 18.3164C2.62465 17.7878 2.30108 17.2282 2.02775 16.6436C1.82685 16.213 1.77341 15.7422 1.86076 15.2871C1.95121 14.8159 2.18617 14.38 2.52677 14.043L3.64396 12.9385L3.64982 12.9336C3.73554 12.8501 3.78235 12.741 3.76799 12.5264C3.7463 12.1746 3.74689 11.8215 3.76896 11.4668C3.78251 11.2591 3.73507 11.1506 3.64982 11.0674L3.64396 11.0615L2.52677 9.95703C2.18621 9.62006 1.95122 9.18415 1.86076 8.71289C1.7735 8.25793 1.82733 7.7869 2.02775 7.35742C2.3005 6.7714 2.62382 6.21129 2.99455 5.68457C3.26828 5.29444 3.6499 5.01214 4.0883 4.86035C4.54172 4.7034 5.03627 4.69057 5.49748 4.81738L7.01506 5.23242C7.13129 5.26485 7.25075 5.252 7.42521 5.13574C7.72088 4.93817 8.02723 4.75994 8.3422 4.60449C8.5324 4.51011 8.60407 4.41423 8.63517 4.29492L9.03263 2.77637C9.15305 2.31221 9.41332 1.89052 9.77677 1.57617C10.128 1.27236 10.564 1.08263 11.0395 1.04102C11.3567 1.01359 11.6777 1 12.0014 1H12.0033ZM12.0004 3.01172C11.7346 3.01175 11.4712 3.02261 11.2133 3.04492C11.1672 3.04905 11.1282 3.06559 11.0922 3.09668C11.0399 3.14196 10.9993 3.20924 10.9799 3.28418L10.5815 4.80273C10.4121 5.45425 9.98322 6.03582 9.23478 6.40723C8.99664 6.52475 8.76638 6.65893 8.5424 6.80859C7.84954 7.2705 7.12652 7.3516 6.47892 7.1709L4.96525 6.75684C4.89112 6.73647 4.81189 6.73811 4.7465 6.76074C4.7023 6.77604 4.66912 6.80087 4.64103 6.84082C4.33803 7.2713 4.07392 7.72804 3.85099 8.20703C3.83209 8.24755 3.82755 8.28817 3.83635 8.33398C3.84949 8.40245 3.88735 8.47243 3.94181 8.52637L5.05314 9.62598C5.53885 10.0991 5.82984 10.7666 5.7758 11.5947C5.75908 11.8636 5.75958 12.1332 5.7758 12.3965C5.83188 13.2302 5.54011 13.8997 5.05314 14.374L3.94181 15.4736C3.88734 15.5275 3.84953 15.5976 3.83635 15.666C3.82758 15.7117 3.83156 15.7522 3.85002 15.792C4.07383 16.2707 4.33983 16.7303 4.64201 17.1621C4.66836 17.1994 4.70187 17.2238 4.7465 17.2393C4.81276 17.2622 4.89297 17.2651 4.96623 17.2451L6.47209 16.8311C7.12378 16.6476 7.84827 16.7294 8.54728 17.1953C8.76659 17.3425 8.99526 17.4751 9.23869 17.5947C9.98051 17.9628 10.407 18.5401 10.5815 19.1924L10.9799 20.7168C10.9992 20.7903 11.0409 20.8581 11.0932 20.9033C11.1284 20.9336 11.166 20.9499 11.2143 20.9541C11.7386 21.0002 12.266 21.0004 12.7934 20.9541C12.8388 20.9502 12.877 20.9331 12.9125 20.9023C12.9646 20.8574 13.0054 20.7907 13.0248 20.7158L13.4233 19.1982C13.5925 18.5467 14.0209 17.9641 14.769 17.5928C15.0078 17.4749 15.239 17.3417 15.4623 17.1924C16.1552 16.7305 16.8782 16.6484 17.5258 16.8291L19.0395 17.2441C19.1135 17.2644 19.1929 17.2619 19.2582 17.2393C19.3024 17.2239 19.3354 17.1991 19.3627 17.1602C19.6659 16.7288 19.9308 16.2712 20.1537 15.793C20.1726 15.7523 20.1771 15.7123 20.1684 15.667C20.1553 15.599 20.1178 15.5289 20.0619 15.4736L18.9457 14.3682L18.9272 14.3506C18.456 13.879 18.1749 13.2195 18.2279 12.4053C18.2447 12.1366 18.2451 11.8666 18.2289 11.6035C18.1731 10.7734 18.4635 10.1068 18.9428 9.63477L20.0629 8.52539C20.1176 8.4714 20.1553 8.40112 20.1684 8.33301C20.177 8.28762 20.1729 8.2472 20.1528 8.2041C19.9324 7.72994 19.6675 7.27352 19.3627 6.83887C19.3363 6.80131 19.303 6.77627 19.2582 6.76074C19.1919 6.73779 19.1118 6.73588 19.0385 6.75586L17.5326 7.16895C16.8812 7.35228 16.1564 7.27065 15.4604 6.80664C15.238 6.65811 15.0076 6.52452 14.766 6.40527C14.0239 6.03697 13.5977 5.45972 13.4233 4.80664L13.0278 3.28613C13.0081 3.21171 12.9655 3.14339 12.9125 3.09766C12.8768 3.06683 12.8388 3.04998 12.7914 3.0459C12.5284 3.02296 12.2644 3.01211 12.0004 3.01172ZM12.0024 7.9209C14.2549 7.92095 16.0815 9.74741 16.0815 12C16.0814 14.2526 14.2549 16.0791 12.0024 16.0791C9.74975 16.0791 7.92328 14.2526 7.92326 12C7.92326 9.74738 9.74974 7.9209 12.0024 7.9209ZM12.0024 9.93262C10.8606 9.93263 9.93498 10.8583 9.93498 12C9.93498 13.1417 10.8606 14.0674 12.0024 14.0674C13.1441 14.0674 14.0697 13.1417 14.0697 12C14.0697 10.8583 13.1441 9.93262 12.0024 9.93262Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+          </div>
+          <span class="more-card-title">Настройки</span>
+        </div>
+
+        <div class="more-card" onclick="openSecurityModal()">
+          <div class="squircle-icon" style="background: #ff9f0a;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.9932 12.5C12.7294 12.5 13.326 13.0968 13.3262 13.833C13.3262 14.3178 13.0675 14.7422 12.6807 14.9756L12.8086 16.5029C12.8483 16.9798 12.4717 17.3887 11.9932 17.3887C11.5147 17.3886 11.139 16.9797 11.1787 16.5029L11.3057 14.9756C10.9188 14.7422 10.6602 14.3178 10.6602 13.833C10.6603 13.0968 11.257 12.5001 11.9932 12.5Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M12 2C14.7614 2 17 4.23858 17 7V8.11523C17.1964 8.14833 17.3752 8.18997 17.5449 8.24512C19.0671 8.7397 20.2603 9.93287 20.7549 11.4551C20.9996 12.2082 21 13.1387 21 15C21 16.8613 20.9996 17.7918 20.7549 18.5449C20.2603 20.0671 19.0671 21.2603 17.5449 21.7549C16.7918 21.9996 15.8612 22 14 22H10C8.13874 22 7.20823 21.9996 6.45508 21.7549C4.93288 21.2603 3.73971 20.0671 3.24512 18.5449C3.00041 17.7918 3 16.8613 3 15C3 13.1387 3.0004 12.2082 3.24512 11.4551C3.7397 9.93288 4.93288 8.73971 6.45508 8.24512C6.62479 8.18997 6.80364 8.14833 7 8.11523V7C7 4.23858 9.23858 2 12 2ZM10 10C7.98373 10 7.44918 10.0244 7.07324 10.1465C6.15992 10.4432 5.44324 11.1599 5.14648 12.0732C5.02443 12.4492 5 12.9837 5 15C5 17.0163 5.02443 17.5508 5.14648 17.9268C5.44324 18.8401 6.15992 19.5568 7.07324 19.8535C7.44918 19.9756 7.9837 20 10 20H14C16.0163 20 16.5508 19.9756 16.9268 19.8535C17.8401 19.5568 18.5568 18.8401 18.8535 17.9268C18.9756 17.5508 19 17.0163 19 15C19 12.9837 18.9756 12.4492 18.8535 12.0732C18.5568 11.1599 17.8401 10.4432 16.9268 10.1465C16.5508 10.0244 16.0163 10 14 10H10ZM9 7C9 5.34315 10.3431 4 12 4C13.6569 4 15 5.34315 15 7V8H9V7Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+          </div>
+          <span class="more-card-title">Безопасность</span>
+        </div>
+
+        <div class="more-card" onclick="openVerificationModal()">
+          <div class="squircle-icon" style="background: #30b0c7;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.2784 8.00005C15.8399 8.00005 16.2637 8.41002 16.2637 8.95318C16.2637 9.14637 16.2041 9.3627 16.0616 9.57427L12.0567 15.5586C11.8496 15.8576 11.5499 16.0001 11.168 16.0001C10.8183 16 10.5419 15.8844 10.3164 15.6221L8.07524 13.0264C7.8635 12.7825 7.79399 12.5846 7.79399 12.336C7.79403 11.7883 8.20901 11.379 8.77055 11.379C9.08783 11.3791 9.31816 11.4843 9.52055 11.7188L11.1495 13.6251L14.4268 8.49712C14.6569 8.13819 14.9011 8.00013 15.2784 8.00005Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M7.45903 1.9522C8.52826 1.1766 9.86512 0.853921 11.1768 1.06157C12.039 1.19814 12.7494 1.61613 13.3428 2.0645C13.6881 2.32542 14.0459 2.63865 14.42 2.98736C14.9179 2.87244 15.3843 2.78092 15.8135 2.72759C16.5516 2.63593 17.3755 2.62879 18.1905 2.94146C19.4306 3.41727 20.4275 4.36478 20.9659 5.57134L21.0674 5.81646L21.17 6.12212C21.3771 6.83604 21.3616 7.54762 21.2813 8.19341C21.228 8.62223 21.1364 9.08769 21.0215 9.58501C21.3696 9.95813 21.6819 10.3156 21.9424 10.6602C22.3908 11.2533 22.8096 11.9633 22.9463 12.8252C23.1684 14.2249 22.7855 15.6535 21.8936 16.7549C21.3441 17.4335 20.6265 17.8394 19.9414 18.129C19.5432 18.2972 19.094 18.4504 18.6055 18.5997C18.4561 19.088 18.3022 19.5374 18.1338 19.9356C17.8442 20.6205 17.4382 21.3375 16.7598 21.8868C15.6584 22.7783 14.2296 23.1611 12.8301 22.9395C11.9682 22.803 11.2584 22.3848 10.6651 21.9366C10.3199 21.6758 9.96177 21.3632 9.58793 21.0147C9.08989 21.1296 8.62373 21.2212 8.19438 21.2745C7.45628 21.3661 6.6324 21.3735 5.81742 21.0606C4.49449 20.5526 3.44929 19.5067 2.94145 18.1836C2.62881 17.3689 2.63593 16.5454 2.72758 15.8077C2.78083 15.3791 2.87165 14.9139 2.98637 14.417C2.63798 14.0436 2.32623 13.6857 2.06547 13.3409C1.61699 12.7478 1.19829 12.038 1.06156 11.1758C0.839769 9.77614 1.22324 8.3482 2.11528 7.24712C2.6648 6.56885 3.38142 6.16258 4.06645 5.8731C4.46487 5.70474 4.91465 5.55075 5.40336 5.40142C5.55275 4.91292 5.70665 4.46373 5.87504 4.06548C6.1647 3.38045 6.57042 2.66272 7.24906 2.11333L7.45903 1.9522ZM10.8643 3.03716C10.0246 2.90416 9.16753 3.1332 8.50688 3.66802C7.87628 4.17863 7.52582 5.17807 7.0186 7.01861C5.17822 7.52538 4.17968 7.87557 3.66899 8.50591C3.13383 9.16649 2.90412 10.0228 3.03715 10.8624C3.16412 11.6635 3.85381 12.4664 5.19438 13.8252C4.71354 15.6709 4.51798 16.7106 4.80864 17.4678C5.11341 18.2614 5.74052 18.8886 6.53422 19.1934C7.2918 19.4843 8.33227 19.2886 10.1797 18.8077C11.5391 20.1474 12.3421 20.837 13.1436 20.9639C13.9835 21.0968 14.8402 20.867 15.501 20.3321C16.1317 19.8216 16.4822 18.8232 16.9893 16.9834C18.8297 16.4767 19.8283 16.1266 20.3389 15.4961C20.8739 14.8354 21.104 13.9785 20.9707 13.1387C20.8436 12.3377 20.1543 11.535 18.8145 10.1768C19.2956 8.33037 19.491 7.29048 19.2002 6.53325C18.8955 5.73996 18.2683 5.11331 17.4747 4.80865C16.717 4.51796 15.6766 4.71349 13.8291 5.19439C12.4691 3.85382 11.6659 3.16414 10.8643 3.03716Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+          </div>
+          <span class="more-card-title">Верификация</span>
+        </div>
+
+        <div class="more-card" onclick="openNotificationsModal()">
+          <div class="squircle-icon" style="background: #ff9f0a;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 10C17 7.23858 14.7614 5 12 5C9.23859 5 7.00002 7.23858 7.00002 10V13.2363L5.61818 16H17.7188L17.0303 13.2422L17 13.123V10ZM19 12.8779L19.6592 15.5146C19.9748 16.7769 19.0199 18 17.7188 18H5.61818C4.13142 18 3.16422 16.4353 3.82912 15.1055L5.00002 12.7637V10C5.00002 6.13401 8.13402 3 12 3C15.866 3 19 6.13401 19 10V12.8779Z" fill="currentColor"/><path d="M14 19.5C14 19.7626 13.9483 20.0227 13.8478 20.2654C13.7473 20.508 13.5999 20.7285 13.4142 20.9142C13.2285 21.0999 13.008 21.2472 12.7654 21.3478C12.5227 21.4483 12.2627 21.5 12 21.5C11.7374 21.5 11.4773 21.4483 11.2346 21.3478C10.992 21.2472 10.7715 21.0999 10.5858 20.9142C10.4001 20.7285 10.2528 20.508 10.1523 20.2654C10.0517 20.0227 10 19.7626 10 19.5H14Z" fill="currentColor"/></svg>
+          </div>
+          <span class="more-card-title">Уведомления</span>
+        </div>
+
+        <div class="more-card" onclick="openWallpapersModal()">
+          <div class="squircle-icon" style="background: #bf5af2;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.00031 6.5C8.82859 6.50017 9.50031 7.17168 9.50031 8C9.50031 8.82833 8.82859 9.49984 8.00031 9.5C7.17188 9.5 6.50031 8.82843 6.50031 8C6.50031 7.17157 7.17188 6.5 8.00031 6.5Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M13.0003 2C14.3837 2 15.4817 1.99909 16.3655 2.07129C17.261 2.14447 18.0248 2.29809 18.7239 2.6543C19.8528 3.22955 20.7708 4.14747 21.346 5.27637C21.7022 5.97555 21.8559 6.73926 21.929 7.63477C22.0012 8.51866 22.0003 9.61649 22.0003 11V13C22.0003 14.3835 22.0012 15.4813 21.929 16.3652C21.8559 17.2607 21.7022 18.0244 21.346 18.7236C20.7708 19.8525 19.8528 20.7705 18.7239 21.3457C18.0248 21.7019 17.261 21.8555 16.3655 21.9287C15.4817 22.0009 14.3837 22 13.0003 22H11.0003C9.61693 22 8.51891 22.0009 7.63507 21.9287C6.73962 21.8555 5.97583 21.7019 5.27667 21.3457C4.14774 20.7705 3.22985 19.8526 2.6546 18.7236C2.29836 18.0244 2.14477 17.2608 2.07159 16.3652C1.99939 15.4813 2.00031 14.3835 2.00031 13V11C2.00031 9.61647 1.99939 8.51866 2.07159 7.63477C2.14477 6.73922 2.29836 5.97558 2.6546 5.27637C3.22985 4.14745 4.14774 3.22952 5.27667 2.6543C5.97583 2.29814 6.73962 2.14445 7.63507 2.07129C8.51891 1.99911 9.61693 2 11.0003 2H13.0003ZM13.7493 14.7813C13.0191 15.3652 11.9816 15.3651 11.2513 14.7813L9.98859 13.7705L4.52374 17.9736C4.90973 18.6535 5.48504 19.2083 6.1839 19.5645C6.55418 19.7531 7.0264 19.8725 7.79816 19.9355C8.58164 19.9995 9.58411 20 11.0003 20H13.0003C14.4165 20 15.419 19.9995 16.2025 19.9355C16.9742 19.8725 17.4464 19.7531 17.8167 19.5645C18.5691 19.181 19.1813 18.5688 19.5648 17.8164C19.7534 17.4461 19.8728 16.974 19.9359 16.2021C19.9942 15.4874 19.9978 14.5905 19.9984 13.3633C19.9808 13.3531 19.9627 13.3434 19.9456 13.332L17.554 11.7373L13.7493 14.7813ZM11.0003 4C9.58411 4 8.58164 4.00049 7.79816 4.06445C7.0264 4.12751 6.55418 4.24693 6.1839 4.43555C5.43143 4.819 4.81933 5.43114 4.43585 6.18359C4.24717 6.5539 4.12783 7.02595 4.06476 7.79785C4.00077 8.58138 4.00031 9.58363 4.00031 11V13C4.00031 14.1969 4.00358 15.0979 4.0423 15.8213L8.76886 12.1855C9.49896 11.6242 10.5184 11.6337 11.2376 12.209L12.5003 13.2197L16.305 10.1758C16.985 9.6321 17.9389 9.59035 18.6634 10.0732L19.9993 10.9639C19.9993 9.56657 19.9993 8.5747 19.9359 7.79785C19.8728 7.02601 19.7534 6.55389 19.5648 6.18359C19.1813 5.43117 18.5691 4.81902 17.8167 4.43555C17.4464 4.24689 16.9742 4.12753 16.2025 4.06445C15.419 4.00047 14.4165 4 13.0003 4H11.0003Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+          </div>
+          <span class="more-card-title">Обои</span>
+        </div>
+
+        <div class="more-card" onclick="openCommissionsModal()">
+          <div class="squircle-icon" style="background: #34c759;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.27002 7.7618V7.31319C3.27002 5.03472 4.63946 3.5 6.78807 3.5C8.93668 3.5 10.2589 5.01111 10.2589 7.31319V7.7618C10.2589 9.99305 8.88946 11.6104 6.72904 11.6104C4.60405 11.6104 3.27002 10.0639 3.27002 7.7618ZM5.45405 18.5993L11.3214 11.1264L16.7047 4.07847C17.177 3.45278 17.7554 3.44097 18.204 3.70069C18.5464 3.84236 18.7825 4.14931 18.7943 4.51528C18.8179 4.79861 18.6999 5.11736 18.4401 5.43611L13.0686 12.3069L7.18946 19.9687C6.69363 20.618 6.10335 20.5826 5.67835 20.3347C5.38321 20.2049 5.1353 19.9215 5.11168 19.5792C5.07627 19.2958 5.17071 18.9535 5.45405 18.5993ZM5.71377 7.40764V7.67916C5.71377 8.89514 6.11516 9.56805 6.76446 9.56805C7.40196 9.56805 7.80335 8.89514 7.80335 7.67916V7.40764C7.80335 6.19166 7.40196 5.54236 6.76446 5.54236C6.10335 5.54236 5.71377 6.17986 5.71377 7.40764ZM13.7533 16.368V15.9194C13.7533 13.641 15.1228 12.1062 17.2832 12.1062C19.4318 12.1062 20.7422 13.6174 20.7422 15.9194V16.368C20.7422 18.5993 19.3846 20.2167 17.2242 20.2167C15.0874 20.2167 13.7533 18.6701 13.7533 16.368ZM16.1971 16.0139V16.2854C16.1971 17.5014 16.6103 18.1743 17.2478 18.1743C17.8853 18.1743 18.2867 17.5014 18.2867 16.2854V16.0139C18.2867 14.7979 17.8971 14.1486 17.2478 14.1486C16.5985 14.1486 16.1971 14.7861 16.1971 16.0139Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+          </div>
+          <span class="more-card-title">Комиссии</span>
+        </div>
+      </div>
+
+      <!-- Section: Справка -->
+      <div class="section-title">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.9237 4.07522C14.8234 -0.0250747 8.17534 -0.0250738 4.07504 4.07522C-0.0252573 8.17552 -0.0252573 14.8236 4.07504 18.9239L4.1766 19.0244C7.44938 22.2103 12.3719 22.8883 16.3495 20.8145L16.3748 20.8008L19.2704 21.418C19.5285 21.473 19.7958 21.4712 20.0536 21.4141C21.0473 21.1937 21.6743 20.2096 21.4539 19.2158L20.8172 16.3438L20.8289 16.3223C22.9071 12.3072 22.1874 7.33901 18.9237 4.07522ZM5.49594 5.4971C8.81107 2.18196 14.1867 2.18196 17.5018 5.4971C20.222 8.21746 20.7565 12.4034 18.8807 15.6973L18.6883 16.0332L19.4344 19.3975L16.0526 18.6768L15.7186 18.8682C12.4221 20.759 8.22302 20.2291 5.49594 17.502C2.18114 14.1869 2.18103 8.81215 5.49594 5.4971ZM11.7088 14.6221C11.0658 14.6221 10.5448 15.1422 10.5448 15.7852C10.5448 16.4282 11.0658 16.9483 11.7088 16.9483C12.3518 16.9482 12.8719 16.4282 12.8719 15.7852C12.8719 15.1422 12.3518 14.6221 11.7088 14.6221ZM11.742 6.08889C10.6574 6.08891 9.80098 6.36101 9.17465 6.90042C8.58094 7.41192 8.26524 8.11394 8.22641 8.99807H8.2186V9.1387C8.21878 9.59658 8.58978 9.9678 9.0477 9.9678H9.72055C10.1697 9.96768 10.535 9.61015 10.5487 9.16409L10.5497 9.14261C10.5594 8.74274 10.9332 8.02835 11.7088 8.02835C12.4657 8.02838 12.8717 8.46182 12.8719 9.19143C12.8719 9.47145 12.7968 9.73953 12.6405 9.99124C12.4903 10.237 12.1899 10.554 11.742 10.9434L11.7079 10.9737C11.2405 11.3751 10.9187 11.7846 10.743 12.1992C10.6396 12.4415 10.5694 12.6985 10.5457 13.0244C10.5138 13.4687 10.8752 13.8457 11.3211 13.8457H12.0965C12.5182 13.8457 12.861 13.5099 12.8719 13.0908V13.0703C12.8719 11.9068 15.1991 11.2072 15.1991 9.0303C15.1959 8.09535 14.8947 7.37188 14.2909 6.85843C13.6855 6.34503 12.8364 6.08889 11.742 6.08889Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+        <span>Справка</span>
+      </div>
+      <div class="more-list-group">
+        <div class="more-list-item" onclick="openHelpModal()">
+          <div class="more-list-left">
+            <div class="squircle-icon" style="width: 32px; height: 32px; border-radius: 9px; background: #6366f1; margin: 0;">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.9237 4.07522C14.8234 -0.0250747 8.17534 -0.0250738 4.07504 4.07522C-0.0252573 8.17552 -0.0252573 14.8236 4.07504 18.9239L4.1766 19.0244C7.44938 22.2103 12.3719 22.8883 16.3495 20.8145L16.3748 20.8008L19.2704 21.418C19.5285 21.473 19.7958 21.4712 20.0536 21.4141C21.0473 21.1937 21.6743 20.2096 21.4539 19.2158L20.8172 16.3438L20.8289 16.3223C22.9071 12.3072 22.1874 7.33901 18.9237 4.07522ZM5.49594 5.4971C8.81107 2.18196 14.1867 2.18196 17.5018 5.4971C20.222 8.21746 20.7565 12.4034 18.8807 15.6973L18.6883 16.0332L19.4344 19.3975L16.0526 18.6768L15.7186 18.8682C12.4221 20.759 8.22302 20.2291 5.49594 17.502C2.18114 14.1869 2.18103 8.81215 5.49594 5.4971ZM11.7088 14.6221C11.0658 14.6221 10.5448 15.1422 10.5448 15.7852C10.5448 16.4282 11.0658 16.9483 11.7088 16.9483C12.3518 16.9482 12.8719 16.4282 12.8719 15.7852C12.8719 15.1422 12.3518 14.6221 11.7088 14.6221ZM11.742 6.08889C10.6574 6.08891 9.80098 6.36101 9.17465 6.90042C8.58094 7.41192 8.26524 8.11394 8.22641 8.99807H8.2186V9.1387C8.21878 9.59658 8.58978 9.9678 9.0477 9.9678H9.72055C10.1697 9.96768 10.535 9.61015 10.5487 9.16409L10.5497 9.14261C10.5594 8.74274 10.9332 8.02835 11.7088 8.02835C12.4657 8.02838 12.8717 8.46182 12.8719 9.19143C12.8719 9.47145 12.7968 9.73953 12.6405 9.99124C12.4903 10.237 12.1899 10.554 11.742 10.9434L11.7079 10.9737C11.2405 11.3751 10.9187 11.7846 10.743 12.1992C10.6396 12.4415 10.5694 12.6985 10.5457 13.0244C10.5138 13.4687 10.8752 13.8457 11.3211 13.8457H12.0965C12.5182 13.8457 12.861 13.5099 12.8719 13.0908V13.0703C12.8719 11.9068 15.1991 11.2072 15.1991 9.0303C15.1959 8.09535 14.8947 7.37188 14.2909 6.85843C13.6855 6.34503 12.8364 6.08889 11.742 6.08889Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+            </div>
+            <span class="more-list-title">Справка</span>
+          </div>
+          <div class="more-list-chevron"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+        </div>
+
+        <div class="more-list-item" onclick="openSupportLink()">
+          <div class="more-list-left">
+            <div class="squircle-icon" style="width: 32px; height: 32px; border-radius: 9px; background: #ff9f0a; margin: 0;">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.07632 4.07522C9.17662 -0.0250747 15.8247 -0.0250738 19.925 4.07522C24.0253 8.17552 24.0253 14.8236 19.925 18.9239L19.8234 19.0244C16.5506 22.2103 11.6281 22.8883 7.65054 20.8145L7.62515 20.8008L4.72964 21.418C4.47153 21.473 4.20417 21.4712 3.94644 21.4141C2.95273 21.1937 2.32567 20.2096 2.54605 19.2158L3.18277 16.3438L3.17105 16.3223C1.09286 12.3072 1.81257 7.33901 5.07632 4.07522ZM18.5031 5.4971C15.1879 2.18215 9.81327 2.18203 6.4982 5.4971C3.77789 8.21746 3.24351 12.4034 5.11929 15.6973L5.3107 16.0332L4.56558 19.3975L7.94742 18.6768L8.2814 18.8682C11.5779 20.7588 15.7761 20.229 18.5031 17.502C21.8182 14.1868 21.8182 8.81223 18.5031 5.4971ZM8.38101 10.0332C9.1906 10.0332 9.84673 10.6895 9.84683 11.4991C9.84683 12.3087 9.19067 12.9649 8.38101 12.9649C7.57144 12.9648 6.91519 12.3086 6.91519 11.4991C6.9153 10.6895 7.57151 10.0333 8.38101 10.0332ZM12.5705 10.0332C13.3801 10.0332 14.0362 10.6895 14.0363 11.4991C14.0363 12.3087 13.3801 12.9649 12.5705 12.9649C11.7609 12.9648 11.1046 12.3086 11.1046 11.4991C11.1048 10.6895 11.761 10.0333 12.5705 10.0332ZM16.7589 10.0332C17.5685 10.0332 18.2247 10.6895 18.2248 11.4991C18.2248 12.3087 17.5686 12.9649 16.7589 12.9649C15.9494 12.9648 15.2931 12.3086 15.2931 11.4991C15.2932 10.6895 15.9494 10.0333 16.7589 10.0332Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+            </div>
+            <span class="more-list-title">Поддержка</span>
+          </div>
+          <div class="more-list-chevron"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+        </div>
+      </div>
+
+      <!-- Section: Документы -->
+      <div class="section-title">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.7587 2L12 2C13.5458 2 15.0283 2.61407 16.1213 3.70711L19.2929 6.87868C20.3859 7.97172 21 9.45421 21 11V16.2413C21 17.0463 21 17.7106 20.9558 18.2518C20.9099 18.8139 20.8113 19.3306 20.564 19.816C20.1805 20.5686 19.5686 21.1805 18.816 21.564C18.3306 21.8113 17.8139 21.9099 17.2518 21.9558C16.7106 22 16.0463 22 15.2413 22H8.75868C7.95372 22 7.28936 22 6.74817 21.9558C6.18608 21.9099 5.66937 21.8113 5.18404 21.564C4.43139 21.1805 3.81947 20.5686 3.43597 19.816C3.18868 19.3306 3.09012 18.8139 3.04419 18.2518C2.99998 17.7106 2.99999 17.0463 3 16.2413V7.7587C2.99999 6.95373 2.99998 6.28937 3.04419 5.74817C3.09012 5.18608 3.18868 4.66937 3.43597 4.18404C3.81947 3.43139 4.43139 2.81947 5.18404 2.43597C5.66937 2.18868 6.18608 2.09012 6.74817 2.04419C7.28937 1.99998 7.95373 1.99999 8.7587 2ZM6.91104 4.03755C6.47262 4.07337 6.24842 4.1383 6.09202 4.21799C5.7157 4.40973 5.40973 4.7157 5.21799 5.09202C5.1383 5.24842 5.07337 5.47262 5.03755 5.91104C5.00078 6.36113 5 6.94342 5 7.8V16.2C5 17.0566 5.00078 17.6389 5.03755 18.089C5.07337 18.5274 5.1383 18.7516 5.21799 18.908C5.40973 19.2843 5.7157 19.5903 6.09202 19.782C6.24842 19.8617 6.47262 19.9266 6.91104 19.9624C7.36113 19.9992 7.94342 20 8.8 20H15.2C16.0566 20 16.6389 19.9992 17.089 19.9624C17.5274 19.9266 17.7516 19.8617 17.908 19.782C18.2843 19.5903 18.5903 19.2843 18.782 18.908C18.8617 18.7516 18.9266 18.5274 18.9624 18.089C18.9992 17.6389 19 17.0566 19 16.2V12H15.1615C14.6343 12 14.1796 12 13.805 11.9694C13.4096 11.9371 13.0164 11.8658 12.638 11.673C12.0735 11.3854 11.6146 10.9265 11.327 10.362C11.1342 9.98359 11.0629 9.59037 11.0306 9.19503C11 8.82046 11 8.36569 11 7.83855L11 4H8.8C7.94342 4 7.36113 4.00078 6.91104 4.03755ZM13 4.1329V7.8C13 8.37655 13.0008 8.74883 13.0239 9.03217C13.0461 9.30383 13.0838 9.40455 13.109 9.45399C13.2049 9.64215 13.3578 9.79513 13.546 9.89101C13.5955 9.9162 13.6962 9.95388 13.9678 9.97607C14.2512 9.99922 14.6234 10 15.2 10H18.8671C18.6939 9.35992 18.3557 8.76994 17.8787 8.29289L14.7071 5.12132C14.2301 4.64427 13.6401 4.30612 13 4.1329Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+        <span>Документы</span>
+      </div>
+      <div class="more-list-group">
+        <div class="more-list-item" onclick="openDocumentModal('privacy')">
+          <div class="more-list-left">
+            <div class="squircle-icon" style="width: 32px; height: 32px; border-radius: 9px; background: #8e8e93; margin: 0;">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.5 9.16671C17.5 13.7917 14.3 18.1167 10 19.1667C5.7 18.1167 2.5 13.7917 2.5 9.16671V4.16671L10 0.833374L17.5 4.16671V9.16671ZM10 17.5C13.125 16.6667 15.8333 12.95 15.8333 9.35004V5.25004L10 2.65004L4.16667 5.25004V9.35004C4.16667 12.95 6.875 16.6667 10 17.5Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M12.4162 7.15092C12.7028 6.8269 13.1981 6.79678 13.5221 7.08337C13.846 7.37005 13.8763 7.86537 13.5897 8.18933L10.5257 11.6529C9.97872 12.271 9.01699 12.2812 8.45703 11.6748L7.08333 10.1864C6.78997 9.86859 6.80963 9.3731 7.12728 9.07963C7.44507 8.78628 7.94058 8.80597 8.23405 9.12358L9.47835 10.4712L12.4162 7.15092Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+            </div>
+            <span class="more-list-title">Политика конфиденциальности</span>
+          </div>
+          <div class="more-list-chevron"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+        </div>
+
+        <div class="more-list-item" onclick="openDocumentModal('aml')">
+          <div class="more-list-left">
+            <div class="squircle-icon" style="width: 32px; height: 32px; border-radius: 9px; background: #8e8e93; margin: 0;">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.7587 2L12 2C13.5458 2 15.0283 2.61407 16.1213 3.70711L19.2929 6.87868C20.3859 7.97172 21 9.45421 21 11V16.2413C21 17.0463 21 17.7106 20.9558 18.2518C20.9099 18.8139 20.8113 19.3306 20.564 19.816C20.1805 20.5686 19.5686 21.1805 18.816 21.564C18.3306 21.8113 17.8139 21.9099 17.2518 21.9558C16.7106 22 16.0463 22 15.2413 22H8.75868C7.95372 22 7.28936 22 6.74817 21.9558C6.18608 21.9099 5.66937 21.8113 5.18404 21.564C4.43139 21.1805 3.81947 20.5686 3.43597 19.816C3.18868 19.3306 3.09012 18.8139 3.04419 18.2518C2.99998 17.7106 2.99999 17.0463 3 16.2413V7.7587C2.99999 6.95373 2.99998 6.28937 3.04419 5.74817C3.09012 5.18608 3.18868 4.66937 3.43597 4.18404C3.81947 3.43139 4.43139 2.81947 5.18404 2.43597C5.66937 2.18868 6.18608 2.09012 6.74817 2.04419C7.28937 1.99998 7.95373 1.99999 8.7587 2ZM6.91104 4.03755C6.47262 4.07337 6.24842 4.1383 6.09202 4.21799C5.7157 4.40973 5.40973 4.7157 5.21799 5.09202C5.1383 5.24842 5.07337 5.47262 5.03755 5.91104C5.00078 6.36113 5 6.94342 5 7.8V16.2C5 17.0566 5.00078 17.6389 5.03755 18.089C5.07337 18.5274 5.1383 18.7516 5.21799 18.908C5.40973 19.2843 5.7157 19.5903 6.09202 19.782C6.24842 19.8617 6.47262 19.9266 6.91104 19.9624C7.36113 19.9992 7.94342 20 8.8 20H15.2C16.0566 20 16.6389 19.9992 17.089 19.9624C17.5274 19.9266 17.7516 19.8617 17.908 19.782C18.2843 19.5903 18.5903 19.2843 18.782 18.908C18.8617 18.7516 18.9266 18.5274 18.9624 18.089C18.9992 17.6389 19 17.0566 19 16.2V12H15.1615C14.6343 12 14.1796 12 13.805 11.9694C13.4096 11.9371 13.0164 11.8658 12.638 11.673C12.0735 11.3854 11.6146 10.9265 11.327 10.362C11.1342 9.98359 11.0629 9.59037 11.0306 9.19503C11 8.82046 11 8.36569 11 7.83855L11 4H8.8C7.94342 4 7.36113 4.00078 6.91104 4.03755ZM13 4.1329V7.8C13 8.37655 13.0008 8.74883 13.0239 9.03217C13.0461 9.30383 13.0838 9.40455 13.109 9.45399C13.2049 9.64215 13.3578 9.79513 13.546 9.89101C13.5955 9.9162 13.6962 9.95388 13.9678 9.97607C14.2512 9.99922 14.6234 10 15.2 10H18.8671C18.6939 9.35992 18.3557 8.76994 17.8787 8.29289L14.7071 5.12132C14.2301 4.64427 13.6401 4.30612 13 4.1329Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+            </div>
+            <span class="more-list-title">Правила AML и KYC</span>
+          </div>
+          <div class="more-list-chevron"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM FLOATING DOCK -->
+    <nav class="dock">
+      <button class="dock-item active" onclick="switchTab('wallet', this)">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.6564 2.00067C16.7948 2.00479 17.8345 2.20847 18.9142 2.78583C19.9032 3.31477 20.685 4.09759 21.214 5.08661C21.7973 6.17728 22.0001 7.22691 22.0001 9.40985V14.5905C22.0001 16.7735 21.7973 17.8231 21.214 18.9138C20.685 19.9028 19.9032 20.6856 18.9142 21.2145C17.8236 21.7978 16.7737 21.9997 14.5909 21.9997H9.41028C7.22751 21.9997 6.1776 21.7977 5.08704 21.2145C4.09796 20.6856 3.31522 19.9028 2.78625 18.9138C2.2089 17.8341 2.00515 16.7944 2.0011 14.6559L2.00012 9.34442C2.00424 7.20595 2.2089 6.16625 2.78625 5.08661C3.31522 4.09753 4.09796 3.31479 5.08704 2.78583C6.15575 2.21435 7.18539 2.0087 9.2804 2.00067H14.6564ZM9.35461 4.00067C7.55205 4.00349 6.81335 4.14134 6.07532 4.52606L6.0304 4.5495C5.38985 4.89207 4.89249 5.38943 4.54993 6.02997L4.52649 6.07587C4.14183 6.81384 4.00387 7.55176 4.0011 9.35419V14.8054C4.01172 16.4933 4.15326 17.2095 4.52649 17.9255L4.54993 17.9704C4.89249 18.6109 5.38985 19.1083 6.0304 19.4509L6.07532 19.4743C6.82095 19.863 7.56684 20.0007 9.41028 20.0007H14.5909C16.4341 20.0007 17.1794 19.8629 17.9249 19.4743L17.9708 19.4509C18.6114 19.1083 19.1087 18.6109 19.4513 17.9704C19.613 17.6679 19.7326 17.369 19.8185 17.0007H15.3341C12.5728 17.0007 10.3343 14.7619 10.3341 12.0007C10.3341 9.23926 12.5727 7.00067 15.3341 7.00067H19.8185C19.7369 6.6506 19.6245 6.36315 19.4747 6.07587L19.4513 6.02997C19.1087 5.38943 18.6114 4.89207 17.9708 4.5495L17.9249 4.52606C17.187 4.14144 16.449 4.00345 14.6466 4.00067H9.35461ZM15.3341 9.00067C13.6773 9.00067 12.3341 10.3438 12.3341 12.0007C12.3343 13.6573 13.6774 15.0007 15.3341 15.0007H19.9982L19.9991 14.8679C19.9999 14.7782 20.0001 14.6858 20.0001 14.5905V9.26923C19.9998 9.17694 19.9993 9.08741 19.9982 9.00067H15.3341ZM15.4337 10.6003C16.1884 10.6003 16.8007 11.2119 16.8009 11.9665C16.8009 12.7213 16.1885 13.3337 15.4337 13.3337C14.679 13.3336 14.0675 12.7212 14.0675 11.9665C14.0677 11.2119 14.6791 10.6003 15.4337 10.6003Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+        <span>Кошелёк</span>
+      </button>
+      <button class="dock-item" onclick="switchTab('exchange', this)">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.49988 3C7.19023 3 7.74987 3.55965 7.74988 4.25V6.02148C7.95609 6.03412 8.12427 6.05254 8.27917 6.08789C9.58951 6.38716 10.6127 7.41037 10.912 8.7207C10.9997 9.10517 10.9999 9.57044 10.9999 10.5V15.5C10.9999 16.4296 10.9997 16.8948 10.912 17.2793L10.8475 17.5215C10.4837 18.7147 9.50763 19.6315 8.27917 19.9121L8.12976 19.9414C8.01581 19.96 7.89184 19.9708 7.74988 19.9795V20.75C7.74988 21.4404 7.19023 22 6.49988 22C5.80961 21.9999 5.24988 21.4403 5.24988 20.75V19.9805C5.04363 19.9677 4.87548 19.9475 4.72058 19.9121C3.49212 19.6315 2.51602 18.7147 2.15222 17.5215L2.08777 17.2793C2.02196 16.991 2.00497 16.657 2.00085 16.1162L1.99988 15.5V10.5C1.99988 9.68684 1.99973 9.22931 2.05847 8.87012L2.08777 8.7207C2.36834 7.49225 3.28518 6.51614 4.47839 6.15234L4.72058 6.08789C4.87548 6.05254 5.04367 6.03412 5.24988 6.02148V4.25C5.24989 3.55972 5.80962 3.00011 6.49988 3ZM6.49988 8C5.46045 8 5.27529 8.01312 5.16589 8.03809C4.6044 8.16636 4.16625 8.60452 4.03796 9.16602C4.013 9.27541 3.99988 9.46057 3.99988 10.5V15.5C3.99988 16.5394 4.013 16.7246 4.03796 16.834C4.16624 17.3955 4.60439 17.8336 5.16589 17.9619C5.27529 17.9869 5.46043 18 6.49988 18C7.53932 18 7.72447 17.9869 7.83386 17.9619C8.39536 17.8336 8.83351 17.3955 8.96179 16.834C8.98676 16.7246 8.99988 16.5394 8.99988 15.5V10.5C8.99988 9.46057 8.98676 9.27541 8.96179 9.16602C8.83351 8.60452 8.39536 8.16636 7.83386 8.03809C7.72447 8.01312 7.53931 8 6.49988 8Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M17.4999 2C18.1902 2 18.7499 2.55966 18.7499 3.25V4.02148C18.9561 4.0341 19.1243 4.05256 19.2792 4.08789C20.5895 4.38716 21.6127 5.4104 21.912 6.7207C21.9997 7.10517 21.9999 7.57043 21.9999 8.5V13.5C21.9999 14.4296 21.9997 14.8948 21.912 15.2793L21.8475 15.5215C21.4837 16.7146 20.5076 17.6315 19.2792 17.9121L19.1298 17.9414C19.0158 17.96 18.8918 17.9708 18.7499 17.9795V19.75C18.7499 20.4404 18.1902 21 17.4999 21C16.8095 21 16.2499 20.4404 16.2499 19.75V17.9805C16.0438 17.9677 15.8754 17.9474 15.7206 17.9121C14.4923 17.6314 13.516 16.7146 13.1522 15.5215L13.0878 15.2793C13.022 14.991 13.005 14.657 13.0009 14.1162L12.9999 13.5V8.5C12.9999 7.68688 12.9997 7.2293 13.0585 6.87012L13.0878 6.7207C13.3683 5.49237 14.2853 4.51623 15.4784 4.15234L15.7206 4.08789C15.8754 4.05256 16.0438 4.03412 16.2499 4.02148V3.25C16.2499 2.55966 16.8095 2 17.4999 2ZM17.4999 6C16.4608 6 16.2753 6.01312 16.1659 6.03809C15.6046 6.16647 15.1662 6.60464 15.038 7.16602C15.013 7.27542 14.9999 7.46084 14.9999 8.5V13.5C14.9999 14.5392 15.013 14.7246 15.038 14.834C15.1662 15.3954 15.6046 15.8335 16.1659 15.9619C16.2753 15.9869 16.4608 16 17.4999 16C18.5381 16 18.7244 15.9868 18.8339 15.9619C19.3953 15.8336 19.8335 15.3954 19.9618 14.834C19.9868 14.7246 19.9999 14.5394 19.9999 13.5V8.5C19.9999 7.46056 19.9868 7.27541 19.9618 7.16602C19.8335 6.60455 19.3953 6.16636 18.8339 6.03809C18.7244 6.01317 18.5382 6 17.4999 6Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+        <span>Биржа</span>
+      </button>
+      <button class="dock-item" onclick="switchTab('swap', this)">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 14C19.5523 14 20 14.4478 20 15C20 15.5523 19.5523 16 19 16H7.41406L9.70703 18.293C10.0975 18.6835 10.0975 19.3166 9.70703 19.7071C9.31652 20.0976 8.68348 20.0976 8.29297 19.7071L4.29297 15.7071C4.00699 15.4211 3.92143 14.9909 4.07617 14.6172C4.23098 14.2436 4.59558 14 5 14H19Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M14.293 4.29302C14.6835 3.90249 15.3165 3.90249 15.707 4.29302L19.707 8.29302C19.993 8.57901 20.0786 9.0092 19.9238 9.38286C19.769 9.75642 19.4044 10 19 10H5C4.44774 10 4.00004 9.5523 4 9.00005C4 8.44776 4.44772 8.00005 5 8.00005H16.5859L14.293 5.70708C13.9025 5.31657 13.9025 4.68354 14.293 4.29302Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M19 14C19.5523 14 20 14.4478 20 15C20 15.5523 19.5523 16 19 16H7.41406L9.70703 18.293C10.0975 18.6835 10.0975 19.3166 9.70703 19.7071C9.31652 20.0976 8.68348 20.0976 8.29297 19.7071L4.29297 15.7071C4.00699 15.4211 3.92143 14.9909 4.07617 14.6172C4.23098 14.2436 4.59558 14 5 14H19Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M14.293 4.29302C14.6835 3.90249 15.3165 3.90249 15.707 4.29302L19.707 8.29302C19.993 8.57901 20.0786 9.0092 19.9238 9.38286C19.769 9.75642 19.4044 10 19 10H5C4.44774 10 4.00004 9.5523 4 9.00005C4 8.44776 4.44772 8.00005 5 8.00005H16.5859L14.293 5.70708C13.9025 5.31657 13.9025 4.68354 14.293 4.29302Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+        <span>Обмен</span>
+      </button>
+      <button class="dock-item" onclick="switchTab('p2p', this)">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 9.66504V14.335C22 16.5931 21.7899 17.6793 21.1865 18.8076C20.6394 19.8305 19.8305 20.6394 18.8076 21.1865C17.6794 21.7899 16.5931 22 14.335 22H9.50195C9.44825 21.9997 9.39513 21.9986 9.34277 21.998C9.83948 21.3765 10.1753 20.6686 10.3506 19.9307H14.335C16.2417 19.9307 17.0129 19.7897 17.7842 19.3877L17.832 19.3623C18.4943 19.008 19.008 18.4943 19.3623 17.832L19.3877 17.7842C19.7897 17.0129 19.9307 16.2416 19.9307 14.335V10.4375C20.644 10.2702 21.3295 9.95253 21.9365 9.48535L21.999 9.43652C21.9995 9.5113 22 9.58755 22 9.66504ZM3.11426 16.6084C4.27236 15.4503 6.15049 15.4503 7.30859 16.6084C8.46668 17.7665 8.46669 19.6446 7.30859 20.8027C6.15049 21.9608 4.27235 21.9608 3.11426 20.8027C1.95617 19.6446 1.9562 17.7665 3.11426 16.6084ZM9.06445 12.9023C9.63006 12.337 10.5468 12.3368 11.1123 12.9023C11.6777 13.4679 11.6777 14.3846 11.1123 14.9502C10.5467 15.5158 9.63005 15.5157 9.06445 14.9502C8.49887 14.3846 8.49887 13.4679 9.06445 12.9023ZM14.5889 2.00098C14.0917 2.62267 13.7554 3.33097 13.5801 4.06934H9.60742C7.74289 4.07225 6.97922 4.21441 6.21582 4.6123L6.16797 4.6377C5.50567 4.99199 4.99199 5.50567 4.6377 6.16797L4.61328 6.21484C4.2151 6.97849 4.07221 7.7423 4.06934 9.60742V13.5469C3.33358 13.7091 2.62512 14.0301 2 14.5098V9.59766C2.00424 7.38516 2.21611 6.30937 2.81348 5.19238C3.36061 4.16952 4.16952 3.36061 5.19238 2.81348C6.29811 2.22213 7.36361 2.00829 9.53125 2H14.5273C14.548 2.00012 14.5685 2.00082 14.5889 2.00098ZM12.8682 9.09863C13.4338 8.53305 14.3504 8.53305 14.916 9.09863C15.4814 9.66424 15.4815 10.581 14.916 11.1465C14.3505 11.712 13.4338 11.7118 12.8682 11.1465C12.3026 10.5809 12.3026 9.66422 12.8682 9.09863ZM16.623 3.19824C17.7812 2.04018 19.6583 2.04015 20.8164 3.19824C21.9744 4.35634 21.9744 6.23353 20.8164 7.3916C19.6583 8.54967 17.7812 8.54959 16.623 7.3916C15.4649 6.23349 15.4649 4.35635 16.623 3.19824Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+        <span>P2P</span>
+      </button>
+      <button class="dock-item" onclick="switchTab('more', this)">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><circle cx="5" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/></svg>
+        <span>Ещё</span>
+      </button>
+    </nav>
+
+    <!-- GENERAL MODAL SHEET -->
+    <div class="modal-overlay" id="general-modal" onclick="closeModalOnOverlay(event)">
+      <div class="modal-sheet">
+        <div class="modal-header">
+          <h3 class="modal-title" id="modal-title-text">Детали</h3>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div id="modal-dynamic-content"></div>
+      </div>
+    </div>
+
   </div>
 
   <script>
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand();
-      tg.setHeaderColor('#14171a');
-      tg.setBackgroundColor('#14171a');
-    }
-
-    // High quality vector SVG icons for all official CryptoBot coins
-    const SVG_ICONS = {
-      USDT: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#26A17B"/><path fill="#fff" d="M17.9 17.1c-.2 0-1.2.1-1.9.1s-1.6 0-1.9-.1c-3.7-.2-6.5-.9-6.5-1.7 0-.9 2.8-1.5 6.5-1.7V10H10V8h12v2h-4.1v3.7c3.7.2 6.5.9 6.5 1.7 0 .8-2.8 1.5-6.5 1.7v5.9h-2v-5.9z"/></svg>`,
-      GRAM: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#0088CC"/><path fill="#fff" d="M8 12l8-5 8 5-8 13z"/></svg>`,
-      TON: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#0098EA"/><path fill="#fff" d="M23.6 9.5H8.4c-1.1 0-1.8 1.2-1.2 2.2l8.8 14.1c.5.8 1.7.8 2.2 0l8.8-14.1c.5-1-.2-2.2-1.2-2.2zm-7.6 12L10 11.7h12l-6 9.8z"/></svg>`,
-      SOL: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#9945FF"/><path fill="#fff" d="M10 10.5l2-2h10l-2 2H10zm0 6l2-2h10l-2 2H10zm2 4l-2 2h10l2-2H12z"/></svg>`,
-      TRX: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#EF0027"/><path fill="#fff" d="M8 9l14 4-7 11zM10 10l5 3-4 5z"/></svg>`,
-      BTC: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#F7931A"/><path fill="#fff" d="M19.7 13.5c.3-1.8-1.1-2.8-3-3.4l.6-2.5-1.5-.4-.6 2.4c-.4-.1-.8-.2-1.2-.3l.6-2.4-1.5-.4-.6 2.5c-.3-.1-.7-.2-1-.3l-2.1-.5-.4 1.7s1.1.3 1.1.3c.6.2.7.5.7.8l-.7 2.9c.1 0 .2.1.3.1l-.3-.1-1 4.1c-.1.2-.3.6-.8.4 0 0-1.1-.3-1.1-.3l-.7 1.8 2 .5c.4.1.7.2 1.1.3l-.6 2.6 1.5.4.6-2.5c.4.1.8.2 1.2.3l-.6 2.5 1.5.4.6-2.5c2.6.5 4.5.3 5.3-2.1.7-1.9 0-3-1.4-3.7 1-.2 1.8-.9 2-2.3z"/></svg>`,
-      ETH: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#627EEA"/><path fill="#fff" fill-opacity=".6" d="M16 4v9l7.5 3.4z"/><path fill="#fff" d="M16 4L8.5 16.4 16 13z"/><path fill="#fff" fill-opacity=".6" d="M16 21.6v6.4l7.5-10.4z"/><path fill="#fff" d="M16 28V21.6L8.5 17.6z"/></svg>`,
-      DOGE: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#BA9F33"/><path fill="#fff" d="M13 9h5c3.3 0 6 2.7 6 6s-2.7 6-6 6h-5V9zm3 2.5v7h2c2 0 3.5-1.5 3.5-3.5S20 11.5 18 11.5h-2zM11 14h6v2h-6z"/></svg>`,
-      LTC: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#345D9D"/><path fill="#fff" d="M13.5 8h3l-2.5 9h4l-.8 3H10.5l.8-3 1.8-.7.8-2.8-1.8.7.6-2.2 1.8-.7.8-3.3z"/></svg>`,
-      BNB: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#F3BA2F"/><path fill="#fff" d="M16 7l3 3-5 5-3-3 5-5zm6 6l3 3-3 3-3-3 3-3zM10 13l3 3-3 3-3-3 3-3zm6 6l3 3-5 5-3-3 5-5z"/></svg>`,
-      USDC: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path fill="#fff" d="M16 6v20M20 10h-6a4 4 0 000 8h4a4 4 0 010 8h-6" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>`,
-      XAUT: `<svg class="asset-icon-svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#C39B36"/><path fill="#fff" d="M16 7l8 5-8 13-8-13z"/></svg>`
-    };
-
-    // User State with LocalStorage Persistence
-    const STORAGE_KEY = 'cryptobot_state_v1';
-    let appState = {
-      balances: {
-        USDT: 50.0,
-        TON: 10.0,
-        GRAM: 25.0,
-        SOL: 0.5,
-        TRX: 100.0,
-        BTC: 0.002,
-        ETH: 0.05,
-        DOGE: 150.0,
-        LTC: 1.0,
-        BNB: 0.2,
-        USDC: 20.0,
-        XAUT: 0.01
-      },
-      orders: [],
-      history: [
-        { type: 'Пополнение', asset: 'USDT', amt: 50.0, time: 'Сегодня, 18:30' }
-      ]
-    };
-
-    function loadState() {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) appState = JSON.parse(saved);
-      } catch (e) {}
-    }
-    function saveState() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-      } catch (e) {}
-    }
-    loadState();
-
+    // Asset definitions with official WebP images
     const ASSETS = [
-      { ticker: 'USDT', name: 'Tether', price: 0.9988, change: -0.02 },
-      { ticker: 'GRAM', name: 'Gram', price: 1.26, change: 3.20 },
-      { ticker: 'TON', name: 'Toncoin', price: 5.50, change: 1.10 },
-      { ticker: 'SOL', name: 'Solana', price: 101.49, change: 1.86 },
-      { ticker: 'TRX', name: 'TRON', price: 0.329, change: 0.07 },
-      { ticker: 'BTC', name: 'Bitcoin', price: 80551.37, change: 3.23 },
-      { ticker: 'ETH', name: 'Ethereum', price: 2341.81, change: 1.65 },
-      { ticker: 'DOGE', name: 'Dogecoin', price: 0.07701, change: 2.06 },
-      { ticker: 'LTC', name: 'Litecoin', price: 57.02, change: 2.40 },
-      { ticker: 'BNB', name: 'Binance Coin', price: 740.99, change: 2.74 },
-      { ticker: 'USDC', name: 'USD Coin', price: 0.9996, change: 0.00 },
-      { ticker: 'XAUT', name: 'Tether Gold', price: 3989.19, change: 0.15 }
+      { id: 'USDT', name: 'Tether USD', symbol: 'USDT', priceRub: 94.20, balance: 15.50, change: '+0.02%' },
+      { id: 'TON',  name: 'Toncoin', symbol: 'TON', priceRub: 512.40, balance: 2.45, change: '+1.85%' },
+      { id: 'BTC',  name: 'Bitcoin', symbol: 'BTC', priceRub: 6420500.0, balance: 0.00012, change: '+2.14%' },
+      { id: 'ETH',  name: 'Ethereum', symbol: 'ETH', priceRub: 324100.0, balance: 0.0, change: '-0.45%' },
+      { id: 'SOL',  name: 'Solana', symbol: 'SOL', priceRub: 14200.0, balance: 0.0, change: '+4.12%' },
+      { id: 'GRAM', name: 'Gram', symbol: 'GRAM', priceRub: 0.88, balance: 1400.0, change: '+5.40%' },
+      { id: 'TRX',  name: 'TRON', symbol: 'TRX', priceRub: 14.80, balance: 0.0, change: '+0.10%' },
+      { id: 'DOGE', name: 'Dogecoin', symbol: 'DOGE', priceRub: 13.50, balance: 0.0, change: '+3.20%' },
+      { id: 'LTC',  name: 'Litecoin', symbol: 'LTC', priceRub: 7850.0, balance: 0.0, change: '-0.15%' },
+      { id: 'BNB',  name: 'BNB', symbol: 'BNB', priceRub: 56400.0, balance: 0.0, change: '+1.05%' },
+      { id: 'USDC', name: 'USD Coin', symbol: 'USDC', priceRub: 94.15, balance: 0.0, change: '+0.01%' },
+      { id: 'XAUT', name: 'Tether Gold', symbol: 'XAUT', priceRub: 254000.0, balance: 0.0, change: '+0.30%' }
     ];
 
-    const RUB_RATE = 95.5;
-    let hideBalance = false;
-    let hideSmall = false;
-    let currentTradeSide = 'buy';
+    // Local state
+    let isBalanceHidden = localStorage.getItem('hide_balance') === 'true';
+    let currentP2PType = 'buy';
+    let currentP2PAsset = 'USDT';
+    let currentTradeMode = 'buy';
 
-    function calculateTotalRUB() {
-      let total = 0;
-      ASSETS.forEach(a => {
-        const bal = appState.balances[a.ticker] || 0;
-        total += bal * a.price * RUB_RATE;
-      });
-      return total.toFixed(0);
+    // Telegram WebApp setup
+    if (window.Telegram && window.Telegram.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.expand();
+      tg.ready();
+      if (tg.setHeaderColor) tg.setHeaderColor('#000000');
+      if (tg.setBackgroundColor) tg.setBackgroundColor('#000000');
     }
 
-    function renderWallet() {
-      const totalRub = calculateTotalRUB();
-      document.getElementById('wallet-balance-num').textContent = hideBalance ? '••••' : totalRub;
+    // Render assets list
+    function renderAssetsList() {
+      const container = document.getElementById('wallet-assets-list');
+      let totalRub = 0;
 
-      const container = document.getElementById('asset-list-container');
-      container.innerHTML = '';
-
-      ASSETS.forEach(item => {
-        const bal = appState.balances[item.ticker] || 0;
-        if (hideSmall && bal <= 0) return;
-
-        const fiatVal = (bal * item.price * RUB_RATE).toFixed(0);
-        const changeClass = item.change >= 0 ? 'change-pos' : 'change-neg';
-        const changeSign = item.change > 0 ? '+' : '';
-
-        const div = document.createElement('div');
-        div.className = 'asset-item';
-        div.innerHTML = `
-          ${SVG_ICONS[item.ticker] || ''}
-          <div class="asset-info">
-            <div class="asset-name">${item.name}</div>
-            <div class="asset-sub">
-              $${item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
-              <span class="${changeClass}">${changeSign}${item.change.toFixed(2)}%</span>
+      container.innerHTML = ASSETS.map(coin => {
+        const fiatValue = coin.balance * coin.priceRub;
+        totalRub += fiatValue;
+        const displayBal = isBalanceHidden ? '••••' : (coin.balance > 0 ? coin.balance.toLocaleString('ru-RU') : '0');
+        const displayFiat = isBalanceHidden ? '••••' : `≈ ₽ ${fiatValue.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        return `
+          <div class="asset-item" onclick="openAssetActionModal('${coin.id}')">
+            <div class="asset-info">
+              <img class="asset-icon-img" src="./images/coins/${coin.id}.webp" onerror="this.src='./images/coins/USDT.webp'" alt="${coin.id}">
+              <div>
+                <div class="asset-name">${coin.name}</div>
+                <div class="asset-price-sub">₽ ${coin.priceRub.toLocaleString('ru-RU')} <span style="color: ${coin.change.startsWith('+') ? 'var(--accent-green)' : 'var(--accent-red)'}">${coin.change}</span></div>
+              </div>
             </div>
-          </div>
-          <div class="asset-vals">
-            <div class="asset-crypto">${hideBalance ? '••••' : bal.toFixed(4).replace(/0+$/, '').replace(/\.$/, '') + ' ' + item.ticker}</div>
-            <div class="asset-fiat">${hideBalance ? '••••' : fiatVal + ' ₽'}</div>
+            <div class="asset-values">
+              <div class="asset-crypto-amount">${displayBal} ${coin.symbol}</div>
+              <div class="asset-fiat-amount">${displayFiat}</div>
+            </div>
           </div>
         `;
-        div.onclick = () => {
-          if (tg) tg.HapticFeedback?.impactOccurred('light');
-          openAssetQuickAction(item.ticker);
-        };
-        container.appendChild(div);
-      });
-    }
+      }).join('');
 
-    function switchTab(tabId) {
-      if (tg) tg.HapticFeedback?.selectionChanged();
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.querySelectorAll('.dock-tab').forEach(t => t.classList.remove('active'));
-
-      const activeView = document.getElementById(`view-${tabId}`);
-      const activeDock = document.getElementById(`dock-${tabId}`);
-      if (activeView) activeView.classList.add('active');
-      if (activeDock) activeDock.classList.add('active');
-
-      if (tabId === 'swap') initSwap();
-      if (tabId === 'exchange') initExchange();
-      if (tabId === 'p2p') renderP2POrders('all');
-
-      window.scrollTo(0, 0);
-    }
-
-    // Hash navigation (e.g. #exchange, #p2p, #swap)
-    window.addEventListener('hashchange', checkHash);
-    function checkHash() {
-      const hash = window.location.hash.replace('#', '');
-      if (['wallet', 'exchange', 'swap', 'p2p', 'more'].includes(hash)) {
-        switchTab(hash);
+      // Update total balance
+      const totalDisplay = document.getElementById('total-balance-display');
+      if (isBalanceHidden) {
+        totalDisplay.innerText = '••••••';
+      } else {
+        totalDisplay.innerText = Math.round(totalRub).toLocaleString('ru-RU');
       }
     }
 
+    // Balance visibility toggle
     function toggleBalanceVisibility() {
-      hideBalance = !hideBalance;
-      renderWallet();
+      isBalanceHidden = !isBalanceHidden;
+      localStorage.setItem('hide_balance', isBalanceHidden);
+      const eyeBtn = document.getElementById('balance-eye-btn');
+      eyeBtn.innerHTML = isBalanceHidden ? `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>` : `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+      renderAssetsList();
     }
 
-    function toggleSmallBalances() {
-      hideSmall = !hideSmall;
-      renderWallet();
+    // Tab navigation
+    function switchTab(tabId, el) {
+      document.querySelectorAll('.tab-view').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.dock-item').forEach(b => b.classList.remove('active'));
+
+      const targetTab = document.getElementById(`tab-${tabId}`);
+      if (targetTab) targetTab.classList.add('active');
+      if (el) el.classList.add('active');
+
+      window.location.hash = tabId;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    /* Modal dialogs */
-    function openDepositModal() {
-      document.getElementById('modal-deposit').classList.add('active');
+    // Hash router
+    function handleHashRoute() {
+      const hash = window.location.hash.replace('#', '') || 'wallet';
+      const dockItems = document.querySelectorAll('.dock-item');
+      const tabs = ['wallet', 'exchange', 'swap', 'p2p', 'more'];
+      const index = tabs.indexOf(hash);
+      if (index !== -1) {
+        switchTab(hash, dockItems[index]);
+      }
     }
-    function openWithdrawModal() {
-      document.getElementById('modal-withdraw').classList.add('active');
+
+    // Modal controls
+    function openModal(title, contentHtml) {
+      document.getElementById('modal-title-text').innerText = title;
+      document.getElementById('modal-dynamic-content').innerHTML = contentHtml;
+      document.getElementById('general-modal').classList.add('active');
     }
+
+    function closeModal() {
+      document.getElementById('general-modal').classList.remove('active');
+    }
+
+    function closeModalOnOverlay(e) {
+      if (e.target.id === 'general-modal') closeModal();
+    }
+
+    // Modals implementations
+    function openAssetActionModal(assetId) {
+      const coin = ASSETS.find(a => a.id === assetId) || ASSETS[0];
+      openModal(coin.name, `
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="./images/coins/${coin.id}.webp" width="64" height="64" style="border-radius: 50%; margin-bottom: 8px;">
+          <div style="font-size: 28px; font-weight: 700;">${coin.balance} ${coin.symbol}</div>
+          <div style="color: var(--text-secondary); font-size: 14px;">≈ ₽ ${(coin.balance * coin.priceRub).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <button class="primary-btn green" onclick="openDepositModal('${coin.id}')">Пополнить</button>
+          <button class="primary-btn" style="background: var(--accent-orange);" onclick="openWithdrawModal('${coin.id}')">Вывести</button>
+        </div>
+        <button class="primary-btn" onclick="startSwapFor('${coin.id}')">Обменять на бирже</button>
+      `);
+    }
+
+    function openDepositModal(assetId = 'USDT') {
+      const addr = 'EQ' + Array.from({length: 46}, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random()*62)]).join('');
+      openModal(`Пополнение ${assetId}`, `
+        <div class="qr-box">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${addr}" alt="Deposit QR">
+        </div>
+        <div style="font-size: 13px; color: var(--text-secondary); text-align: center; margin-bottom: 8px;">Ваш адрес для пополнения (${assetId} TON):</div>
+        <div class="address-box">${addr}</div>
+        <button class="primary-btn" onclick="navigator.clipboard.writeText('${addr}'); alert('Адрес скопирован в буфер обмена!');">
+          Скопировать адрес
+        </button>
+      `);
+    }
+
+    function openWithdrawModal(assetId = 'USDT') {
+      openModal(`Вывод ${assetId}`, `
+        <div class="form-input-group">
+          <span class="form-input-label">Адрес получателя</span>
+          <input type="text" id="withdraw-addr" placeholder="Введите адрес кошелька">
+        </div>
+        <div class="form-input-group">
+          <span class="form-input-label">Сумма</span>
+          <input type="number" id="withdraw-sum" placeholder="0.00">
+        </div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+          Комиссия сети: ≈ 0.05 ${assetId}
+        </div>
+        <button class="primary-btn" style="background: var(--accent-orange);" onclick="executeWithdraw('${assetId}')">
+          Подтвердить вывод
+        </button>
+      `);
+    }
+
+    function executeWithdraw(assetId) {
+      const addr = document.getElementById('withdraw-addr').value;
+      const sum = parseFloat(document.getElementById('withdraw-sum').value);
+      if (!addr || !sum || sum <= 0) {
+        alert('Пожалуйста, введите корректный адрес и сумму.');
+        return;
+      }
+      alert(`Заявка на вывод ${sum} ${assetId} успешно отправлена в обработку!`);
+      closeModal();
+    }
+
     function openHistoryModal() {
-      const list = document.getElementById('history-items-list');
-      list.innerHTML = '';
-      if (!appState.history.length) {
-        list.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:20px;">Операций пока нет.</div>';
-      } else {
-        appState.history.forEach(h => {
-          const div = document.createElement('div');
-          div.style.cssText = 'padding:10px 0; border-bottom:1px solid #282f38; display:flex; justify-content:space-between; align-items:center;';
-          div.innerHTML = `
+      openModal('История транзакций', `
+        <div style="padding: 10px 0;">
+          <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
             <div>
-              <div style="font-weight:600; font-size:14px;">${h.type}</div>
-              <div style="font-size:12px; color:var(--text-muted);">${h.time}</div>
+              <div style="font-weight: 600;">Пополнение USDT</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Вчера, 18:42</div>
             </div>
-            <div style="font-weight:700; color:${h.amt > 0 ? 'var(--green)' : 'var(--red)'};">
-              ${h.amt > 0 ? '+' : ''}${h.amt} ${h.asset}
+            <div style="color: var(--accent-green); font-weight: 700;">+15.50 USDT</div>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+            <div>
+              <div style="font-weight: 600;">Обмен GRAM → TON</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">22 окт, 14:10</div>
             </div>
-          `;
-          list.appendChild(div);
-        });
-      }
-      document.getElementById('modal-history').classList.add('active');
-    }
-    function closeModals() {
-      document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('active'));
-    }
-
-    function submitDeposit() {
-      const asset = document.getElementById('dep-asset-select').value;
-      const amt = parseFloat(document.getElementById('dep-amount-input').value) || 0;
-      if (amt <= 0) return alert('Введите сумму');
-
-      appState.balances[asset] = (appState.balances[asset] || 0) + amt;
-      appState.history.unshift({ type: 'Пополнение', asset, amt, time: 'Только что' });
-      saveState();
-      renderWallet();
-      closeModals();
-      if (tg) tg.HapticFeedback?.notificationOccurred('success');
-      alert(`Успешно пополнено ${amt} ${asset}!`);
+            <div style="color: var(--text-primary); font-weight: 700;">+2.45 TON</div>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 12px 0;">
+            <div>
+              <div style="font-weight: 600;">Чек CryptoBot</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">20 окт, 11:05</div>
+            </div>
+            <div style="color: var(--accent-green); font-weight: 700;">+50.00 RUB</div>
+          </div>
+        </div>
+      `);
     }
 
-    function submitWithdraw() {
-      const asset = document.getElementById('wdr-asset-select').value;
-      const amt = parseFloat(document.getElementById('wdr-amount-input').value) || 0;
-      const curBal = appState.balances[asset] || 0;
-      if (amt <= 0 || amt > curBal) return alert('Недостаточно средств!');
-
-      appState.balances[asset] -= amt;
-      appState.history.unshift({ type: 'Вывод', asset, amt: -amt, time: 'Только что' });
-      saveState();
-      renderWallet();
-      closeModals();
-      if (tg) tg.HapticFeedback?.notificationOccurred('success');
-      alert(`Заявка на вывод ${amt} ${asset} принята!`);
+    function openChecksModal() {
+      openModal('Чеки CryptoBot', `
+        <div style="text-align: center; padding: 20px 0;">
+          <div style="font-size: 15px; color: var(--text-secondary); margin-bottom: 20px;">
+            Создавайте чеки для мгновенной передачи криптовалюты в Telegram без комиссий.
+          </div>
+          <button class="primary-btn" onclick="alert('Для создания чека перейдите в диалог с ботом @CryptoBotOfficialbot'); closeModal();">
+            Создать чек
+          </button>
+        </div>
+      `);
     }
 
-    /* Exchange trading logic */
-    function initExchange() {
-      const balUSDT = appState.balances['USDT'] || 0;
-      document.getElementById('trade-available-balance').textContent = `${balUSDT.toFixed(2)} USDT`;
-      calculateTotal();
-      renderExchangeOrders();
+    function openAddressBookModal() {
+      openModal('Адресная книга', `
+        <div style="text-align: center; padding: 20px 0; color: var(--text-secondary);">
+          <div style="margin-bottom: 16px;">У вас пока нет сохранённых адресов.</div>
+          <button class="primary-btn" onclick="alert('Функция добавления контакта открыта');">Добавить адрес</button>
+        </div>
+      `);
     }
 
-    function setOrderSide(side) {
-      currentTradeSide = side;
-      const buyBtn = document.getElementById('btn-buy');
-      const sellBtn = document.getElementById('btn-sell');
-      const submitBtn = document.getElementById('btn-submit-order');
+    function openSettingsModal() {
+      openModal('Настройки', `
+        <div class="more-list-group" style="margin-top: 10px;">
+          <div class="more-list-item" onclick="alert('Язык интерфейса: Русский');">
+            <span class="more-list-title">Язык</span>
+            <span style="color: var(--text-secondary);">Русский</span>
+          </div>
+          <div class="more-list-item" onclick="alert('Основная валюта: RUB (₽)');">
+            <span class="more-list-title">Валюта</span>
+            <span style="color: var(--text-secondary);">RUB (₽)</span>
+          </div>
+          <div class="more-list-item" onclick="toggleBalanceVisibility(); closeModal();">
+            <span class="more-list-title">Скрывать баланс</span>
+            <span style="color: var(--text-secondary);">${isBalanceHidden ? 'Да' : 'Нет'}</span>
+          </div>
+        </div>
+      `);
+    }
 
-      if (side === 'buy') {
-        buyBtn.className = 'bs-tab active-buy';
-        sellBtn.className = 'bs-tab';
-        submitBtn.textContent = 'Купить USDC';
-        submitBtn.style.background = 'var(--green)';
-        const balUSDT = appState.balances['USDT'] || 0;
-        document.getElementById('trade-available-balance').textContent = `${balUSDT.toFixed(2)} USDT`;
+    function openSecurityModal() {
+      openModal('Безопасность', `
+        <div style="padding: 10px 0;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border-color);">
+            <div>
+              <div style="font-weight: 600;">Код-пароль</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Защита входа в приложение</div>
+            </div>
+            <span style="color: var(--accent-green); font-weight: 600;">Включен</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0;">
+            <div>
+              <div style="font-weight: 600;">Face ID / Отпечаток</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Быстрая авторизация</div>
+            </div>
+            <span style="color: var(--accent-green); font-weight: 600;">Активен</span>
+          </div>
+        </div>
+      `);
+    }
+
+    function openVerificationModal() {
+      openModal('Верификация', `
+        <div style="text-align: center; padding: 16px 0;">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(48, 176, 199, 0.15); color: var(--accent-cyan); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.2784 8.00005C15.8399 8.00005 16.2637 8.41002 16.2637 8.95318C16.2637 9.14637 16.2041 9.3627 16.0616 9.57427L12.0567 15.5586C11.8496 15.8576 11.5499 16.0001 11.168 16.0001C10.8183 16 10.5419 15.8844 10.3164 15.6221L8.07524 13.0264C7.8635 12.7825 7.79399 12.5846 7.79399 12.336C7.79403 11.7883 8.20901 11.379 8.77055 11.379C9.08783 11.3791 9.31816 11.4843 9.52055 11.7188L11.1495 13.6251L14.4268 8.49712C14.6569 8.13819 14.9011 8.00013 15.2784 8.00005Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/><path d="M7.45903 1.9522C8.52826 1.1766 9.86512 0.853921 11.1768 1.06157C12.039 1.19814 12.7494 1.61613 13.3428 2.0645C13.6881 2.32542 14.0459 2.63865 14.42 2.98736C14.9179 2.87244 15.3843 2.78092 15.8135 2.72759C16.5516 2.63593 17.3755 2.62879 18.1905 2.94146C19.4306 3.41727 20.4275 4.36478 20.9659 5.57134L21.0674 5.81646L21.17 6.12212C21.3771 6.83604 21.3616 7.54762 21.2813 8.19341C21.228 8.62223 21.1364 9.08769 21.0215 9.58501C21.3696 9.95813 21.6819 10.3156 21.9424 10.6602C22.3908 11.2533 22.8096 11.9633 22.9463 12.8252C23.1684 14.2249 22.7855 15.6535 21.8936 16.7549C21.3441 17.4335 20.6265 17.8394 19.9414 18.129C19.5432 18.2972 19.094 18.4504 18.6055 18.5997C18.4561 19.088 18.3022 19.5374 18.1338 19.9356C17.8442 20.6205 17.4382 21.3375 16.7598 21.8868C15.6584 22.7783 14.2296 23.1611 12.8301 22.9395C11.9682 22.803 11.2584 22.3848 10.6651 21.9366C10.3199 21.6758 9.96177 21.3632 9.58793 21.0147C9.08989 21.1296 8.62373 21.2212 8.19438 21.2745C7.45628 21.3661 6.6324 21.3735 5.81742 21.0606C4.49449 20.5526 3.44929 19.5067 2.94145 18.1836C2.62881 17.3689 2.63593 16.5454 2.72758 15.8077C2.78083 15.3791 2.87165 14.9139 2.98637 14.417C2.63798 14.0436 2.32623 13.6857 2.06547 13.3409C1.61699 12.7478 1.19829 12.038 1.06156 11.1758C0.839769 9.77614 1.22324 8.3482 2.11528 7.24712C2.6648 6.56885 3.38142 6.16258 4.06645 5.8731C4.46487 5.70474 4.91465 5.55075 5.40336 5.40142C5.55275 4.91292 5.70665 4.46373 5.87504 4.06548C6.1647 3.38045 6.57042 2.66272 7.24906 2.11333L7.45903 1.9522ZM10.8643 3.03716C10.0246 2.90416 9.16753 3.1332 8.50688 3.66802C7.87628 4.17863 7.52582 5.17807 7.0186 7.01861C5.17822 7.52538 4.17968 7.87557 3.66899 8.50591C3.13383 9.16649 2.90412 10.0228 3.03715 10.8624C3.16412 11.6635 3.85381 12.4664 5.19438 13.8252C4.71354 15.6709 4.51798 16.7106 4.80864 17.4678C5.11341 18.2614 5.74052 18.8886 6.53422 19.1934C7.2918 19.4843 8.33227 19.2886 10.1797 18.8077C11.5391 20.1474 12.3421 20.837 13.1436 20.9639C13.9835 21.0968 14.8402 20.867 15.501 20.3321C16.1317 19.8216 16.4822 18.8232 16.9893 16.9834C18.8297 16.4767 19.8283 16.1266 20.3389 15.4961C20.8739 14.8354 21.104 13.9785 20.9707 13.1387C20.8436 12.3377 20.1543 11.535 18.8145 10.1768C19.2956 8.33037 19.491 7.29048 19.2002 6.53325C18.8955 5.73996 18.2683 5.11331 17.4747 4.80865C16.717 4.51796 15.6766 4.71349 13.8291 5.19439C12.4691 3.85382 11.6659 3.16414 10.8643 3.03716Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+          </div>
+          <div style="font-size: 20px; font-weight: 700; margin-bottom: 6px;">Уровень 1 (Базовый)</div>
+          <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 20px;">
+            Лимит вывода: до $10,000 в день.<br>P2P сделки: доступны без ограничений.
+          </div>
+          <button class="primary-btn" onclick="alert('Документы отправлены на проверку.'); closeModal();">Пройти Уровень 2</button>
+        </div>
+      `);
+    }
+
+    function openNotificationsModal() {
+      openModal('Уведомления', `
+        <div style="padding: 10px 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+            <span>Входящие платежи</span>
+            <span style="color: var(--accent-green); font-weight: 600;">Вкл</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+            <span>P2P сделки</span>
+            <span style="color: var(--accent-green); font-weight: 600;">Вкл</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0;">
+            <span>Новости и акции</span>
+            <span style="color: var(--accent-green); font-weight: 600;">Вкл</span>
+          </div>
+        </div>
+      `);
+    }
+
+    function openWallpapersModal() {
+      openModal('Обои приложения', `
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px 0;">
+          <div style="height: 90px; border-radius: 12px; background: #000; border: 2px solid var(--accent-blue); display: flex; align-items: center; justify-content: center; font-size: 12px;">Стандартные</div>
+          <div style="height: 90px; border-radius: 12px; background: #1c1c1e; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-secondary);">Графит</div>
+          <div style="height: 90px; border-radius: 12px; background: #0b192c; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-secondary);">Сапфир</div>
+        </div>
+      `);
+    }
+
+    function openCommissionsModal() {
+      openModal('Комиссии', `
+        <div style="padding: 10px 0; font-size: 14px;">
+          <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+            <span>Ввод криптовалюты</span>
+            <span style="color: var(--accent-green); font-weight: 600;">0%</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+            <span>P2P Маркет (мейкер)</span>
+            <span style="font-weight: 600;">0.5%</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+            <span>P2P Маркет (тейкер)</span>
+            <span style="color: var(--accent-green); font-weight: 600;">0%</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 10px 0;">
+            <span>Обмен криптовалюты</span>
+            <span style="color: var(--accent-green); font-weight: 600;">0%</span>
+          </div>
+        </div>
+      `);
+    }
+
+    function openHelpModal() {
+      openModal('Справка и FAQ', `
+        <div style="padding: 10px 0;">
+          <div style="font-weight: 600; margin-bottom: 4px;">Как пополнить баланс?</div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+            Откройте Кошелёк → Пополнить, выберите криптовалюту и скопируйте предоставленный адрес для перевода.
+          </div>
+          <div style="font-weight: 600; margin-bottom: 4px;">Как купить криптовалюту за рубли?</div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+            Используйте вкладку P2P, выберите актив и подходящий банк (Т-Банк, Сбер, СБП).
+          </div>
+        </div>
+      `);
+    }
+
+    function openSupportLink() {
+      window.open('https://t.me/CryptoBotFeedback', '_blank');
+    }
+
+    function openDocumentModal(type) {
+      const title = type === 'privacy' ? 'Политика конфиденциальности' : 'Правила AML и KYC';
+      const text = type === 'privacy' 
+        ? 'Crypto Bot обязуется защищать конфиденциальность персональных данных пользователей в строгом соответствии с международными стандартами.'
+        : 'Crypto Bot придерживается строгих норм по противодействию легализации доходов (AML) и идентификации клиентов (KYC).';
+      openModal(title, `
+        <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.5; padding: 10px 0;">
+          ${text}<br><br>
+          Полная версия юридической документации доступна на официальном сайте сервиса.
+        </div>
+      `);
+    }
+
+    function openQrScanner() {
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showScanQrPopup) {
+        window.Telegram.WebApp.showScanQrPopup({ text: 'Наведите камеру на QR-код' });
       } else {
-        buyBtn.className = 'bs-tab';
-        sellBtn.className = 'bs-tab active-sell';
-        submitBtn.textContent = 'Продать USDC';
-        submitBtn.style.background = 'var(--red)';
-        const balUSDC = appState.balances['USDC'] || 0;
-        document.getElementById('trade-available-balance').textContent = `${balUSDC.toFixed(2)} USDC`;
+        alert('Сканер QR доступен в официальном клиенте Telegram.');
       }
-      calculateTotal();
     }
 
-    function selectObPrice(price) {
-      document.getElementById('trade-price').value = price.toFixed(4);
-      calculateTotal();
-    }
+    // Exchange order placement
+    function setTradeMode(mode) {
+      currentTradeMode = mode;
+      const buyTab = document.getElementById('trade-buy-tab');
+      const sellTab = document.getElementById('trade-sell-tab');
+      const submitBtn = document.getElementById('trade-submit-btn');
 
-    function calculateTotal() {
-      const p = parseFloat(document.getElementById('trade-price').value) || 0;
-      const a = parseFloat(document.getElementById('trade-amount').value) || 0;
-      document.getElementById('trade-total').value = (p * a).toFixed(2);
-      if (currentTradeSide === 'buy') {
-        const bal = appState.balances['USDT'] || 0;
-        document.getElementById('trade-max-calc').textContent = p > 0 ? (bal / p).toFixed(2) + ' USDC' : '0 USDC';
+      if (mode === 'buy') {
+        buyTab.className = 'trade-tab-btn active buy';
+        sellTab.className = 'trade-tab-btn';
+        submitBtn.className = 'primary-btn green';
+        submitBtn.innerText = 'Купить USDC';
       } else {
-        const bal = appState.balances['USDC'] || 0;
-        document.getElementById('trade-max-calc').textContent = bal.toFixed(2) + ' USDC';
+        buyTab.className = 'trade-tab-btn';
+        sellTab.className = 'trade-tab-btn active sell';
+        submitBtn.className = 'primary-btn red';
+        submitBtn.innerText = 'Продать USDC';
       }
     }
 
     function setTradePercent(pct) {
-      const p = parseFloat(document.getElementById('trade-price').value) || 1;
-      if (currentTradeSide === 'buy') {
-        const balUSDT = appState.balances['USDT'] || 0;
-        const totalToSpend = balUSDT * (pct / 100);
-        document.getElementById('trade-amount').value = (totalToSpend / p).toFixed(2);
-      } else {
-        const balUSDC = appState.balances['USDC'] || 0;
-        document.getElementById('trade-amount').value = (balUSDC * (pct / 100)).toFixed(2);
+      const input = document.getElementById('trade-amount-input');
+      input.value = (100 * (pct / 100)).toFixed(2);
+    }
+
+    function executeTradeOrder() {
+      const price = document.getElementById('trade-price-input').value;
+      const amt = document.getElementById('trade-amount-input').value;
+      if (!amt || amt <= 0) {
+        alert('Укажите количество для ордера.');
+        return;
       }
-      calculateTotal();
+      alert(`Ордер успешно выставлен на бирже: ${currentTradeMode === 'buy' ? 'Покупка' : 'Продажа'} ${amt} USDC по курсу ${price} USDT.`);
     }
 
-    function placeExchangeOrder() {
-      const price = parseFloat(document.getElementById('trade-price').value) || 0;
-      const amt = parseFloat(document.getElementById('trade-amount').value) || 0;
-      const total = price * amt;
-      if (amt <= 0 || price <= 0) return alert('Введите корректную сумму');
-
-      if (currentTradeSide === 'buy') {
-        if ((appState.balances['USDT'] || 0) < total) return alert('Недостаточно USDT!');
-        appState.balances['USDT'] -= total;
-        appState.balances['USDC'] = (appState.balances['USDC'] || 0) + amt;
-      } else {
-        if ((appState.balances['USDC'] || 0) < amt) return alert('Недостаточно USDC!');
-        appState.balances['USDC'] -= amt;
-        appState.balances['USDT'] = (appState.balances['USDT'] || 0) + total;
-      }
-
-      appState.history.unshift({
-        type: `Биржа ${currentTradeSide.toUpperCase()}`,
-        asset: currentTradeSide === 'buy' ? 'USDC' : 'USDT',
-        amt: currentTradeSide === 'buy' ? amt : total,
-        time: 'Только что'
-      });
-      saveState();
-      renderWallet();
-      initExchange();
-      if (tg) tg.HapticFeedback?.notificationOccurred('success');
-      alert(`Ордер на ${amt} USDC успешно исполнен!`);
-    }
-
-    function renderExchangeOrders() {
-      document.getElementById('orders-count').textContent = '0';
-    }
-
-    /* Swap logic */
-    let swapFrom = 'GRAM';
-    let swapTo = 'USDT';
-
-    function initSwap() {
-      document.getElementById('swap-from-sym').textContent = swapFrom;
-      document.getElementById('swap-to-sym').textContent = swapTo;
-      document.getElementById('swap-from-icon').innerHTML = SVG_ICONS[swapFrom] || '';
-      document.getElementById('swap-to-icon').innerHTML = SVG_ICONS[swapTo] || '';
-      document.getElementById('swap-from-bal').textContent = (appState.balances[swapFrom] || 0).toFixed(2);
-      calculateSwap();
-    }
-
-    function switchSwapCoins() {
-      const temp = swapFrom;
-      swapFrom = swapTo;
-      swapTo = temp;
-      initSwap();
-    }
-
-    function setSwapMax() {
-      document.getElementById('swap-from-amt').value = (appState.balances[swapFrom] || 0).toFixed(4);
-      calculateSwap();
-    }
-
+    // Swap functions
     function calculateSwap() {
-      const fromAmt = parseFloat(document.getElementById('swap-from-amt').value) || 0;
-      const pFrom = ASSETS.find(a => a.ticker === swapFrom)?.price || 1;
-      const pTo = ASSETS.find(a => a.ticker === swapTo)?.price || 1;
-      const rate = pFrom / pTo;
-      const outAmt = fromAmt * rate * 0.99; // 1% fee
-      document.getElementById('swap-to-amt').value = fromAmt > 0 ? outAmt.toFixed(4) : '';
-      document.getElementById('swap-rate-preview').textContent = `1 ${swapFrom} ≈ ${rate.toFixed(4)} ${swapTo} (Комиссия 1%)`;
+      const fromVal = parseFloat(document.getElementById('swap-from-amount').value) || 0;
+      document.getElementById('swap-to-amount').value = (fromVal * 0.0094).toFixed(4);
+    }
+
+    function switchSwapCurrencies() {
+      const fromSym = document.getElementById('swap-from-symbol').innerText;
+      const toSym = document.getElementById('swap-to-symbol').innerText;
+      const fromIcon = document.getElementById('swap-from-icon').src;
+      const toIcon = document.getElementById('swap-to-icon').src;
+
+      document.getElementById('swap-from-symbol').innerText = toSym;
+      document.getElementById('swap-to-symbol').innerText = fromSym;
+      document.getElementById('swap-from-icon').src = toIcon;
+      document.getElementById('swap-to-icon').src = fromIcon;
+      calculateSwap();
     }
 
     function executeSwap() {
-      const fromAmt = parseFloat(document.getElementById('swap-from-amt').value) || 0;
-      if (fromAmt <= 0) return alert('Введите сумму для обмена');
-      if ((appState.balances[swapFrom] || 0) < fromAmt) return alert(`Недостаточно ${swapFrom}!`);
-
-      const toAmt = parseFloat(document.getElementById('swap-to-amt').value) || 0;
-      appState.balances[swapFrom] -= fromAmt;
-      appState.balances[swapTo] = (appState.balances[swapTo] || 0) + toAmt;
-
-      appState.history.unshift({
-        type: `Обмен ${swapFrom} → ${swapTo}`,
-        asset: swapTo,
-        amt: toAmt,
-        time: 'Только что'
-      });
-      saveState();
-      renderWallet();
-      initSwap();
-      if (tg) tg.HapticFeedback?.notificationOccurred('success');
-      alert(`Обмен успешно выполнен! Получено ${toAmt.toFixed(4)} ${swapTo}`);
+      const fromAmt = document.getElementById('swap-from-amount').value;
+      const toAmt = document.getElementById('swap-to-amount').value;
+      const fromSym = document.getElementById('swap-from-symbol').innerText;
+      const toSym = document.getElementById('swap-to-symbol').innerText;
+      alert(`Обмен успешно выполнен! Получено ${toAmt} ${toSym} за ${fromAmt} ${fromSym}.`);
     }
 
-    /* P2P logic */
+    function startSwapFor(coinId) {
+      closeModal();
+      document.getElementById('swap-from-symbol').innerText = coinId;
+      document.getElementById('swap-from-icon').src = `./images/coins/${coinId}.webp`;
+      switchTab('swap', document.querySelectorAll('.dock-item')[2]);
+    }
+
+    // P2P functionality
     const P2P_ORDERS = [
-      { id: 1, user: 'CryptoTrader_777', fiat: 'RUB', price: 96.50, limit: '1 000 - 50 000 ₽', pay: 'Сбербанк' },
-      { id: 2, user: 'FastExchange_PRO', fiat: 'RUB', price: 96.85, limit: '5 000 - 150 000 ₽', pay: 'Тинькофф' },
-      { id: 3, user: 'SberPay_Fast', fiat: 'RUB', price: 97.10, limit: '500 - 25 000 ₽', pay: 'СБП' },
-      { id: 4, user: 'GlobalPay_USD', fiat: 'USD', price: 1.01, limit: '$50 - $2,500', pay: 'Wise / Revolut' },
-      { id: 5, user: 'EuroTrader_EU', fiat: 'EUR', price: 0.93, limit: '€50 - €1,000', pay: 'SEPA' }
+      { user: 'FastTrader_TG', deals: 420, rate: '100%', price: 94.80, min: 1000, max: 85000, bank: 'Т-Банк' },
+      { user: 'CryptoExpress', deals: 1150, rate: '99.8%', price: 95.10, min: 2500, max: 150000, bank: 'Сбербанк' },
+      { user: 'Vanya_P2P', deals: 89, rate: '100%', price: 95.25, min: 500, max: 35000, bank: 'СБП' },
+      { user: 'TopMerchant_77', deals: 3400, rate: '99.5%', price: 95.40, min: 10000, max: 300000, bank: 'Т-Банк' }
     ];
 
-    function renderP2POrders(fiatFilter) {
+    function setP2PType(type) {
+      currentP2PType = type;
+      document.getElementById('p2p-buy-tab').className = `p2p-type-btn ${type === 'buy' ? 'active' : ''}`;
+      document.getElementById('p2p-sell-tab').className = `p2p-type-btn ${type === 'sell' ? 'active' : ''}`;
+      renderP2POrders();
+    }
+
+    function selectP2PAsset(asset, el) {
+      currentP2PAsset = asset;
+      document.querySelectorAll('#p2p-asset-chips .p2p-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      renderP2POrders();
+    }
+
+    function renderP2POrders() {
       const container = document.getElementById('p2p-orders-container');
-      container.innerHTML = '';
-      const list = fiatFilter === 'all' ? P2P_ORDERS : P2P_ORDERS.filter(o => o.fiat === fiatFilter);
-
-      list.forEach(ord => {
-        const div = document.createElement('div');
-        div.className = 'p2p-order-item';
-        div.innerHTML = `
-          <div class="p2p-order-top">
-            <span class="p2p-order-user">👤 ${ord.user}</span>
-            <span class="p2p-order-price">${ord.price.toFixed(2)} ${ord.fiat}</span>
+      container.innerHTML = P2P_ORDERS.map(o => `
+        <div class="p2p-order-card">
+          <div class="p2p-order-user">
+            <span class="p2p-username">
+              ${o.user}
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="var(--accent-cyan)"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4" stroke="#000" stroke-width="2" fill="none"/></svg>
+            </span>
+            <span class="p2p-user-stats">${o.deals} сделок • ${o.rate}</span>
           </div>
-          <div class="p2p-order-details">
-            <span>Лимиты: ${ord.limit}</span>
-            <span style="color:#3da7f2;">💳 ${ord.pay}</span>
+          <div class="p2p-price-row">
+            <div>
+              <div class="p2p-price">${o.price.toFixed(2)} ₽</div>
+              <div class="p2p-limits">Лимит: ${o.min.toLocaleString('ru-RU')} – ${o.max.toLocaleString('ru-RU')} ₽</div>
+            </div>
+            <button class="p2p-action-btn ${currentP2PType}" onclick="openP2PTradeModal('${o.user}', ${o.price})">
+              ${currentP2PType === 'buy' ? 'Купить' : 'Продать'}
+            </button>
           </div>
-          <button class="p2p-buy-btn" onclick="buyP2P(${ord.id}, '${ord.user}', ${ord.price}, '${ord.fiat}')">Купить USDT</button>
-        `;
-        container.appendChild(div);
-      });
+          <span class="p2p-badge-pay">${o.bank}</span>
+        </div>
+      `).join('');
     }
 
-    function filterP2P(fiat) {
-      document.querySelectorAll('.p2p-filter-pill').forEach(p => p.classList.remove('active'));
-      event.target.classList.add('active');
-      renderP2POrders(fiat);
+    function openP2PTradeModal(merchant, price) {
+      openModal(`${currentP2PType === 'buy' ? 'Покупка' : 'Продажа'} ${currentP2PAsset} у ${merchant}`, `
+        <div style="font-size: 14px; margin-bottom: 12px; color: var(--text-secondary);">Курс: <b style="color: #fff;">${price} ₽</b></div>
+        <div class="form-input-group">
+          <span class="form-input-label">Сумма в рублях (₽)</span>
+          <input type="number" id="p2p-fiat-amt" placeholder="5000">
+        </div>
+        <button class="primary-btn ${currentP2PType === 'buy' ? 'green' : 'red'}" onclick="alert('Сделка открыта! Переведите рубли по указанным реквизитам продавца.'); closeModal();">
+          Начать сделку
+        </button>
+      `);
     }
 
-    function buyP2P(id, user, price, fiat) {
-      if (tg) tg.HapticFeedback?.impactOccurred('medium');
-      alert(`Сделка с ${user} на покупку USDT за ${price} ${fiat} открыта!\nОжидайте подтверждения реквизитов.`);
-    }
-
-    function openP2PProfile() {
-      alert('Профиль P2P:\nСделок: 14\nУспешность: 100%\nВерификация: Пройдена');
-    }
-
-    function showStub(feature) {
-      if (tg) tg.HapticFeedback?.impactOccurred('light');
-      alert(`Раздел «${feature}» доступен в вашем регионе.`);
-    }
-
-    function openAssetQuickAction(ticker) {
-      switchTab('swap');
-      swapFrom = ticker;
-      initSwap();
-    }
-
-    // Startup
-    renderWallet();
-    checkHash();
+    // Initial load
+    window.addEventListener('DOMContentLoaded', () => {
+      renderAssetsList();
+      renderP2POrders();
+      handleHashRoute();
+      window.addEventListener('hashchange', handleHashRoute);
+    });
   </script>
 </body>
 </html>
