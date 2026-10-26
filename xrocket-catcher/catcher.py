@@ -5,7 +5,13 @@ import re
 import time
 from datetime import datetime
 from telethon import TelegramClient, events
-from telethon.tl.types import KeyboardButtonCallback, KeyboardButtonUrl
+from telethon.tl.types import (
+    KeyboardButtonCallback,
+    KeyboardButtonUrl,
+    MessageEntityTextUrl,
+    Channel,
+    Chat
+)
 from telethon.tl.functions.messages import StartBotRequest
 
 # Enable UTF-8 in Windows console
@@ -88,12 +94,59 @@ def print_header(delay_sec: float, username: str):
   {C_WHITE}АККАУНТ:{RESET}     {C_GREEN}{username}{RESET}
   {C_WHITE}ЦЕЛЕВОЙ БОТ:{RESET} {C_YELLOW}@xrocket{RESET}
   {C_WHITE}ТАЙМЕР:{RESET}      {C_CYAN}Задержка ровно {delay_sec:.1f} сек{RESET} (антифрод-обход)
+  {C_WHITE}МОНИТОРИНГ:{RESET}  {C_GREEN}КАНАЛЫ + ЧАТЫ + КОММЕНТАРИИ ПОД ПОСТАМИ [ON]{RESET}
+  {C_WHITE}ПАРСИНГ:{RESET}     {C_CYAN}ТЕКСТ + КНОПКИ ССЫЛОК + ГИПЕРССЫЛКИ [ON]{RESET}
   {C_WHITE}ИЗБРАННОЕ:{RESET}   {C_GREEN}АВТО-ОТПРАВКА ССЫЛКИ В 'ИЗБРАННОЕ' [ON]{RESET}
-  {C_WHITE}МОНИТОРИНГ:{RESET}  {C_GREEN}ВСЕ ЧАТЫ, КАНАЛЫ И ЛС [ON]{RESET}
-  {C_WHITE}РУЧНОЙ ВВОД:{RESET} {C_WHITE}Вставь ссылку в консоль и нажми Enter{RESET}
 {C_GRAY}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}
 """
     print(logo, flush=True)
+
+def extract_cheque_code(text: str):
+    if not text:
+        return None
+    for pat in XROCKET_PATTERNS:
+        m = pat.search(text)
+        if m:
+            code = m.group(1)
+            if code.startswith(("t_", "m_", "c_", "w_")):
+                return code
+    return None
+
+def extract_cheque_code_from_message(message):
+    """
+    Глубокий парсинг сообщения:
+    1. Текст сообщения
+    2. URL-адреса инлайн-кнопок
+    3. Гиперссылки внутри текста
+    """
+    if not message:
+        return None
+
+    # 1. Текст сообщения
+    raw = message.raw_text or ""
+    code = extract_cheque_code(raw)
+    if code:
+        return code
+
+    # 2. Инлайн-кнопки (KeyboardButtonUrl)
+    if message.reply_markup and hasattr(message.reply_markup, "rows"):
+        for row in message.reply_markup.rows:
+            for btn in row.buttons:
+                url = getattr(btn, "url", None)
+                if url:
+                    code = extract_cheque_code(url)
+                    if code:
+                        return code
+
+    # 3. Скрытые гиперссылки (MessageEntityTextUrl)
+    if message.entities:
+        for ent in message.entities:
+            if isinstance(ent, MessageEntityTextUrl) and ent.url:
+                code = extract_cheque_code(ent.url)
+                if code:
+                    return code
+
+    return None
 
 async def claim_cheque(client: TelegramClient, code: str, source_name: str, delay_sec: float):
     if code in PROCESSED_CHEQUES:
@@ -108,15 +161,15 @@ async def claim_cheque(client: TelegramClient, code: str, source_name: str, dela
     print(f"  {C_GRAY}▸ Ссылка:{RESET} {C_CYAN}{full_link}{RESET}")
     print(f"  {C_GRAY}▸ Источник:{RESET} {C_WHITE}{source_name}{RESET}")
 
-    # 1. Сразу отправляем ссылку в Избранное (Saved Messages)
+    # 1. Мгновенно пересылаем ссылку в Избранное
     try:
         fav_text = f"⚡ ЧЕК XROCKET:\n{full_link}\n(Источник: {source_name})"
         await client.send_message("me", fav_text)
-        print(f"  {C_GREEN}✔ Ссылка мгновенно сохранена в Избранное{RESET}", flush=True)
+        print(f"  {C_GREEN}✔ Ссылка мгновенно отправлена в Избранное{RESET}", flush=True)
     except Exception as e:
         print(f"  {C_GRAY}● Отправка в избранное:{RESET} {e}", flush=True)
 
-    # 2. Выжидаем таймер (ровно 6.0 секунд)
+    # 2. Выжидаем 6 секунд
     print(f"  {C_PURPLE}▸ Таймер: отсчет {delay_sec:.1f} сек перед переходом в бота...{RESET}", flush=True)
     await asyncio.sleep(delay_sec)
 
@@ -124,21 +177,19 @@ async def claim_cheque(client: TelegramClient, code: str, source_name: str, dela
     print(f"  {C_GREEN}▸ [{send_time}] Переход по ссылке в @xrocket...{RESET}", flush=True)
 
     try:
-        # 3. Официальный переход по deep-link ссылке через Telegram MTProto API (StartBotRequest)
+        # 3. Официальный клик по ссылке через протокол Telegram (StartBotRequest)
         try:
             bot_entity = await client.get_input_entity("xrocket")
             await client(StartBotRequest(bot=bot_entity, peer=bot_entity, start_param=code))
         except Exception:
-            # Резервный метод: прямая отправка команды в диалог
             await client.send_message("xrocket", f"/start {code}")
 
-        # 4. Ожидание ответа и автоматический клик по кнопке активации
+        # 4. Ожидание ответа и клик по инлайн-кнопке
         for _ in range(25):
             await asyncio.sleep(0.2)
             async for reply in client.iter_messages("xrocket", limit=3):
                 reply_text = reply.text or ""
-                
-                # Проверяем inline-кнопки
+
                 if reply.reply_markup and hasattr(reply.reply_markup, "rows"):
                     for row in reply.reply_markup.rows:
                         for btn in row.buttons:
@@ -153,11 +204,10 @@ async def claim_cheque(client: TelegramClient, code: str, source_name: str, dela
                                         pass
                                 break
 
-                # Анализ ответа xRocket
                 first_line = reply_text.strip().split("\n")[0] if reply_text else "Ответ получен"
                 if any(w in reply_text.lower() for w in ["получен", "активирован", "зачислен", "чек на сумму", "вы получили"]):
                     STATS["claimed"] += 1
-                    print(f"  {C_GREEN}★ УСПЕХ: Чек активирован!{RESET} {C_WHITE}{first_line}{RESET}", flush=True)
+                    print(f"  {C_GREEN}★ УСПЕХ: Чек успешно активирован!{RESET} {C_WHITE}{first_line}{RESET}", flush=True)
                     return
                 elif any(w in reply_text.lower() for w in ["закончился", "не найден", "уже активирован", "пуст"]):
                     STATS["failed"] += 1
@@ -171,17 +221,6 @@ async def claim_cheque(client: TelegramClient, code: str, source_name: str, dela
     except Exception as e:
         STATS["failed"] += 1
         print(f"  {C_RED}✖ Ошибка при активации:{RESET} {e}", flush=True)
-
-def extract_cheque_code(text: str):
-    if not text:
-        return None
-    for pat in XROCKET_PATTERNS:
-        m = pat.search(text)
-        if m:
-            code = m.group(1)
-            if code.startswith(("t_", "m_", "c_", "w_")):
-                return code
-    return None
 
 async def console_input_loop(client: TelegramClient, delay_sec: float):
     """Позволяет вручную вставить ссылку на чек прямо в окно консоли"""
@@ -233,11 +272,12 @@ async def main():
     print_header(delay_sec, username)
 
     now_str = datetime.now().strftime("%H:%M:%S")
-    print(f"  {C_GRAY}[{now_str}]{RESET} {C_GREEN}● МОНИТОРИНГ ЧАТОВ АКТИВИРОВАН.{RESET} Ожидание чеков...", flush=True)
+    print(f"  {C_GRAY}[{now_str}]{RESET} {C_GREEN}● МОНИТОРИНГ ЧАТОВ, КАНАЛОВ И КОММЕНТАРИЕВ АКТИВИРОВАН.{RESET}", flush=True)
+    print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}● Скрипт готов ловить чеки в текстах и кнопках раздач...{RESET}\n", flush=True)
 
     @client.on(events.NewMessage())
     async def incoming_message_handler(event):
-        # Игнорируем сообщения в диалоге с самим xrocket
+        # Игнорируем диалог с самим @xrocket
         if event.is_private and event.chat_id:
             try:
                 chat = await event.get_chat()
@@ -246,15 +286,25 @@ async def main():
             except Exception:
                 pass
 
-        text = event.raw_text or ""
-        code = extract_cheque_code(text)
+        code = extract_cheque_code_from_message(event.message)
         if code:
             source = "Личные сообщения"
             try:
                 chat = await event.get_chat()
-                source = getattr(chat, "title", None) or getattr(chat, "username", None) or "Чат"
+                chat_title = getattr(chat, "title", None) or getattr(chat, "username", None) or "Чат"
+                
+                # Проверяем, комментарий ли это под постом в канале
+                if getattr(event.message, "reply_to", None):
+                    source = f"Комментарии: {chat_title}"
+                elif isinstance(chat, Channel):
+                    source = f"Канал: {chat_title}"
+                elif isinstance(chat, Chat):
+                    source = f"Группа: {chat_title}"
+                else:
+                    source = chat_title
             except Exception:
                 pass
+
             asyncio.create_task(claim_cheque(client, code, source, delay_sec))
 
     asyncio.create_task(console_input_loop(client, delay_sec))
