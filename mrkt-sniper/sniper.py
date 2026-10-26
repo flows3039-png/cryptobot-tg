@@ -7,6 +7,30 @@ import sys
 import random
 from datetime import datetime
 
+# Load environment variables (.env)
+def load_env():
+    # Try finding .env in script directory or parent directory
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(base_dir, ".env"),
+        os.path.join(os.path.dirname(base_dir), ".env")
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            k, v = k.strip(), v.strip()
+                            if k and not os.environ.get(k):
+                                os.environ[k] = v
+            except Exception:
+                pass
+
+load_env()
+
 # Enable UTF-8 and ANSI escape sequences in Windows Command Prompt
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
@@ -39,8 +63,12 @@ MIN_PROFIT_PERCENT     = 20         # Минимальная базовая на
 MIN_DISCOUNT_PERCENT   = 12         # Минимальная скидка к флору для выкупа обычных лотов
 
 # Сессия аккаунта
-ACCESS_TOKEN = "f63be9e2-bf98-4e54-b9eb-ef7ffa3ba054"
-STEAM_ID = "76561198664065587"
+ACCESS_TOKEN = os.getenv("MRKT_ACCESS_TOKEN", "f63be9e2-bf98-4e54-b9eb-ef7ffa3ba054")
+STEAM_ID     = os.getenv("MRKT_STEAM_ID", "76561198664065587")
+
+# Telegram Bot уведомления
+TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN", "").strip()
+TG_CHAT_ID   = os.getenv("TG_CHAT_ID", "7162454634").strip()
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 YaBrowser/26.8.0.0 Safari/537.36",
@@ -53,6 +81,7 @@ HEADERS = {
 }
 
 API_BASE = "https://api.tgmrkt.io/api/v1"
+TRADES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trades.json")
 
 # Глобальное состояние торговли
 STATE = {
@@ -62,9 +91,45 @@ STATE = {
     "trades_count": 0,
     "total_profit_ton": 0.0,
     "market_floor": 3.81,
-    "active_sales": {} # {gift_id: {"title": ..., "buy_price": ..., "sell_price": ...}}
+    "active_sales": {} # {gift_id: {"title": ..., "buy": ..., "sell": ...}}
 }
 
+# ==============================================================================
+# TELEGRAM NOTIFIER
+# ==============================================================================
+
+async def send_tg_notification(session: aiohttp.ClientSession, message_text: str):
+    """Отправляет мгновенное уведомление в Telegram MODRIX"""
+    if not TG_BOT_TOKEN or not TG_CHAT_ID:
+        return
+    url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TG_CHAT_ID,
+        "text": message_text,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True
+    }
+    try:
+        async with session.post(url, json=payload, timeout=3.5) as resp:
+            pass
+    except Exception:
+        pass
+
+def save_trade_history(trade_entry: dict):
+    """Сохраняет сделку в локальный trades.json"""
+    try:
+        trades = []
+        if os.path.exists(TRADES_FILE):
+            with open(TRADES_FILE, "r", encoding="utf-8") as f:
+                trades = json.load(f)
+        trades.append(trade_entry)
+        with open(TRADES_FILE, "w", encoding="utf-8") as f:
+            json.dump(trades, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+# ==============================================================================
+# АНАЛИЗАТОР РЕДКОСТИ И ФЛОРА КОЛЛЕКЦИЙ
 # ==============================================================================
 
 def check_rare_number(num):
@@ -96,6 +161,7 @@ def check_rare_number(num):
 
 def print_header():
     os.system("cls" if os.name == "nt" else "clear")
+    tg_status = f"{C_GREEN}ПОДКЛЮЧЕН{RESET}" if TG_BOT_TOKEN else f"{C_GRAY}ОТКЛЮЧЕН{RESET}"
     logo = f"""
 {C_CYAN}███╗   ███╗██████╗ ██╗  ██╗████████╗    {C_PURPLE}███████╗███╗   ██╗██╗██████╗ ███████╗██████╗ 
 {C_CYAN}████╗ ████║██╔══██╗██║ ██╔╝╚══██╔══╝    {C_PURPLE}██╔════╝████╗  ██║██║██╔══██╗██╔════╝██╔══██╗
@@ -107,13 +173,15 @@ def print_header():
   {C_WHITE}АККАУНТ:{RESET}     {C_GREEN}MODRIX (2297417){RESET}     │  {C_WHITE}БАЛАНС:{RESET}      {C_YELLOW}{STATE['balance']:.4f} TON{RESET} (авто-разгон)
   {C_WHITE}МАКС. ВЫКУП:{RESET} {C_CYAN}<= {STATE['max_buy_price']:.2f} TON{RESET}        │  {C_WHITE}ФЛОР РЫНКА:{RESET}  {C_YELLOW}{STATE['market_floor']:.2f} TON{RESET}
   {C_WHITE}СКОРОСТЬ:{RESET}    {C_PURPLE}{int(POLL_INTERVAL_SEC*1000)} мс{RESET}               │  {C_WHITE}ПРИБЫЛЬ:{RESET}     {C_GREEN}+{STATE['total_profit_ton']:.2f} TON{RESET} ({STATE['trades_count']} сделок)
-  {C_WHITE}МОДУЛИ:{RESET}      {C_GREEN}RARE-HUNTER [ON]{RESET}     │  {C_GREEN}AUTO-RELIST [ON]{RESET}  │  {C_GREEN}SMART-PRICE [ON]{RESET}
+  {C_WHITE}ТЕЛЕГРАМ:{RESET}    {tg_status}             │  {C_WHITE}РЕЖИМ:{RESET}       {C_CYAN}МУЛЬТИ-СКАН (ФЛОР + СВЕЖИЕ){RESET}
+  {C_WHITE}МОДУЛИ:{RESET}      {C_GREEN}RARE-HUNTER [ON]{RESET}     │  {C_GREEN}SMART-FLOOR [ON]{RESET} │  {C_GREEN}AUTO-RELIST [ON]{RESET}
 {C_GRAY}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}
 """
     print(logo, flush=True)
 
-def print_buy_banner(title: str, buy_price: float, sell_price: float, profit: float, rarity_label: str, elapsed_ms: int):
+def print_buy_banner(title: str, buy_price: float, sell_price: float, profit: float, rarity_label: str, col_floor: float, elapsed_ms: int):
     rarity_tag = f" {C_PURPLE}[{rarity_label}]{RESET}" if rarity_label else ""
+    col_info = f" (Флор коллекции: {col_floor:.2f} TON)" if col_floor > 0 else ""
     banner = f"""
 {C_GREEN}╔══════════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                          ║
@@ -126,7 +194,7 @@ def print_buy_banner(title: str, buy_price: float, sell_price: float, profit: fl
 ║                                                                                          ║
 ║                 {C_WHITE}{BOLD}ПОДАРОК УСПЕШНО ВЫКУПЛЕН С РЫНКА MRKT ЗА {elapsed_ms} МС!{RESET}{C_GREEN}                               ║
 ╚══════════════════════════════════════════════════════════════════════════════════════════╝{RESET}
-  {C_CYAN}▸ НАЗВАНИЕ:{RESET}    {C_WHITE}{BOLD}{title}{RESET}{rarity_tag}
+  {C_CYAN}▸ НАЗВАНИЕ:{RESET}    {C_WHITE}{BOLD}{title}{RESET}{rarity_tag}{col_info}
   {C_YELLOW}▸ ЦЕНА ВЫКУПА:{RESET} {C_GREEN}{buy_price:.2f} TON{RESET}
   {C_PURPLE}▸ АВТО-ЛИСТИНГ:{RESET}{C_WHITE} ВЫСТАВЛЕН НА ПРОДАЖУ ЗА {C_YELLOW}{sell_price:.2f} TON{RESET}
   {C_GREEN}▸ ЧИСТЫЙ ПРОФИТ:{RESET}{C_GREEN}{BOLD}+{profit:.2f} TON (после комиссии 2%){RESET}
@@ -142,7 +210,6 @@ async def refresh_account_balance(session: aiohttp.ClientSession):
                 data = await resp.json()
                 bal = data.get("hard", 0) / 1e9
                 STATE["balance"] = bal
-                # Авто-разгон: выкуп до 98% от всего баланса (оставляем 0.05 TON на комиссии)
                 STATE["max_buy_price"] = max(1.0, round(bal - 0.05, 2))
                 return bal
     except Exception:
@@ -162,30 +229,29 @@ async def fetch_current_market_floor(session: aiohttp.ClientSession) -> float:
                 data = await resp.json()
                 gifts = data.get("gifts", [])
                 if gifts:
-                    fl = gifts[0].get("salePrice", 0) / 1e9
-                    STATE["market_floor"] = fl
-                    return fl
+                    f_ton = gifts[0].get("salePrice", 0) / 1e9
+                    if f_ton > 0:
+                        STATE["market_floor"] = f_ton
+                        return f_ton
     except Exception:
         pass
     return STATE["market_floor"]
 
-async def auto_relist_gift(session: aiohttp.ClientSession, gift_id: str, title: str, buy_price_ton: float, multiplier: float):
-    """Автоматически выставляет купленный подарок с гарантированной прибылью"""
-    await asyncio.sleep(1.8)
-    floor = await fetch_current_market_floor(session)
-
-    # Расчет целевой цены продажи
-    base_min_price = round(buy_price_ton * (1 + MIN_PROFIT_PERCENT / 100), 2)
+async def auto_relist_gift(session: aiohttp.ClientSession, gift_id: str, title: str, buy_price_ton: float, multiplier: float, col_floor: float):
+    """Автоматически выставляет выкупленный подарок на продажу с максимальной прибылью"""
+    await asyncio.sleep(0.3)
     
-    if multiplier > 1.0:
-        # Редкий номер: продаем дороже рынка
-        optimal_sell_price = round(max(base_min_price, floor) * multiplier, 2)
-    else:
-        # Обычный подарок: встаем на 0.01 TON дешевле флора для моментальной продажи
-        optimal_sell_price = max(base_min_price, round(floor - 0.01, 2))
-
+    # Умный расчет цены: если у этой коллекции высокий флор, берем его, а не дешевый глобальный флор
+    target_floor = max(STATE["market_floor"], col_floor)
+    base_sell = target_floor - 0.01 if target_floor > 0 else buy_price_ton * 1.22
+    
+    optimal_sell_price = round(max(buy_price_ton * 1.20, base_sell * multiplier), 2)
     sell_nano = int(optimal_sell_price * 1e9)
-    sale_payload = {"ids": [gift_id], "price": sell_nano}
+
+    sale_payload = {
+        "ids": [gift_id],
+        "price": sell_nano
+    }
 
     try:
         async with session.post(f"{API_BASE}/gifts/sale", json=sale_payload, headers=HEADERS, timeout=4.0) as resp:
@@ -195,10 +261,32 @@ async def auto_relist_gift(session: aiohttp.ClientSession, gift_id: str, title: 
                 STATE["trades_count"] += 1
                 STATE["total_profit_ton"] += clean_profit
                 STATE["active_sales"][gift_id] = {
-                    "title": title, "buy": buy_price_ton, "sell": optimal_sell_price
+                    "title": title, "buy": buy_price_ton, "sell": optimal_sell_price, "col_floor": col_floor
                 }
                 print(f"  {C_GRAY}[{now_str}]{RESET} {C_GREEN}✔ АВТО-ЛИСТИНГ УСПЕШЕН:{RESET} {title} выставлен за {C_YELLOW}{optimal_sell_price:.2f} TON{RESET} (чистый плюс: {C_GREEN}+{clean_profit:.2f} TON{RESET})", flush=True)
-                # Обновляем баланс
+                
+                # Сохраняем в историю
+                save_trade_history({
+                    "timestamp": datetime.now().isoformat(),
+                    "gift_id": gift_id,
+                    "title": title,
+                    "buy_price": buy_price_ton,
+                    "sell_price": optimal_sell_price,
+                    "expected_profit": clean_profit,
+                    "collection_floor": col_floor
+                })
+
+                # Отправляем уведомление в Telegram
+                tg_msg = (
+                    f"📦 <b>АВТО-ЛИСТИНГ УСПЕШЕН</b>\n\n"
+                    f"▸ <b>Подарок:</b> {title}\n"
+                    f"▸ <b>Куплен за:</b> {buy_price_ton:.2f} TON\n"
+                    f"▸ <b>Выставлен за:</b> {optimal_sell_price:.2f} TON\n"
+                    f"▸ <b>Чистая прибыль:</b> +{clean_profit:.2f} TON\n"
+                    f"▸ <b>Текущий баланс:</b> {STATE['balance']:.2f} TON"
+                )
+                asyncio.create_task(send_tg_notification(session, tg_msg))
+
                 await refresh_account_balance(session)
             else:
                 err = await resp.text()
@@ -214,17 +302,26 @@ async def check_and_adjust_sales(session: aiohttp.ClientSession):
     for gid, item in list(STATE["active_sales"].items()):
         current_sell = item["sell"]
         buy_price = item["buy"]
-        # Если рынок опустился ниже нашей цены, но сделка все еще в плюс (+15% минимум)
+        col_floor = item.get("col_floor", 0)
+        reference_floor = col_floor if col_floor > 0 else floor
+
         min_allowed = round(buy_price * 1.15, 2)
-        if floor < current_sell and (floor - 0.01) >= min_allowed:
-            new_price = round(floor - 0.01, 2)
+        if reference_floor < current_sell and (reference_floor - 0.01) >= min_allowed:
+            new_price = round(reference_floor - 0.01, 2)
             try:
                 ch_payload = {"ids": [gid], "newPrice": int(new_price * 1e9)}
                 async with session.post(f"{API_BASE}/gifts/sale/change-price", json=ch_payload, headers=HEADERS, timeout=3.0) as resp:
                     if resp.status in (200, 201):
                         now_str = datetime.now().strftime("%H:%M:%S")
                         item["sell"] = new_price
-                        print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}⚡ СМАРТ-КОРРЕКТИРОВКА:{RESET} Цена {item['title']} снижена до {C_YELLOW}{new_price:.2f} TON{RESET} (для быстрой продажи перед конкурентами)", flush=True)
+                        print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}⚡ СМАРТ-КОРРЕКТИРОВКА:{RESET} Цена {item['title']} снижена до {C_YELLOW}{new_price:.2f} TON{RESET}", flush=True)
+                        
+                        tg_msg = (
+                            f"🔄 <b>СМАРТ-КОРРЕКТИРОВКА ЦЕНЫ</b>\n\n"
+                            f"▸ <b>Подарок:</b> {item['title']}\n"
+                            f"▸ <b>Новая цена:</b> {new_price:.2f} TON (первый в стакане)"
+                        )
+                        asyncio.create_task(send_tg_notification(session, tg_msg))
             except Exception:
                 pass
 
@@ -233,11 +330,12 @@ async def execute_buy(session: aiohttp.ClientSession, gift: dict, rarity_label: 
     raw_price = gift.get("salePrice", 0)
     buy_price_ton = raw_price / 1e9 if raw_price > 1e6 else raw_price
     title = gift.get("title") or gift.get("name") or "NFT Gift"
-    num = gift.get("num")
+    num = gift.get("num") or gift.get("number")
     display_name = f"{title} #{num}" if num else title
+    col_floor = (gift.get("floorPriceNanoTONsByCollection") or 0) / 1e9
 
     now_str = datetime.now().strftime("%H:%M:%S")
-    reason = f"[{rarity_label}]" if rarity_label else f"[Скидка к флору]"
+    reason = f"[{rarity_label}]" if rarity_label else f"[Выгодный флор {col_floor:.2f} TON]" if col_floor > buy_price_ton * 1.15 else f"[Скидка к флору]"
     print(f"\n{C_YELLOW}⚡ [{now_str}] ЦЕЛЬ ОБНАРУЖЕНА {reason}:{RESET} {C_WHITE}{display_name}{RESET} за {C_GREEN}{buy_price_ton:.2f} TON{RESET}! Моментальный выкуп...", flush=True)
 
     buy_payload = {
@@ -250,12 +348,27 @@ async def execute_buy(session: aiohttp.ClientSession, gift: dict, rarity_label: 
         async with session.post(f"{API_BASE}/gifts/buy", json=buy_payload, headers=HEADERS, timeout=4.0) as resp:
             elapsed_ms = int((time.perf_counter() - t0) * 1000)
             if resp.status in (200, 201):
-                floor = STATE["market_floor"]
-                sell_est = round(max(buy_price_ton * 1.22, floor - 0.01) * multiplier, 2)
+                target_floor = max(STATE["market_floor"], col_floor)
+                base_sell = target_floor - 0.01 if target_floor > 0 else buy_price_ton * 1.22
+                sell_est = round(max(buy_price_ton * 1.20, base_sell * multiplier), 2)
                 profit_est = round(sell_est * 0.98 - buy_price_ton, 2)
                 
-                print_buy_banner(display_name, buy_price_ton, sell_est, profit_est, rarity_label, elapsed_ms)
-                asyncio.create_task(auto_relist_gift(session, gift_id, display_name, buy_price_ton, multiplier))
+                print_buy_banner(display_name, buy_price_ton, sell_est, profit_est, rarity_label, col_floor, elapsed_ms)
+
+                # Мгновенный Telegram пуш о выкупе
+                tg_msg = (
+                    f"⚡ <b>ПОДАРОК ВЫКУПЛЕН С РЫНКА!</b>\n\n"
+                    f"▸ <b>Название:</b> {display_name}\n"
+                    f"▸ <b>Скорость:</b> {elapsed_ms} мс\n"
+                    f"▸ <b>Цена покупки:</b> {buy_price_ton:.2f} TON\n"
+                    f"▸ <b>Флор коллекции:</b> {col_floor:.2f} TON\n"
+                    f"▸ <b>План продажи:</b> {sell_est:.2f} TON\n"
+                    f"▸ <b>Ожидаемый профит:</b> +{profit_est:.2f} TON"
+                )
+                asyncio.create_task(send_tg_notification(session, tg_msg))
+
+                # Автоматический перевыставление
+                asyncio.create_task(auto_relist_gift(session, gift_id, display_name, buy_price_ton, multiplier, col_floor))
             else:
                 err_text = await resp.text()
                 print(f"{C_RED}[ОШИБКА ВЫКУПА {resp.status} ({elapsed_ms} мс)]{RESET} {err_text[:160]}", flush=True)
@@ -273,12 +386,26 @@ async def run_sniper():
         last_pulse_time = 0
         last_radar_time = time.time()
         last_adjust_time = time.time()
+        scan_cycle = 0
+
+        # Приветственное уведомление в Telegram
+        if TG_BOT_TOKEN and TG_CHAT_ID:
+            start_msg = (
+                f"🟢 <b>MRKT SNIPER АКТИВИРОВАН</b>\n\n"
+                f"▸ <b>Аккаунт:</b> MODRIX (2297417)\n"
+                f"▸ <b>Баланс:</b> {STATE['balance']:.4f} TON\n"
+                f"▸ <b>Макс. выкуп:</b> &lt;= {STATE['max_buy_price']:.2f} TON\n"
+                f"▸ <b>Текущий флор:</b> {STATE['market_floor']:.2f} TON\n"
+                f"▸ <b>Модули:</b> Смарт-Флор, Редкие номера, Авто-листинг"
+            )
+            asyncio.create_task(send_tg_notification(session, start_msg))
 
         now_init = datetime.now().strftime("%H:%M:%S")
-        print(f"  {C_GRAY}[{now_init}]{RESET} {C_GREEN}● ТОРГОВЫЙ ДВИЖОК АКТИВИРОВАН:{RESET} Поиск миспрайсов и редких номеров запущен...", flush=True)
+        print(f"  {C_GRAY}[{now_init}]{RESET} {C_GREEN}● ТОРГОВЫЙ ДВИЖОК АКТИВИРОВАН:{RESET} Двойное сканирование (флор + свежие) запущено...", flush=True)
 
         while True:
             STATE["total_scans"] += 1
+            scan_cycle += 1
             t_start = time.perf_counter()
             current_time = time.time()
 
@@ -306,8 +433,8 @@ async def run_sniper():
                                 p2 = g2.get("salePrice", 0) / 1e9
                                 t1 = g1.get("title") or g1.get("name")
                                 t2 = g2.get("title") or g2.get("name")
-                                n1 = f"#{g1.get('num')}" if g1.get('num') else ""
-                                n2 = f"#{g2.get('num')}" if g2.get('num') else ""
+                                n1 = f"#{g1.get('num') or g1.get('number')}" if (g1.get('num') or g1.get('number')) else ""
+                                n2 = f"#{g2.get('num') or g2.get('number')}" if (g2.get('num') or g2.get('number')) else ""
                                 print(f"  {C_GRAY}[{now_str}]{RESET} {C_PURPLE}● ПУЛЬС РЫНКА:{RESET} {C_WHITE}{t1} {n1}{RESET} ({C_YELLOW}{p1:.2f} TON{RESET}) │ {C_WHITE}{t2} {n2}{RESET} ({C_YELLOW}{p2:.2f} TON{RESET}) {C_DARK}│ Проверок: {STATE['total_scans']}{RESET}", flush=True)
                 except Exception:
                     pass
@@ -324,12 +451,21 @@ async def run_sniper():
                 last_adjust_time = current_time
                 asyncio.create_task(check_and_adjust_sales(session))
 
-            # 4. Основной поиск: запрашиваем свежие дешевые лоты
-            search_payload = {
-                "count": 15, "cursor": "",
-                "collectionNames": [], "modelNames": [], "backdropNames": [], "symbolNames": [],
-                "ordering": 2, "lowToHigh": True, "maxPrice": max_nano
-            }
+            # 4. Двойное сканирование (чередуем поток дешевых лотов и свежих поступлений)
+            if scan_cycle % 2 == 0:
+                # Поток А: Самые дешевые лоты с лимитом цены
+                search_payload = {
+                    "count": 15, "cursor": "",
+                    "collectionNames": [], "modelNames": [], "backdropNames": [], "symbolNames": [],
+                    "ordering": 2, "lowToHigh": True, "maxPrice": max_nano
+                }
+            else:
+                # Поток Б: Свежий рынок (включая дорогие коллекции, где кто-то слил за бесценок)
+                search_payload = {
+                    "count": 20, "cursor": "",
+                    "collectionNames": [], "modelNames": [], "backdropNames": [], "symbolNames": [],
+                    "ordering": 0, "lowToHigh": True
+                }
 
             try:
                 async with session.post(f"{API_BASE}/gifts/saling", json=search_payload, headers=HEADERS, timeout=3.0) as resp:
@@ -341,19 +477,30 @@ async def run_sniper():
                                 gid = gift.get("id")
                                 if gid in seen_ids:
                                     continue
-                                seen_ids.add(gid)
 
                                 price_nano = gift.get("salePrice", 0)
                                 price_ton = price_nano / 1e9
-                                num = gift.get("num")
+                                num = gift.get("num") or gift.get("number")
+                                col_floor = (gift.get("floorPriceNanoTONsByCollection") or 0) / 1e9
+
+                                # Если лот дороже нашего баланса — пропускаем
+                                if price_nano > max_nano:
+                                    continue
+
+                                seen_ids.add(gid)
 
                                 # Анализ на редкий номер
                                 rarity_label, multiplier = check_rare_number(num)
 
                                 # Условия на выкуп:
-                                # 1. Редкий номер (покупаем с повышенным приоритетом)
-                                # 2. Обычный лот с ценой в пределах нашего лимита баланса
-                                if price_nano <= max_nano:
+                                # 1. Редкий номер (топ 1-99, 777, зеркалка)
+                                # 2. Дорогая коллекция со сливом цены (флор коллекции сильно выше цены продажи)
+                                # 3. Обычный лот ниже рынка
+                                is_high_floor_deal = (col_floor >= price_ton * 1.15)
+                                is_rare = (rarity_label is not None)
+                                is_cheap = (price_nano <= max_nano)
+
+                                if is_rare or is_high_floor_deal or is_cheap:
                                     asyncio.create_task(execute_buy(session, gift, rarity_label, multiplier))
 
                     elif resp.status == 401:
