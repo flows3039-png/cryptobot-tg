@@ -3,3 +3,6 @@
 __pycache__/
 *.pyc
 mrkt-sniper/.env
+xrocket-catcher/.env
+*.session
+*.session-journal
