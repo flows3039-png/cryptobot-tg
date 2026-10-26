@@ -243,31 +243,26 @@ async def console_input_loop(client: TelegramClient):
         except Exception:
             break
 
+# Официальные ключи приложения Telegram Desktop
+OFFICIAL_APP_API_ID   = 2040
+OFFICIAL_APP_API_HASH = "b1844651345ec3e5e7730e36422730e8"
+
 async def main():
     env = load_env()
-    api_id = env.get("TG_API_ID")
-    api_hash = env.get("TG_API_HASH")
+    api_id = int(env.get("TG_API_ID") or OFFICIAL_APP_API_ID)
+    api_hash = env.get("TG_API_HASH") or OFFICIAL_APP_API_HASH
 
-    if not api_id or not api_hash:
-        os.system("cls" if os.name == "nt" else "clear")
-        print(f"{C_CYAN}=== НАСТРОЙКА XROCKET CHEQUE SNIPER ==={RESET}\n")
-        print(f"{C_WHITE}Для работы юзербота нужны API_ID и API_HASH с сайта {C_CYAN}https://my.telegram.org{RESET}")
-        print(f"{C_GRAY}1. Зайди на https://my.telegram.org и авторизуйся{RESET}")
-        print(f"{C_GRAY}2. Нажми 'API development tools'{RESET}")
-        print(f"{C_GRAY}3. Скопируй app api_id и api_hash сюда:\n{RESET}")
-
-        api_id = input("Введите TG_API_ID: ").strip()
-        api_hash = input("Введите TG_API_HASH: ").strip()
-
-        if not api_id or not api_hash:
-            print(f"{C_RED}Ошибка: API_ID и API_HASH обязательны.{RESET}")
-            return
-
-        save_env_field("TG_API_ID", api_id)
-        save_env_field("TG_API_HASH", api_hash)
-
-    print(f"\n{C_CYAN}[*] Подключение к Telegram...{RESET}")
-    client = TelegramClient(SESSION_NAME, int(api_id), api_hash)
+    print(f"\n{C_CYAN}[*] Авторизация через официальный Telegram Desktop (app_id: {api_id})...{RESET}")
+    client = TelegramClient(
+        SESSION_NAME,
+        api_id=api_id,
+        api_hash=api_hash,
+        device_model="PC 64bit",
+        system_version="Windows 11",
+        app_version="5.8.3 x64",
+        lang_code="ru",
+        system_lang_code="ru-RU"
+    )
     await client.start()
 
     me = await client.get_me()
@@ -276,7 +271,7 @@ async def main():
 
     now_str = datetime.now().strftime("%H:%M:%S")
     print(f"  {C_GRAY}[{now_str}]{RESET} {C_GREEN}● МОНИТОРИНГ ЧАТОВ, КАНАЛОВ И КОММЕНТАРИЕВ АКТИВИРОВАН.{RESET}", flush=True)
-    print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}● Режим: моментальный перехват и клик (без задержки)...{RESET}\n", flush=True)
+    print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}● Клиент: Официальный Telegram Desktop | Задержка: 0 мс (турбо)...{RESET}\n", flush=True)
 
     @client.on(events.NewMessage())
     async def incoming_message_handler(event):
