@@ -221,13 +221,35 @@ async def console_input_loop(client: TelegramClient):
 
 async def main():
     env = load_env()
-    api_id = int(env.get("TG_API_ID") or OFFICIAL_APP_API_ID)
-    api_hash = env.get("TG_API_HASH") or OFFICIAL_APP_API_HASH
+    api_id = env.get("TG_API_ID")
+    api_hash = env.get("TG_API_HASH")
 
-    print(f"\n{C_CYAN}[*] Авторизация через официальный Telegram Desktop (app_id: {api_id})...{RESET}")
+    if not api_id or not api_hash or api_id in ("2040", "6", "8"):
+        os.system("cls" if os.name == "nt" else "clear")
+        print(f"{C_CYAN}╔══════════════════════════════════════════════════════════════════╗{RESET}")
+        print(f"{C_CYAN}║             НАСТРОЙКА XROCKET CHEQUE SNIPER // MODRIX            ║{RESET}")
+        print(f"{C_CYAN}╚══════════════════════════════════════════════════════════════════╝{RESET}\n")
+        print(f"{C_WHITE}Для входа в аккаунт нужны личные API_ID и API_HASH с сайта {C_CYAN}https://my.telegram.org{RESET}")
+        print(f"{C_GRAY}1. Открой в браузере: https://my.telegram.org{RESET}")
+        print(f"{C_GRAY}2. Введи номер телефона и код из Telegram{RESET}")
+        print(f"{C_GRAY}3. Нажми 'API development tools'{RESET}")
+        print(f"{C_GRAY}4. В поле App title напиши любое слово (например: Sniper) и нажми Create{RESET}")
+        print(f"{C_GRAY}5. Скопируй app api_id и api_hash сюда (вводится только 1 раз):\n{RESET}")
+
+        api_id = input("Введите api_id (цифры): ").strip()
+        api_hash = input("Введите api_hash: ").strip()
+
+        if not api_id or not api_hash:
+            print(f"{C_RED}Ошибка: api_id и api_hash обязательны.{RESET}")
+            return
+
+        save_env_field("TG_API_ID", api_id)
+        save_env_field("TG_API_HASH", api_hash)
+
+    print(f"\n{C_CYAN}[*] Подключение к серверам Telegram...{RESET}")
     client = TelegramClient(
         SESSION_NAME,
-        api_id=api_id,
+        api_id=int(api_id),
         api_hash=api_hash,
         device_model="PC 64bit",
         system_version="Windows 11",
@@ -235,7 +257,22 @@ async def main():
         lang_code="ru",
         system_lang_code="ru-RU"
     )
-    await client.start()
+
+    await client.connect()
+    if not await client.is_user_authorized():
+        print(f"\n{C_YELLOW}[!] Требуется авторизация аккаунта Telegram:{RESET}")
+        phone = input("Введите номер телефона (без пробелов, например +918708544588): ").strip().replace(" ", "").replace("-", "")
+        await client.send_code_request(phone)
+        code = input("Введите проверочный код из Telegram: ").strip()
+        try:
+            await client.sign_in(phone, code)
+        except Exception as e:
+            # Если включен пароль двухфакторной аутентификации (2FA)
+            if "Two-steps verification" in str(e) or "SessionPasswordNeededError" in str(e):
+                pwd = input("Введите пароль двухфакторной аутентификации (2FA): ").strip()
+                await client.sign_in(password=pwd)
+            else:
+                raise e
 
     me = await client.get_me()
     username = f"@{me.username}" if me.username else (me.first_name or "Пользователь")
@@ -243,7 +280,7 @@ async def main():
 
     now_str = datetime.now().strftime("%H:%M:%S")
     print(f"  {C_GRAY}[{now_str}]{RESET} {C_GREEN}● МОНИТОРИНГ ЧАТОВ, КАНАЛОВ И КОММЕНТАРИЕВ АКТИВИРОВАН.{RESET}", flush=True)
-    print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}● Клиент: Официальный Telegram Desktop | Режим: 0 мс (турбо)...{RESET}\n", flush=True)
+    print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}● Сессия сохранена в файл. Режим: моментальный перехват (0 мс)...{RESET}\n", flush=True)
 
     @client.on(events.NewMessage())
     async def incoming_message_handler(event):
