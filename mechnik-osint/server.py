@@ -8,26 +8,16 @@ from aiohttp import web
 import phonenumbers
 from phonenumbers import geocoder, carrier
 
-# Load Sherlock Database
+# Load Full Sherlock Database (480+ platforms)
 SHERLOCK_SITES = {}
 SHERLOCK_PATH = os.path.join(os.path.dirname(__file__), "sherlock_data.json")
 if os.path.exists(SHERLOCK_PATH):
     try:
         with open(SHERLOCK_PATH, "r", encoding="utf-8") as f:
             raw_data = json.load(f)
-            # Remove schema
             SHERLOCK_SITES = {k: v for k, v in raw_data.items() if not k.startswith("$")}
     except Exception:
         pass
-
-# Select Top 35 High-Impact Sherlock platforms for rapid OSINT correlation
-PRIORITY_PLATFORMS = [
-    "GitHub", "Telegram", "VK", "Steam", "Reddit", "Twitch", "Chess", 
-    "SoundCloud", "TikTok", "Habr", "Pinterest", "Spotify", "YouTube", 
-    "Pastebin", "Medium", "Docker Hub", "GitLab", "Roblox", "Duolingo", 
-    "Flickr", "Snapchat", "DeviantART", "Patreon", "Disqus", "Vimeo",
-    "ProductHunt", "Kaggle", "Behance", "Dribbble", "TradingView", "Speedrun.com"
-]
 
 def estimate_creation_year(user_id: int) -> str:
     if user_id < 120000000:
@@ -55,7 +45,6 @@ def estimate_creation_year(user_id: int) -> str:
     else:
         return "~2026"
 
-# Accurate Russian and International Phone Parser
 def parse_phone_intel(raw_phone: str) -> dict:
     digits = re.sub(r"\D", "", raw_phone)
     if digits.startswith("8") and len(digits) == 11:
@@ -84,7 +73,6 @@ def parse_phone_intel(raw_phone: str) -> dict:
     except Exception:
         pass
 
-    # Detailed DEF code refinement for Russian operators
     if digits.startswith("7") and len(digits) == 11:
         def_code = digits[1:4]
         part1 = digits[4:7]
@@ -125,7 +113,6 @@ def parse_phone_intel(raw_phone: str) -> dict:
         elif region in ("Не определен", "Россия", ""):
             region = "Российская Федерация"
 
-    # Fast Banks / SBP detection
     sbp_banks = ["Сбербанк", "Т-Банк (Тинькофф)", "ВТБ", "Альфа-Банк"]
 
     return {
@@ -141,8 +128,8 @@ def parse_phone_intel(raw_phone: str) -> dict:
         "viber_link": f"https://viber.click/{digits}"
     }
 
-# Sherlock Engine Async Worker
-async def query_sherlock_site(session: aiohttp.ClientSession, name: str, site_data: dict, username: str) -> dict:
+# High-speed Sherlock worker with Semaphore control
+async def check_sherlock_single(session: aiohttp.ClientSession, name: str, site_data: dict, username: str, sem: asyncio.Semaphore) -> dict:
     url = site_data.get("url", "").replace("{}", username)
     error_type = site_data.get("errorType", "status_code")
     error_msg = site_data.get("errorMsg", "")
@@ -152,6 +139,7 @@ async def query_sherlock_site(session: aiohttp.ClientSession, name: str, site_da
 
     result = {
         "platform": name,
+        "name": name,
         "url": url,
         "found": False,
         "status": 0
@@ -160,24 +148,24 @@ async def query_sherlock_site(session: aiohttp.ClientSession, name: str, site_da
     if not url:
         return result
 
-    try:
-        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=3.5), allow_redirects=True) as resp:
-            result["status"] = resp.status
-            if error_type == "status_code":
-                result["found"] = (resp.status == 200)
-            elif error_type == "message":
-                text = await resp.text()
-                result["found"] = (resp.status == 200) and (error_msg not in text)
-            elif error_type == "response_url":
-                result["found"] = (resp.status == 200) and (resp.url.path.strip("/") != "")
-            else:
-                result["found"] = (resp.status == 200)
-    except Exception:
-        pass
+    async with sem:
+        try:
+            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=4.5), allow_redirects=True) as resp:
+                result["status"] = resp.status
+                if error_type == "status_code":
+                    result["found"] = (resp.status == 200)
+                elif error_type == "message":
+                    text = await resp.text()
+                    result["found"] = (resp.status == 200) and (error_msg not in text)
+                elif error_type == "response_url":
+                    result["found"] = (resp.status == 200) and (resp.url.path.strip("/") != "")
+                else:
+                    result["found"] = (resp.status == 200)
+        except Exception:
+            pass
 
     return result
 
-# Public Telegram Scraper
 async def fetch_telegram_public(username: str, session: aiohttp.ClientSession) -> dict:
     url = f"https://t.me/{username}"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -219,7 +207,6 @@ async def fetch_telegram_public(username: str, session: aiohttp.ClientSession) -
         pass
     return data
 
-# Deep VK Resolver (with real metadata extraction)
 async def fetch_vk_intel(target: str, session: aiohttp.ClientSession, is_phone: bool = False) -> dict:
     headers = {"User-Agent": "Googlebot/2.1 (+http://www.google.com/bot.html)"}
     data = {
@@ -267,7 +254,6 @@ async def fetch_vk_intel(target: str, session: aiohttp.ClientSession, is_phone: 
     except Exception:
         pass
 
-    # If phone lookup fallback correlation
     if is_phone and not data["found"]:
         data = {
             "found": True,
@@ -287,7 +273,6 @@ async def fetch_vk_intel(target: str, session: aiohttp.ClientSession, is_phone: 
 
     return data
 
-# MAX Messenger Checker
 def check_max_messenger(digits: str) -> dict:
     if not digits:
         return {"registered": False}
@@ -323,33 +308,28 @@ async def handle_search(request: web.Request) -> web.Response:
         vk_info = {}
         sherlock_results = []
 
-        # 1. Telegram Web Check
         if username:
             tg_info = await fetch_telegram_public(username, session)
-
-        # 2. VKontakte Intel Check
-        if username:
             vk_info = await fetch_vk_intel(username, session, is_phone=False)
-        elif is_phone:
-            vk_info = await fetch_vk_intel(phone_info["digits"], session, is_phone=True)
 
-        # 3. Sherlock 30+ High-Impact Platforms Engine
-        if username:
-            tasks = []
-            for site_name in PRIORITY_PLATFORMS:
-                if site_name in SHERLOCK_SITES:
-                    tasks.append(query_sherlock_site(session, site_name, SHERLOCK_SITES[site_name], username))
+            # REAL SHERLOCK: 480+ parallel asynchronous requests with semaphore 70
+            sem = asyncio.Semaphore(70)
+            tasks = [
+                check_sherlock_single(session, site_name, site_data, username, sem)
+                for site_name, site_data in SHERLOCK_SITES.items()
+            ]
             if tasks:
                 sherlock_results = await asyncio.gather(*tasks)
 
+        elif is_phone:
+            vk_info = await fetch_vk_intel(phone_info["digits"], session, is_phone=True)
+
     elapsed_ms = int((time.perf_counter() - start_time) * 1000)
 
-    # 4. MAX Messenger
     max_messenger_info = None
     if is_phone:
         max_messenger_info = check_max_messenger(phone_info["digits"])
 
-    # 5. Telegram Metadata & Year
     if user_id:
         reg_year = estimate_creation_year(user_id)
         display_id = str(user_id)
@@ -373,6 +353,8 @@ async def handle_search(request: web.Request) -> web.Response:
     )
     avatar = tg_info.get("avatar") or ""
 
+    found_platforms = [p for p in sherlock_results if p["found"]]
+
     summary = {
         "name": name,
         "username": f"@{username}" if username else ("Номер телефона" if is_phone else "Не указан"),
@@ -384,8 +366,9 @@ async def handle_search(request: web.Request) -> web.Response:
         "avatar": avatar,
         "gifts": f"{abs(hash(name)) % 14} шт." if not is_phone else "0",
         "search_time": f"{elapsed_ms} мс",
-        "sherlock_count": len([p for p in sherlock_results if p["found"]]),
-        "all_platforms": sherlock_results,
+        "total_scanned_sites": len(SHERLOCK_SITES),
+        "sherlock_count": len(found_platforms),
+        "all_platforms": found_platforms,
         "phone_info": phone_info if is_phone else None,
         "vk_profile": vk_info,
         "max_messenger": max_messenger_info
