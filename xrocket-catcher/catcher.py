@@ -80,7 +80,7 @@ STATS = {
     "failed": 0
 }
 
-def print_header(delay_sec: float, username: str):
+def print_header(username: str):
     os.system("cls" if os.name == "nt" else "clear")
     logo = f"""
 {C_CYAN}██╗  ██╗██████╗  ██████╗  ██████╗██╗  ██╗███████╗████████╗{RESET}
@@ -93,10 +93,10 @@ def print_header(delay_sec: float, username: str):
 {C_GRAY}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}
   {C_WHITE}АККАУНТ:{RESET}     {C_GREEN}{username}{RESET}
   {C_WHITE}ЦЕЛЕВОЙ БОТ:{RESET} {C_YELLOW}@xrocket{RESET}
-  {C_WHITE}ТАЙМЕР:{RESET}      {C_CYAN}Задержка ровно {delay_sec:.1f} сек{RESET} (антифрод-обход)
+  {C_WHITE}СКОРОСТЬ:{RESET}    {C_GREEN}МОМЕНТАЛЬНО (0 мс задержки, турбо-клик){RESET}
   {C_WHITE}МОНИТОРИНГ:{RESET}  {C_GREEN}КАНАЛЫ + ЧАТЫ + КОММЕНТАРИИ ПОД ПОСТАМИ [ON]{RESET}
   {C_WHITE}ПАРСИНГ:{RESET}     {C_CYAN}ТЕКСТ + КНОПКИ ССЫЛОК + ГИПЕРССЫЛКИ [ON]{RESET}
-  {C_WHITE}ИЗБРАННОЕ:{RESET}   {C_GREEN}АВТО-ОТПРАВКА ССЫЛКИ В 'ИЗБРАННОЕ' [ON]{RESET}
+  {C_WHITE}ИЗБРАННОЕ:{RESET}   {C_GREEN}АВТО-СОХРАНЕНИЕ ССЫЛОК [ON]{RESET}
 {C_GRAY}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}
 """
     print(logo, flush=True)
@@ -148,46 +148,48 @@ def extract_cheque_code_from_message(message):
 
     return None
 
-async def claim_cheque(client: TelegramClient, code: str, source_name: str, delay_sec: float):
+# Кэш сущности бота для моментального перехода без задержек
+BOT_ENTITY = None
+
+async def claim_cheque(client: TelegramClient, code: str, source_name: str):
     if code in PROCESSED_CHEQUES:
         return
     PROCESSED_CHEQUES.add(code)
     STATS["detected"] += 1
 
+    t0 = time.perf_counter()
     full_link = f"https://t.me/xrocket?start={code}"
     now = datetime.now().strftime("%H:%M:%S")
 
     print(f"\n{C_YELLOW}⚡ [{now}] ОБНАРУЖЕН ЧЕК XROCKET:{RESET} {C_WHITE}{code}{RESET}")
     print(f"  {C_GRAY}▸ Ссылка:{RESET} {C_CYAN}{full_link}{RESET}")
     print(f"  {C_GRAY}▸ Источник:{RESET} {C_WHITE}{source_name}{RESET}")
+    print(f"  {C_PURPLE}▸ Режим:{RESET} {C_GREEN}МОМЕНТАЛЬНЫЙ ПЕРЕХОД (0 МС ЗАДЕРЖКИ)...{RESET}", flush=True)
 
-    # 1. Мгновенно пересылаем ссылку в Избранное
-    try:
-        fav_text = f"⚡ ЧЕК XROCKET:\n{full_link}\n(Источник: {source_name})"
-        await client.send_message("me", fav_text)
-        print(f"  {C_GREEN}✔ Ссылка мгновенно отправлена в Избранное{RESET}", flush=True)
-    except Exception as e:
-        print(f"  {C_GRAY}● Отправка в избранное:{RESET} {e}", flush=True)
-
-    # 2. Выжидаем 6 секунд
-    print(f"  {C_PURPLE}▸ Таймер: отсчет {delay_sec:.1f} сек перед переходом в бота...{RESET}", flush=True)
-    await asyncio.sleep(delay_sec)
-
-    send_time = datetime.now().strftime("%H:%M:%S")
-    print(f"  {C_GREEN}▸ [{send_time}] Переход по ссылке в @xrocket...{RESET}", flush=True)
-
-    try:
-        # 3. Официальный клик по ссылке через протокол Telegram (StartBotRequest)
+    # 1. Параллельно сохраняем в Избранное (в фоне, чтобы не отнимать ни миллисекунды)
+    async def save_to_fav():
         try:
-            bot_entity = await client.get_input_entity("xrocket")
-            await client(StartBotRequest(bot=bot_entity, peer=bot_entity, start_param=code))
+            fav_text = f"⚡ ЧЕК XROCKET:\n{full_link}\n(Источник: {source_name})"
+            await client.send_message("me", fav_text)
+        except Exception:
+            pass
+    asyncio.create_task(save_to_fav())
+
+    # 2. Моментальный переход в @xrocket через MTProto StartBotRequest
+    global BOT_ENTITY
+    try:
+        if BOT_ENTITY is None:
+            BOT_ENTITY = await client.get_input_entity("xrocket")
+        
+        try:
+            await client(StartBotRequest(bot=BOT_ENTITY, peer=BOT_ENTITY, start_param=code))
         except Exception:
             await client.send_message("xrocket", f"/start {code}")
 
-        # 4. Ожидание ответа и клик по инлайн-кнопке
-        for _ in range(25):
-            await asyncio.sleep(0.2)
-            async for reply in client.iter_messages("xrocket", limit=3):
+        # 3. Высокоскоростной перехват ответа и клик по кнопке (опрос каждые 50 мс)
+        for _ in range(60):
+            await asyncio.sleep(0.05)
+            async for reply in client.iter_messages("xrocket", limit=2):
                 reply_text = reply.text or ""
 
                 if reply.reply_markup and hasattr(reply.reply_markup, "rows"):
@@ -196,7 +198,8 @@ async def claim_cheque(client: TelegramClient, code: str, source_name: str, dela
                             if isinstance(btn, KeyboardButtonCallback):
                                 try:
                                     await reply.click(data=btn.data)
-                                    print(f"  {C_CYAN}✔ [{datetime.now().strftime('%H:%M:%S')}] Нажата кнопка активации:{RESET} '{btn.text}'", flush=True)
+                                    ms = int((time.perf_counter() - t0) * 1000)
+                                    print(f"  {C_CYAN}✔ [{ms} мс] Клик по кнопке:{RESET} '{btn.text}'", flush=True)
                                 except Exception:
                                     try:
                                         await reply.click(0)
@@ -207,22 +210,24 @@ async def claim_cheque(client: TelegramClient, code: str, source_name: str, dela
                 first_line = reply_text.strip().split("\n")[0] if reply_text else "Ответ получен"
                 if any(w in reply_text.lower() for w in ["получен", "активирован", "зачислен", "чек на сумму", "вы получили"]):
                     STATS["claimed"] += 1
-                    print(f"  {C_GREEN}★ УСПЕХ: Чек успешно активирован!{RESET} {C_WHITE}{first_line}{RESET}", flush=True)
+                    ms = int((time.perf_counter() - t0) * 1000)
+                    print(f"  {C_GREEN}★ [{ms} мс] УСПЕХ: Чек активирован!{RESET} {C_WHITE}{first_line}{RESET}", flush=True)
                     return
                 elif any(w in reply_text.lower() for w in ["закончился", "не найден", "уже активирован", "пуст"]):
                     STATS["failed"] += 1
-                    print(f"  {C_RED}✖ Чек пуст или исчерпан:{RESET} {C_GRAY}{first_line}{RESET}", flush=True)
+                    ms = int((time.perf_counter() - t0) * 1000)
+                    print(f"  {C_RED}✖ [{ms} мс] Чек пуст или исчерпан:{RESET} {C_GRAY}{first_line}{RESET}", flush=True)
                     return
                 elif "подпишитесь" in reply_text.lower():
                     print(f"  {C_YELLOW}⚠ Требуется подписка на канал для получения чека.{RESET}", flush=True)
                     return
 
-        print(f"  {C_GRAY}● Запрос в @xrocket выполнен. Проверь диалог с ботом.{RESET}", flush=True)
+        print(f"  {C_GRAY}● Запрос в @xrocket отправлен.{RESET}", flush=True)
     except Exception as e:
         STATS["failed"] += 1
         print(f"  {C_RED}✖ Ошибка при активации:{RESET} {e}", flush=True)
 
-async def console_input_loop(client: TelegramClient, delay_sec: float):
+async def console_input_loop(client: TelegramClient):
     """Позволяет вручную вставить ссылку на чек прямо в окно консоли"""
     loop = asyncio.get_event_loop()
     while True:
@@ -232,7 +237,7 @@ async def console_input_loop(client: TelegramClient, delay_sec: float):
                 break
             code = extract_cheque_code(line.strip())
             if code:
-                asyncio.create_task(claim_cheque(client, code, "Ручной ввод (консоль)", delay_sec))
+                asyncio.create_task(claim_cheque(client, code, "Ручной ввод (консоль)"))
             else:
                 print(f"  {C_GRAY}[i] В строке не найден чек xRocket (пример: https://t.me/xrocket?start=t_...){RESET}", flush=True)
         except Exception:
@@ -242,7 +247,6 @@ async def main():
     env = load_env()
     api_id = env.get("TG_API_ID")
     api_hash = env.get("TG_API_HASH")
-    delay_sec = float(env.get("DELAY_SECONDS", 6.0))
 
     if not api_id or not api_hash:
         os.system("cls" if os.name == "nt" else "clear")
@@ -261,7 +265,6 @@ async def main():
 
         save_env_field("TG_API_ID", api_id)
         save_env_field("TG_API_HASH", api_hash)
-        save_env_field("DELAY_SECONDS", str(delay_sec))
 
     print(f"\n{C_CYAN}[*] Подключение к Telegram...{RESET}")
     client = TelegramClient(SESSION_NAME, int(api_id), api_hash)
@@ -269,11 +272,11 @@ async def main():
 
     me = await client.get_me()
     username = f"@{me.username}" if me.username else (me.first_name or "Пользователь")
-    print_header(delay_sec, username)
+    print_header(username)
 
     now_str = datetime.now().strftime("%H:%M:%S")
     print(f"  {C_GRAY}[{now_str}]{RESET} {C_GREEN}● МОНИТОРИНГ ЧАТОВ, КАНАЛОВ И КОММЕНТАРИЕВ АКТИВИРОВАН.{RESET}", flush=True)
-    print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}● Скрипт готов ловить чеки в текстах и кнопках раздач...{RESET}\n", flush=True)
+    print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}● Режим: моментальный перехват и клик (без задержки)...{RESET}\n", flush=True)
 
     @client.on(events.NewMessage())
     async def incoming_message_handler(event):
@@ -305,9 +308,9 @@ async def main():
             except Exception:
                 pass
 
-            asyncio.create_task(claim_cheque(client, code, source, delay_sec))
+            asyncio.create_task(claim_cheque(client, code, source))
 
-    asyncio.create_task(console_input_loop(client, delay_sec))
+    asyncio.create_task(console_input_loop(client))
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
