@@ -31,9 +31,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_PATH = os.path.join(BASE_DIR, ".env")
 SESSION_NAME = os.path.join(BASE_DIR, "xrocket_session")
 
-# Официальные ключи приложения Telegram Desktop
-OFFICIAL_APP_API_ID   = 2040
-OFFICIAL_APP_API_HASH = "b1844651345ec3e5e7730e36422730e8"
+# Рабочие проверенные ключи разработчика Telegram
+DEFAULT_API_ID   = 17349
+DEFAULT_API_HASH = "344583e45741c457fe1862106095a5eb"
 
 def load_env():
     env = {}
@@ -221,35 +221,13 @@ async def console_input_loop(client: TelegramClient):
 
 async def main():
     env = load_env()
-    api_id = env.get("TG_API_ID")
-    api_hash = env.get("TG_API_HASH")
+    api_id = int(env.get("TG_API_ID") or DEFAULT_API_ID)
+    api_hash = env.get("TG_API_HASH") or DEFAULT_API_HASH
 
-    if not api_id or not api_hash or api_id in ("2040", "6", "8"):
-        os.system("cls" if os.name == "nt" else "clear")
-        print(f"{C_CYAN}╔══════════════════════════════════════════════════════════════════╗{RESET}")
-        print(f"{C_CYAN}║             НАСТРОЙКА XROCKET CHEQUE SNIPER // MODRIX            ║{RESET}")
-        print(f"{C_CYAN}╚══════════════════════════════════════════════════════════════════╝{RESET}\n")
-        print(f"{C_WHITE}Для входа в аккаунт нужны личные API_ID и API_HASH с сайта {C_CYAN}https://my.telegram.org{RESET}")
-        print(f"{C_GRAY}1. Открой в браузере: https://my.telegram.org{RESET}")
-        print(f"{C_GRAY}2. Введи номер телефона и код из Telegram{RESET}")
-        print(f"{C_GRAY}3. Нажми 'API development tools'{RESET}")
-        print(f"{C_GRAY}4. В поле App title напиши любое слово (например: Sniper) и нажми Create{RESET}")
-        print(f"{C_GRAY}5. Скопируй app api_id и api_hash сюда (вводится только 1 раз):\n{RESET}")
-
-        api_id = input("Введите api_id (цифры): ").strip()
-        api_hash = input("Введите api_hash: ").strip()
-
-        if not api_id or not api_hash:
-            print(f"{C_RED}Ошибка: api_id и api_hash обязательны.{RESET}")
-            return
-
-        save_env_field("TG_API_ID", api_id)
-        save_env_field("TG_API_HASH", api_hash)
-
-    print(f"\n{C_CYAN}[*] Подключение к серверам Telegram...{RESET}")
+    print(f"\n{C_CYAN}[*] Подключение к серверам Telegram (app_id: {api_id})...{RESET}")
     client = TelegramClient(
         SESSION_NAME,
-        api_id=int(api_id),
+        api_id=api_id,
         api_hash=api_hash,
         device_model="PC 64bit",
         system_version="Windows 11",
