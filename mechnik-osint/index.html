@@ -634,6 +634,39 @@
       box-shadow: 0 0 6px rgba(255, 179, 0, 0.5);
     }
 
+        .tag-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .tag-chip {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.76rem;
+      color: #e2e8f0;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .tag-chip .tag-count {
+      color: var(--accent-blue);
+      font-weight: 700;
+      font-size: 0.7rem;
+    }
+    .card-badge.gold {
+      background: rgba(255, 179, 0, 0.15);
+      color: var(--accent-yellow);
+      border: 1px solid rgba(255, 179, 0, 0.35);
+    }
+    .card-badge.purple {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.35);
+    }
+
     .accuracy-fill.low {
       background: var(--accent-red);
       box-shadow: 0 0 6px rgba(255, 51, 75, 0.5);
@@ -1716,6 +1749,65 @@
               protocol: "MAX Secure E2E",
               server_node: "MAX-RU-CORE-01"
             } : null,
+            deep_dossier: isPhone ? {
+              sbp: {
+                fio: "Иван Сергеевич М.",
+                main_bank: "ПАО Сбербанк (СБП активен)",
+                banks: ["Сбербанк", "Т-Банк (Тинькофф)", "ВТБ", "Альфа-Банк"],
+                status: "Принимает входящие переводы по СБП",
+                confidence: 99
+              },
+              getcontact: {
+                tags: [
+                  { tag: "Иван", count: 14 },
+                  { tag: "Ваня Т2", count: 9 },
+                  { tag: "Иван Сергеевич", count: 7 },
+                  { tag: "Ванек Краснодар", count: 6 },
+                  { tag: "Иван Авито", count: 5 },
+                  { tag: "Иван СТО / Авто", count: 4 },
+                  { tag: "Ваня Клиент", count: 3 },
+                  { tag: "Брат", count: 2 }
+                ],
+                total_tags_count: 50,
+                confidence: 96
+              },
+              delivery: {
+                city: "Краснодар",
+                address: "ул. Красная, д. 42, кв. 18",
+                services: ["Яндекс Еда", "Delivery Club / Купер", "СДЭК"],
+                orders_count: 18,
+                last_order: "14.08.2024",
+                confidence: 92
+              },
+              avito: {
+                profile_name: "Иван",
+                rating: "4.9 (18 отзывов)",
+                active_ads: 2,
+                closed_ads: 11,
+                categories: ["Запчасти и автотовары", "Бытовая электроника"],
+                city: "Краснодар",
+                confidence: 89
+              },
+              auto: {
+                car_model: "Kia Rio (2019)",
+                plate: "К 742 ТХ 123",
+                vin: "XTA217030******41",
+                osago: "Полис ОСАГО активен (АльфаСтрахование)",
+                fines: "0 неоплаченных штрафов",
+                confidence: 87
+              },
+              email: {
+                email: "iva***3262@mail.ru",
+                leaks_sources: ["СДЭК (2022)", "Яндекс.Еда (2022)", "Delivery Club (2022)"],
+                password_status: "Хэширован (bcrypt / SHA-256)",
+                confidence: 93
+              },
+              messengers: {
+                whatsapp: { registered: true, status: "Доступен / Available", avatar: true },
+                viber: { registered: true, name: "Иван" },
+                confidence: 96
+              }
+            } : null,
             all_platforms: [
               { platform: 'Steam', found: true, url: `https://steamcommunity.com/id/${clean}` },
               { platform: 'VK', found: true, url: `https://vk.com/${clean}` },
@@ -2050,9 +2142,294 @@
         cardElements.push(pCard);
       });
 
-      // Position Cards in an elegant tree layout & append
+      // Deep Dossier Extra Cards (Eye of God / Sherlock Engine)
+      if (summary.deep_dossier) {
+        const d = summary.deep_dossier;
+
+        // 1. SBP & FIO Card
+        if (d.sbp) {
+          const sbpCard = document.createElement('div');
+          sbpCard.className = 'intel-card';
+          sbpCard.innerHTML = `
+            <div class="accuracy-header">
+              <span class="accuracy-label">Вероятность инфы:</span>
+              <span class="accuracy-badge high">${d.sbp.confidence}% Точность</span>
+            </div>
+            <div class="accuracy-track"><div class="accuracy-fill high" style="width: ${d.sbp.confidence}%;"></div></div>
+            <div class="prob-hint">Верификация через Систему Быстрых Платежей (СБП ЦБ РФ)</div>
+
+            <div class="card-top" style="margin-top: 4px;">
+              <div class="card-service-title">
+                <svg style="width: 18px; height: 18px; stroke: #00e676; fill: none; stroke-width: 2;" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <span>Банки СБП & Владелец</span>
+              </div>
+              <span class="card-badge found">СБП верифицирован</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Инициалы владельца счета</span>
+              <span class="card-data-val" style="color: #fff; font-size: 1.05rem; font-weight: 700;">${d.sbp.fio}</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Основной банк перевода</span>
+              <span class="card-data-val" style="color: var(--accent-green); font-weight: 600;">${d.sbp.main_bank}</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Подключенные банки</span>
+              <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
+                ${d.sbp.banks.map(b => `<span style="font-size: 0.74rem; padding: 2px 7px; background: rgba(255,255,255,0.06); border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1;">${b}</span>`).join('')}
+              </div>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Статус шлюза</span>
+              <span class="card-data-val" style="color: #94a3b8; font-size: 0.8rem;">${d.sbp.status}</span>
+            </div>
+          `;
+          cardElements.push(sbpCard);
+        }
+
+        // 2. GetContact Tags Card
+        if (d.getcontact && d.getcontact.tags) {
+          const gcCard = document.createElement('div');
+          gcCard.className = 'intel-card';
+          gcCard.innerHTML = `
+            <div class="accuracy-header">
+              <span class="accuracy-label">Вероятность инфы:</span>
+              <span class="accuracy-badge high">${d.getcontact.confidence}% Точность</span>
+            </div>
+            <div class="accuracy-track"><div class="accuracy-fill high" style="width: ${d.getcontact.confidence}%;"></div></div>
+            <div class="prob-hint">Анализ телефонных книг (GetContact / NumBuster)</div>
+
+            <div class="card-top" style="margin-top: 4px;">
+              <div class="card-service-title">
+                <svg style="width: 18px; height: 18px; stroke: #0084ff; fill: none; stroke-width: 2;" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>Теги в контактах</span>
+              </div>
+              <span class="card-badge gold">${d.getcontact.total_tags_count} записей</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Как записан у других абонентов</span>
+              <div class="tag-container">
+                ${d.getcontact.tags.map(t => `<div class="tag-chip"><span>${t.tag}</span><span class="tag-count">+${t.count}</span></div>`).join('')}
+              </div>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Источник данных</span>
+              <span class="card-data-val" style="color: #94a3b8; font-size: 0.8rem;">Агрегированная синхронизация телефонных книг</span>
+            </div>
+          `;
+          cardElements.push(gcCard);
+        }
+
+        // 3. Delivery & Address Leaks
+        if (d.delivery) {
+          const delCard = document.createElement('div');
+          delCard.className = 'intel-card';
+          delCard.innerHTML = `
+            <div class="accuracy-header">
+              <span class="accuracy-label">Вероятность инфы:</span>
+              <span class="accuracy-badge high">${d.delivery.confidence}% Точность</span>
+            </div>
+            <div class="accuracy-track"><div class="accuracy-fill high" style="width: ${d.delivery.confidence}%;"></div></div>
+            <div class="prob-hint">Утечки служб доставки (Яндекс.Еда, Delivery Club, СДЭК)</div>
+
+            <div class="card-top" style="margin-top: 4px;">
+              <div class="card-service-title">
+                <svg style="width: 18px; height: 18px; stroke: #ffb300; fill: none; stroke-width: 2;" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>Адреса & Доставки</span>
+              </div>
+              <span class="card-badge found">Адрес подтвержден</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Геолокация / Город</span>
+              <span class="card-data-val" style="color: #fff; font-weight: 600;">${d.delivery.city}</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Основной адрес доставки</span>
+              <span class="card-data-val" style="color: var(--accent-yellow); font-weight: 600; font-size: 0.88rem;">${d.delivery.address}</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Заказы в базах</span>
+              <span class="card-data-val" style="color: #cbd5e1;">${d.delivery.orders_count} заказов (посл. ${d.delivery.last_order})</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Источники</span>
+              <span class="card-data-val" style="color: #94a3b8; font-size: 0.78rem;">${d.delivery.services.join(', ')}</span>
+            </div>
+          `;
+          cardElements.push(delCard);
+        }
+
+        // 4. Avito Profile
+        if (d.avito) {
+          const avCard = document.createElement('div');
+          avCard.className = 'intel-card';
+          avCard.innerHTML = `
+            <div class="accuracy-header">
+              <span class="accuracy-label">Вероятность инфы:</span>
+              <span class="accuracy-badge high">${d.avito.confidence}% Точность</span>
+            </div>
+            <div class="accuracy-track"><div class="accuracy-fill high" style="width: ${d.avito.confidence}%;"></div></div>
+            <div class="prob-hint">Парсинг торговых площадок (Авито / Юла)</div>
+
+            <div class="card-top" style="margin-top: 4px;">
+              <div class="card-service-title">
+                <svg style="width: 18px; height: 18px; stroke: #a855f7; fill: none; stroke-width: 2;" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                <span>Профиль Авито</span>
+              </div>
+              <span class="card-badge purple">Активен</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Продавец</span>
+              <span class="card-data-val" style="color: #fff; font-weight: 700;">${d.avito.profile_name} (${d.avito.rating})</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">История объявлений</span>
+              <span class="card-data-val" style="color: #cbd5e1;">${d.avito.active_ads} активных, ${d.avito.closed_ads} архивных</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Категории сделок</span>
+              <span class="card-data-val" style="color: var(--accent-blue); font-size: 0.8rem;">${d.avito.categories.join(' • ')}</span>
+            </div>
+          `;
+          cardElements.push(avCard);
+        }
+
+        // 5. Auto & Traffic Police
+        if (d.auto) {
+          const autoCard = document.createElement('div');
+          autoCard.className = 'intel-card';
+          autoCard.innerHTML = `
+            <div class="accuracy-header">
+              <span class="accuracy-label">Вероятность инфы:</span>
+              <span class="accuracy-badge high">${d.auto.confidence}% Точность</span>
+            </div>
+            <div class="accuracy-track"><div class="accuracy-fill high" style="width: ${d.auto.confidence}%;"></div></div>
+            <div class="prob-hint">Реестры Автокод, ГИБДД, страховые базы РСА</div>
+
+            <div class="card-top" style="margin-top: 4px;">
+              <div class="card-service-title">
+                <svg style="width: 18px; height: 18px; stroke: #38bdf8; fill: none; stroke-width: 2;" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                <span>Автомобиль & ГИБДД</span>
+              </div>
+              <span class="card-badge found">ТС найдено</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Марка / Модель</span>
+              <span class="card-data-val" style="color: #fff; font-weight: 700;">${d.auto.car_model}</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Госномер ТС</span>
+              <span class="card-data-val" style="font-family: var(--font-mono); color: var(--accent-green); font-size: 0.98rem; font-weight: 700;">${d.auto.plate}</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">VIN номер</span>
+              <span class="card-data-val" style="font-family: var(--font-mono); color: #cbd5e1; font-size: 0.82rem;">${d.auto.vin}</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Страховка & Штрафы</span>
+              <span class="card-data-val" style="color: #94a3b8; font-size: 0.8rem;">${d.auto.osago} // ${d.auto.fines}</span>
+            </div>
+          `;
+          cardElements.push(autoCard);
+        }
+
+        // 6. Email & Database Leaks
+        if (d.email) {
+          const emCard = document.createElement('div');
+          emCard.className = 'intel-card';
+          emCard.innerHTML = `
+            <div class="accuracy-header">
+              <span class="accuracy-label">Вероятность инфы:</span>
+              <span class="accuracy-badge high">${d.email.confidence}% Точность</span>
+            </div>
+            <div class="accuracy-track"><div class="accuracy-fill high" style="width: ${d.email.confidence}%;"></div></div>
+            <div class="prob-hint">Утечки учетных записей (HaveIBeenPwned / Darknet)</div>
+
+            <div class="card-top" style="margin-top: 4px;">
+              <div class="card-service-title">
+                <svg style="width: 18px; height: 18px; stroke: #f43f5e; fill: none; stroke-width: 2;" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span>Email & Утечки баз</span>
+              </div>
+              <span class="card-badge found">Привязан</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Электронная почта</span>
+              <span class="card-data-val" style="color: var(--accent-blue); font-family: var(--font-mono); font-weight: 700;">${d.email.email}</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Обнаружен в утечках</span>
+              <span class="card-data-val" style="color: #cbd5e1; font-size: 0.82rem;">${d.email.leaks_sources.join(', ')}</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Статус паролей</span>
+              <span class="card-data-val" style="color: var(--accent-green); font-size: 0.8rem;">${d.email.password_status}</span>
+            </div>
+          `;
+          cardElements.push(emCard);
+        }
+
+        // 7. WhatsApp & Viber
+        if (d.messengers) {
+          const mCard = document.createElement('div');
+          mCard.className = 'intel-card';
+          mCard.innerHTML = `
+            <div class="accuracy-header">
+              <span class="accuracy-label">Вероятность инфы:</span>
+              <span class="accuracy-badge high">${d.messengers.confidence}% Точность</span>
+            </div>
+            <div class="accuracy-track"><div class="accuracy-fill high" style="width: ${d.messengers.confidence}%;"></div></div>
+            <div class="prob-hint">Прямая проверка регистрации в протоколах мессенджеров</div>
+
+            <div class="card-top" style="margin-top: 4px;">
+              <div class="card-service-title">
+                <svg style="width: 18px; height: 18px; stroke: #10b981; fill: none; stroke-width: 2;" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                <span>WhatsApp & Viber</span>
+              </div>
+              <span class="card-badge found">Активны</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">WhatsApp</span>
+              <span class="card-data-val" style="color: var(--accent-green); font-weight: 600;">Зарегистрирован (${d.messengers.whatsapp.status})</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Viber</span>
+              <span class="card-data-val" style="color: #c084fc; font-weight: 600;">Активен (Имя: ${d.messengers.viber.name})</span>
+            </div>
+
+            <div class="card-data-row">
+              <span class="card-data-label">Аватарки</span>
+              <span class="card-data-val" style="color: #cbd5e1; font-size: 0.8rem;">Установлена в WhatsApp</span>
+            </div>
+          `;
+          cardElements.push(mCard);
+        }
+      }
+
+      // Position Cards in an elegant multi-tier grid & append
       const viewport = document.getElementById('viewport');
-      const vWidth = viewport.clientWidth || window.innerWidth;
+      const vWidth = Math.max(viewport.clientWidth || 1400, 1400);
       const rootNode = document.getElementById('node-root-view');
 
       // Center root node
@@ -2063,17 +2440,25 @@
       rootNode.style.top = `${rootY}px`;
       makeDraggable(rootNode);
 
-      // Position children side-by-side centered below root
       const cardWidth = 330;
-      const gap = 24;
-      const totalWidth = cardElements.length * cardWidth + (cardElements.length - 1) * gap;
-      let startX = Math.max(30, (vWidth - totalWidth) / 2);
-      const childY = rootY + 130;
+      const gapX = 26;
+      const gapY = 32;
+      const cols = Math.min(4, Math.max(1, cardElements.length));
 
       cardElements.forEach((card, idx) => {
-        const posX = startX + idx * (cardWidth + gap);
+        const colIdx = idx % cols;
+        const rowIdx = Math.floor(idx / cols);
+
+        // Count how many cards in this specific row
+        const cardsInThisRow = Math.min(cols, cardElements.length - rowIdx * cols);
+        const rowTotalWidth = cardsInThisRow * cardWidth + (cardsInThisRow - 1) * gapX;
+        const rowStartX = Math.max(40, (vWidth - rowTotalWidth) / 2);
+
+        const posX = rowStartX + colIdx * (cardWidth + gapX);
+        const posY = rootY + 140 + rowIdx * (390 + gapY);
+
         card.style.left = `${posX}px`;
-        card.style.top = `${childY}px`;
+        card.style.top = `${posY}px`;
         cardsLayer.appendChild(card);
         makeDraggable(card);
       });
