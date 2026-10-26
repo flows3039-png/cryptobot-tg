@@ -5,13 +5,7 @@ import re
 import time
 from datetime import datetime
 from telethon import TelegramClient, events
-from telethon.tl.types import (
-    KeyboardButtonCallback,
-    KeyboardButtonUrl,
-    MessageEntityTextUrl,
-    Channel,
-    Chat
-)
+from telethon.tl.types import MessageEntityTextUrl, Channel, Chat
 from telethon.tl.functions.messages import StartBotRequest
 
 # Enable UTF-8 in Windows console
@@ -37,6 +31,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_PATH = os.path.join(BASE_DIR, ".env")
 SESSION_NAME = os.path.join(BASE_DIR, "xrocket_session")
 
+# Официальные ключи приложения Telegram Desktop
+OFFICIAL_APP_API_ID   = 2040
+OFFICIAL_APP_API_HASH = "b1844651345ec3e5e7730e36422730e8"
+
 def load_env():
     env = {}
     if os.path.exists(ENV_PATH):
@@ -47,24 +45,6 @@ def load_env():
                     k, v = line.split("=", 1)
                     env[k.strip()] = v.strip()
     return env
-
-def save_env_field(key: str, value: str):
-    lines = []
-    if os.path.exists(ENV_PATH):
-        with open(ENV_PATH, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-    found = False
-    new_lines = []
-    for line in lines:
-        if line.strip().startswith(f"{key}="):
-            new_lines.append(f"{key}={value}\n")
-            found = True
-        else:
-            new_lines.append(line)
-    if not found:
-        new_lines.append(f"{key}={value}\n")
-    with open(ENV_PATH, "w", encoding="utf-8") as f:
-        f.writelines(new_lines)
 
 # Регулярные выражения для поиска ссылок и кодов чеков xRocket
 XROCKET_PATTERNS = [
@@ -128,10 +108,10 @@ def extract_cheque_code_from_message(message):
     if code:
         return code
 
-    # 2. Инлайн-кнопки (KeyboardButtonUrl)
-    if message.reply_markup and hasattr(message.reply_markup, "rows"):
-        for row in message.reply_markup.rows:
-            for btn in row.buttons:
+    # 2. Инлайн-кнопки (через высокоуровневое свойство buttons)
+    if message.buttons:
+        for row in message.buttons:
+            for btn in row:
                 url = getattr(btn, "url", None)
                 if url:
                     code = extract_cheque_code(url)
@@ -166,7 +146,7 @@ async def claim_cheque(client: TelegramClient, code: str, source_name: str):
     print(f"  {C_GRAY}▸ Источник:{RESET} {C_WHITE}{source_name}{RESET}")
     print(f"  {C_PURPLE}▸ Режим:{RESET} {C_GREEN}МОМЕНТАЛЬНЫЙ ПЕРЕХОД (0 МС ЗАДЕРЖКИ)...{RESET}", flush=True)
 
-    # 1. Параллельно сохраняем в Избранное (в фоне, чтобы не отнимать ни миллисекунды)
+    # 1. Параллельно сохраняем в Избранное (в фоне, чтобы не отнимать миллисекунды)
     async def save_to_fav():
         try:
             fav_text = f"⚡ ЧЕК XROCKET:\n{full_link}\n(Источник: {source_name})"
@@ -192,26 +172,22 @@ async def claim_cheque(client: TelegramClient, code: str, source_name: str):
             async for reply in client.iter_messages("xrocket", limit=2):
                 reply_text = reply.text or ""
 
-                if reply.reply_markup and hasattr(reply.reply_markup, "rows"):
-                    for row in reply.reply_markup.rows:
-                        for btn in row.buttons:
-                            if isinstance(btn, KeyboardButtonCallback):
-                                try:
-                                    await reply.click(data=btn.data)
-                                    ms = int((time.perf_counter() - t0) * 1000)
-                                    print(f"  {C_CYAN}✔ [{ms} мс] Клик по кнопке:{RESET} '{btn.text}'", flush=True)
-                                except Exception:
-                                    try:
-                                        await reply.click(0)
-                                    except Exception:
-                                        pass
+                if reply.buttons:
+                    for row in reply.buttons:
+                        for btn in row:
+                            try:
+                                await btn.click()
+                                ms = int((time.perf_counter() - t0) * 1000)
+                                print(f"  {C_CYAN}✔ [{ms} мс] Нажата кнопка активации:{RESET} '{btn.text}'", flush=True)
                                 break
+                            except Exception:
+                                pass
 
                 first_line = reply_text.strip().split("\n")[0] if reply_text else "Ответ получен"
                 if any(w in reply_text.lower() for w in ["получен", "активирован", "зачислен", "чек на сумму", "вы получили"]):
                     STATS["claimed"] += 1
                     ms = int((time.perf_counter() - t0) * 1000)
-                    print(f"  {C_GREEN}★ [{ms} мс] УСПЕХ: Чек активирован!{RESET} {C_WHITE}{first_line}{RESET}", flush=True)
+                    print(f"  {C_GREEN}★ [{ms} мс] УСПЕХ: Чек успешно активирован!{RESET} {C_WHITE}{first_line}{RESET}", flush=True)
                     return
                 elif any(w in reply_text.lower() for w in ["закончился", "не найден", "уже активирован", "пуст"]):
                     STATS["failed"] += 1
@@ -243,10 +219,6 @@ async def console_input_loop(client: TelegramClient):
         except Exception:
             break
 
-# Официальные ключи приложения Telegram Desktop
-OFFICIAL_APP_API_ID   = 2040
-OFFICIAL_APP_API_HASH = "b1844651345ec3e5e7730e36422730e8"
-
 async def main():
     env = load_env()
     api_id = int(env.get("TG_API_ID") or OFFICIAL_APP_API_ID)
@@ -271,7 +243,7 @@ async def main():
 
     now_str = datetime.now().strftime("%H:%M:%S")
     print(f"  {C_GRAY}[{now_str}]{RESET} {C_GREEN}● МОНИТОРИНГ ЧАТОВ, КАНАЛОВ И КОММЕНТАРИЕВ АКТИВИРОВАН.{RESET}", flush=True)
-    print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}● Клиент: Официальный Telegram Desktop | Задержка: 0 мс (турбо)...{RESET}\n", flush=True)
+    print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}● Клиент: Официальный Telegram Desktop | Режим: 0 мс (турбо)...{RESET}\n", flush=True)
 
     @client.on(events.NewMessage())
     async def incoming_message_handler(event):
