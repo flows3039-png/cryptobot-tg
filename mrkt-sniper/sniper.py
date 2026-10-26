@@ -660,12 +660,24 @@ async def run_sniper():
                                 # Оценка редкости (номера, фоны, модели)
                                 rarity_label, multiplier = evaluate_gift_rarity(gift)
 
+                                # Расчет ожидаемой цены продажи и чистого профита
+                                target_floor = col_floor if col_floor > 0 else STATE["market_floor"]
+                                base_sell = (target_floor - 0.01) if target_floor > 0 else (price_ton * 1.20)
+                                expected_sell = round(max(price_ton * 1.15, base_sell * multiplier), 2)
+                                clean_profit_est = round(expected_sell * 0.98 - price_ton, 2)
+
+                                # Условия на выкуп:
+                                # 1. Хватает баланса
+                                # 2. Не на паузе
+                                # 3. Чистый расчетный профит не менее 0.25 TON после вычета 2% комиссии маркета
+                                # 4. Это либо редкий лот, либо слив дорогой коллекции, либо скидка к флору
                                 is_high_floor_deal = (col_floor >= price_ton * 1.15)
                                 is_rare = (rarity_label is not None)
-                                is_cheap = (price_nano <= max_nano)
+                                is_discounted = (target_floor > 0 and price_ton <= target_floor * 0.90)
 
-                                if not STATE.get("paused") and (is_rare or is_high_floor_deal or is_cheap):
-                                    asyncio.create_task(execute_buy(session, gift, rarity_label, multiplier))
+                                if not STATE.get("paused") and (price_nano <= max_nano) and (clean_profit_est >= 0.25):
+                                    if is_rare or is_high_floor_deal or is_discounted:
+                                        asyncio.create_task(execute_buy(session, gift, rarity_label, multiplier))
 
                     elif resp.status == 401:
                         now_str = datetime.now().strftime("%H:%M:%S")
