@@ -2,7 +2,6 @@ import asyncio
 import aiohttp
 import time
 import json
-import logging
 import os
 import sys
 import random
@@ -16,11 +15,10 @@ if hasattr(sys.stderr, "reconfigure"):
 os.system("")
 
 # ANSI Color Palette
-RESET   = "\033[0m"
-BOLD    = "\033[1m"
-DIM     = "\033[2m"
+RESET     = "\033[0m"
+BOLD      = "\033[1m"
+DIM       = "\033[2m"
 
-# Colors
 C_CYAN    = "\033[38;2;34;211;238m"   # Neon Cyan
 C_GREEN   = "\033[38;2;74;222;128m"   # Neon Green
 C_PURPLE  = "\033[38;2;192;132;252m" # Neon Violet
@@ -31,13 +29,14 @@ C_DARK    = "\033[38;2;71;85;105m"    # Dark Slate
 C_WHITE   = "\033[38;2;241;245;249m"  # Crisp White
 
 # ==============================================================================
-# НАСТРОЙКИ СНАЙПЕРА (MODRIX MRKT AUTO-BOT)
+# НАСТРОЙКИ СНАЙПЕРА (MODRIX AUTO-FLIPPER ENGINE)
 # ==============================================================================
 
-MAX_BUY_PRICE_TON = 3.60       # Максимальная цена выкупа в TON
-POLL_INTERVAL_SEC = 0.45       # Частота сканирования рынка (450 мс)
-PULSE_INTERVAL_SEC = 45        # Пульс рынка (каждые 45 сек вывод 2 подарков)
-PROFIT_MARGIN_PERCENT = 22     # Минимальная наценка для перепродажи (+22%)
+POLL_INTERVAL_SEC      = 0.45       # Частота сканирования (450 мс)
+PULSE_INTERVAL_SEC     = 45         # Пульс рынка (каждые 45 сек)
+RADAR_INTERVAL_SEC     = 12         # Строка радара (каждые 12 сек)
+MIN_PROFIT_PERCENT     = 20         # Минимальная базовая наценка при продаже (+20%)
+MIN_DISCOUNT_PERCENT   = 12         # Минимальная скидка к флору для выкупа обычных лотов
 
 # Сессия аккаунта
 ACCESS_TOKEN = "f63be9e2-bf98-4e54-b9eb-ef7ffa3ba054"
@@ -55,9 +54,47 @@ HEADERS = {
 
 API_BASE = "https://api.tgmrkt.io/api/v1"
 
+# Глобальное состояние торговли
+STATE = {
+    "balance": 3.6157,
+    "max_buy_price": 3.56,
+    "total_scans": 0,
+    "trades_count": 0,
+    "total_profit_ton": 0.0,
+    "market_floor": 3.81,
+    "active_sales": {} # {gift_id: {"title": ..., "buy_price": ..., "sell_price": ...}}
+}
+
 # ==============================================================================
 
-def print_header(balance_ton: float):
+def check_rare_number(num):
+    """Анализ номера подарка на редкость для премиальной наценки"""
+    if not num:
+        return None, 1.0
+    s = str(num).strip()
+    if not s.isdigit():
+        return None, 1.0
+    n = int(s)
+
+    # 1. Первая сотня (#1 - #99)
+    if 1 <= n <= 99:
+        return f"ТОП-{n} (ПЕРВАЯ СОТНЯ)", 1.70  # +70% наценка
+
+    # 2. Одинаковые цифры (#777, #111, #2222)
+    if len(s) >= 2 and len(set(s)) == 1:
+        return f"ОДИНАКОВЫЕ ЦИФРЫ #{s}", 1.60  # +60% наценка
+
+    # 3. Зеркалка / Палиндром (#1221, #5005, #7887, #303)
+    if len(s) >= 3 and s == s[::-1]:
+        return f"ЗЕРКАЛКА #{s}", 1.45  # +45% наценка
+
+    # 4. Круглые числа (#100, #500, #1000)
+    if n in (100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 5000):
+        return f"КРУГЛОЕ ЧИСЛО #{s}", 1.35  # +35% наценка
+
+    return None, 1.0
+
+def print_header():
     os.system("cls" if os.name == "nt" else "clear")
     logo = f"""
 {C_CYAN}███╗   ███╗██████╗ ██╗  ██╗████████╗    {C_PURPLE}███████╗███╗   ██╗██╗██████╗ ███████╗██████╗ 
@@ -67,13 +104,16 @@ def print_header(balance_ton: float):
 {C_CYAN}██║ ╚═╝ ██║██║  ██║██║ ╚██╗   ██║       {C_PURPLE}███████║██║ ╚████║██║██║     ███████╗██║  ██║
 {C_CYAN}╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝       {C_PURPLE}╚══════╝╚═╝  ╚═══╝╚═╝╚═╝     ╚══════╝╚═╝  ╚═╝{RESET}
 {C_GRAY}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}
-  {C_WHITE}АККАУНТ:{RESET} {C_GREEN}MODRIX (2297417){RESET}  │  {C_WHITE}БАЛАНС:{RESET} {C_YELLOW}{balance_ton:.4f} TON{RESET}  │  {C_WHITE}РЕЖИМ:{RESET} {C_GREEN}БОЕВОЙ АВТОВЫКУП{RESET}
-  {C_WHITE}ЛИМИТ:{RESET}   {C_CYAN}<= {MAX_BUY_PRICE_TON} TON{RESET}         │  {C_WHITE}СКОРОСТЬ:{RESET} {C_PURPLE}{int(POLL_INTERVAL_SEC*1000)} мс{RESET}        │  {C_WHITE}АВТО-ПРОДАЖА:{RESET} {C_GREEN}+{PROFIT_MARGIN_PERCENT}% В ПЛЮС{RESET}
+  {C_WHITE}АККАУНТ:{RESET}     {C_GREEN}MODRIX (2297417){RESET}     │  {C_WHITE}БАЛАНС:{RESET}      {C_YELLOW}{STATE['balance']:.4f} TON{RESET} (авто-разгон)
+  {C_WHITE}МАКС. ВЫКУП:{RESET} {C_CYAN}<= {STATE['max_buy_price']:.2f} TON{RESET}        │  {C_WHITE}ФЛОР РЫНКА:{RESET}  {C_YELLOW}{STATE['market_floor']:.2f} TON{RESET}
+  {C_WHITE}СКОРОСТЬ:{RESET}    {C_PURPLE}{int(POLL_INTERVAL_SEC*1000)} мс{RESET}               │  {C_WHITE}ПРИБЫЛЬ:{RESET}     {C_GREEN}+{STATE['total_profit_ton']:.2f} TON{RESET} ({STATE['trades_count']} сделок)
+  {C_WHITE}МОДУЛИ:{RESET}      {C_GREEN}RARE-HUNTER [ON]{RESET}     │  {C_GREEN}AUTO-RELIST [ON]{RESET}  │  {C_GREEN}SMART-PRICE [ON]{RESET}
 {C_GRAY}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}
 """
     print(logo, flush=True)
 
-def print_buy_banner(title: str, buy_price: float, sell_price: float, profit: float, elapsed_ms: int):
+def print_buy_banner(title: str, buy_price: float, sell_price: float, profit: float, rarity_label: str, elapsed_ms: int):
+    rarity_tag = f" {C_PURPLE}[{rarity_label}]{RESET}" if rarity_label else ""
     banner = f"""
 {C_GREEN}╔══════════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                          ║
@@ -84,27 +124,33 @@ def print_buy_banner(title: str, buy_price: float, sell_price: float, profit: fl
 ║    ███████║╚██████╔╝██║     ███████╗██║  ██║    ███████╚██████╔╝   ██║                   ║
 ║    ╚══════╝ ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═╝    ╚══════╝╚═════╝    ╚═╝                   ║
 ║                                                                                          ║
-║                   {C_WHITE}{BOLD}ПОДАРОК УСПЕШНО ВЫКУПЛЕН С РЫНКА MRKT ЗА {elapsed_ms} МС!{RESET}{C_GREEN}                             ║
+║                 {C_WHITE}{BOLD}ПОДАРОК УСПЕШНО ВЫКУПЛЕН С РЫНКА MRKT ЗА {elapsed_ms} МС!{RESET}{C_GREEN}                               ║
 ╚══════════════════════════════════════════════════════════════════════════════════════════╝{RESET}
-  {C_CYAN}▸ НАЗВАНИЕ:{RESET}    {C_WHITE}{BOLD}{title}{RESET}
+  {C_CYAN}▸ НАЗВАНИЕ:{RESET}    {C_WHITE}{BOLD}{title}{RESET}{rarity_tag}
   {C_YELLOW}▸ ЦЕНА ВЫКУПА:{RESET} {C_GREEN}{buy_price:.2f} TON{RESET}
   {C_PURPLE}▸ АВТО-ЛИСТИНГ:{RESET}{C_WHITE} ВЫСТАВЛЕН НА ПРОДАЖУ ЗА {C_YELLOW}{sell_price:.2f} TON{RESET}
-  {C_GREEN}▸ ЧИСТЫЙ ПРОФИТ:{RESET}{C_GREEN}{BOLD}+{profit:.2f} TON (+{PROFIT_MARGIN_PERCENT}%){RESET}
+  {C_GREEN}▸ ЧИСТЫЙ ПРОФИТ:{RESET}{C_GREEN}{BOLD}+{profit:.2f} TON (после комиссии 2%){RESET}
 {C_GRAY}────────────────────────────────────────────────────────────────────────────────────────────{RESET}
 """
     print(banner, flush=True)
 
-async def check_balance(session: aiohttp.ClientSession) -> float:
+async def refresh_account_balance(session: aiohttp.ClientSession):
+    """Обновляет баланс и автоматически пересчитывает лимит покупки (авто-разгон)"""
     try:
         async with session.get(f"{API_BASE}/balance", headers=HEADERS, timeout=3.5) as resp:
             if resp.status == 200:
                 data = await resp.json()
-                return data.get("hard", 0) / 1e9
+                bal = data.get("hard", 0) / 1e9
+                STATE["balance"] = bal
+                # Авто-разгон: выкуп до 98% от всего баланса (оставляем 0.05 TON на комиссии)
+                STATE["max_buy_price"] = max(1.0, round(bal - 0.05, 2))
+                return bal
     except Exception:
         pass
-    return 3.6157
+    return STATE["balance"]
 
-async def get_current_floor(session: aiohttp.ClientSession) -> float:
+async def fetch_current_market_floor(session: aiohttp.ClientSession) -> float:
+    """Опрашивает текущий флор рынка в реальном времени"""
     try:
         payload = {
             "count": 5, "cursor": "",
@@ -116,37 +162,73 @@ async def get_current_floor(session: aiohttp.ClientSession) -> float:
                 data = await resp.json()
                 gifts = data.get("gifts", [])
                 if gifts:
-                    return gifts[0].get("salePrice", 0) / 1e9
+                    fl = gifts[0].get("salePrice", 0) / 1e9
+                    STATE["market_floor"] = fl
+                    return fl
     except Exception:
         pass
-    return 3.85
+    return STATE["market_floor"]
 
-async def auto_relist_gift(session: aiohttp.ClientSession, gift_id: str, title: str, buy_price_ton: float):
-    await asyncio.sleep(1.5)
-    current_floor = await get_current_floor(session)
+async def auto_relist_gift(session: aiohttp.ClientSession, gift_id: str, title: str, buy_price_ton: float, multiplier: float):
+    """Автоматически выставляет купленный подарок с гарантированной прибылью"""
+    await asyncio.sleep(1.8)
+    floor = await fetch_current_market_floor(session)
+
+    # Расчет целевой цены продажи
+    base_min_price = round(buy_price_ton * (1 + MIN_PROFIT_PERCENT / 100), 2)
     
-    min_profitable_price = round(buy_price_ton * (1 + PROFIT_MARGIN_PERCENT / 100), 2)
-    optimal_sell_price = max(min_profitable_price, round(current_floor - 0.01, 2))
+    if multiplier > 1.0:
+        # Редкий номер: продаем дороже рынка
+        optimal_sell_price = round(max(base_min_price, floor) * multiplier, 2)
+    else:
+        # Обычный подарок: встаем на 0.01 TON дешевле флора для моментальной продажи
+        optimal_sell_price = max(base_min_price, round(floor - 0.01, 2))
+
     sell_nano = int(optimal_sell_price * 1e9)
-    
-    sale_payload = {
-        "ids": [gift_id],
-        "price": sell_nano
-    }
-    
+    sale_payload = {"ids": [gift_id], "price": sell_nano}
+
     try:
         async with session.post(f"{API_BASE}/gifts/sale", json=sale_payload, headers=HEADERS, timeout=4.0) as resp:
             now_str = datetime.now().strftime("%H:%M:%S")
             if resp.status in (200, 201):
-                profit = round(optimal_sell_price * 0.98 - buy_price_ton, 2)
-                print(f"  {C_GRAY}[{now_str}]{RESET} {C_GREEN}✔ АВТО-ЛИСТИНГ УСПЕШЕН:{RESET} {title} выставлен за {C_YELLOW}{optimal_sell_price} TON{RESET} (чистый плюс: {C_GREEN}+{profit} TON{RESET})", flush=True)
+                clean_profit = round(optimal_sell_price * 0.98 - buy_price_ton, 2)
+                STATE["trades_count"] += 1
+                STATE["total_profit_ton"] += clean_profit
+                STATE["active_sales"][gift_id] = {
+                    "title": title, "buy": buy_price_ton, "sell": optimal_sell_price
+                }
+                print(f"  {C_GRAY}[{now_str}]{RESET} {C_GREEN}✔ АВТО-ЛИСТИНГ УСПЕШЕН:{RESET} {title} выставлен за {C_YELLOW}{optimal_sell_price:.2f} TON{RESET} (чистый плюс: {C_GREEN}+{clean_profit:.2f} TON{RESET})", flush=True)
+                # Обновляем баланс
+                await refresh_account_balance(session)
             else:
                 err = await resp.text()
-                print(f"  {C_GRAY}[{now_str}]{RESET} {C_RED}✖ Ошибка авто-листинга [{resp.status}]:{RESET} {err[:150]}", flush=True)
+                print(f"  {C_GRAY}[{now_str}]{RESET} {C_RED}✖ Ошибка авто-листинга [{resp.status}]:{RESET} {err[:140]}", flush=True)
     except Exception as e:
         print(f"  {C_RED}✖ Сбой авто-листинга:{RESET} {e}", flush=True)
 
-async def execute_buy(session: aiohttp.ClientSession, gift: dict):
+async def check_and_adjust_sales(session: aiohttp.ClientSession):
+    """Умная корректировка цен: если наш лот перебили, аккуратно двигаем цену на 0.01 TON ниже"""
+    if not STATE["active_sales"]:
+        return
+    floor = await fetch_current_market_floor(session)
+    for gid, item in list(STATE["active_sales"].items()):
+        current_sell = item["sell"]
+        buy_price = item["buy"]
+        # Если рынок опустился ниже нашей цены, но сделка все еще в плюс (+15% минимум)
+        min_allowed = round(buy_price * 1.15, 2)
+        if floor < current_sell and (floor - 0.01) >= min_allowed:
+            new_price = round(floor - 0.01, 2)
+            try:
+                ch_payload = {"ids": [gid], "newPrice": int(new_price * 1e9)}
+                async with session.post(f"{API_BASE}/gifts/sale/change-price", json=ch_payload, headers=HEADERS, timeout=3.0) as resp:
+                    if resp.status in (200, 201):
+                        now_str = datetime.now().strftime("%H:%M:%S")
+                        item["sell"] = new_price
+                        print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}⚡ СМАРТ-КОРРЕКТИРОВКА:{RESET} Цена {item['title']} снижена до {C_YELLOW}{new_price:.2f} TON{RESET} (для быстрой продажи перед конкурентами)", flush=True)
+            except Exception:
+                pass
+
+async def execute_buy(session: aiohttp.ClientSession, gift: dict, rarity_label: str, multiplier: float):
     gift_id = gift.get("id")
     raw_price = gift.get("salePrice", 0)
     buy_price_ton = raw_price / 1e9 if raw_price > 1e6 else raw_price
@@ -155,13 +237,12 @@ async def execute_buy(session: aiohttp.ClientSession, gift: dict):
     display_name = f"{title} #{num}" if num else title
 
     now_str = datetime.now().strftime("%H:%M:%S")
-    print(f"\n{C_YELLOW}⚡ [{now_str}] ОБНАРУЖЕН МИСПРАЙС:{RESET} {C_WHITE}{display_name}{RESET} за {C_GREEN}{buy_price_ton:.2f} TON{RESET}! Моментальный выкуп...", flush=True)
+    reason = f"[{rarity_label}]" if rarity_label else f"[Скидка к флору]"
+    print(f"\n{C_YELLOW}⚡ [{now_str}] ЦЕЛЬ ОБНАРУЖЕНА {reason}:{RESET} {C_WHITE}{display_name}{RESET} за {C_GREEN}{buy_price_ton:.2f} TON{RESET}! Моментальный выкуп...", flush=True)
 
     buy_payload = {
         "ids": [gift_id],
-        "prices": {
-            str(gift_id): raw_price
-        }
+        "prices": {str(gift_id): raw_price}
     }
 
     t0 = time.perf_counter()
@@ -169,82 +250,87 @@ async def execute_buy(session: aiohttp.ClientSession, gift: dict):
         async with session.post(f"{API_BASE}/gifts/buy", json=buy_payload, headers=HEADERS, timeout=4.0) as resp:
             elapsed_ms = int((time.perf_counter() - t0) * 1000)
             if resp.status in (200, 201):
-                sell_est = max(round(buy_price_ton * 1.25, 2), 3.84)
+                floor = STATE["market_floor"]
+                sell_est = round(max(buy_price_ton * 1.22, floor - 0.01) * multiplier, 2)
                 profit_est = round(sell_est * 0.98 - buy_price_ton, 2)
-                print_buy_banner(display_name, buy_price_ton, sell_est, profit_est, elapsed_ms)
-                asyncio.create_task(auto_relist_gift(session, gift_id, display_name, buy_price_ton))
+                
+                print_buy_banner(display_name, buy_price_ton, sell_est, profit_est, rarity_label, elapsed_ms)
+                asyncio.create_task(auto_relist_gift(session, gift_id, display_name, buy_price_ton, multiplier))
             else:
                 err_text = await resp.text()
-                print(f"{C_RED}[ОШИБКА ВЫКУПА {resp.status} ({elapsed_ms} мс)]{RESET} {err_text[:180]}", flush=True)
+                print(f"{C_RED}[ОШИБКА ВЫКУПА {resp.status} ({elapsed_ms} мс)]{RESET} {err_text[:160]}", flush=True)
     except Exception as e:
         print(f"{C_RED}[СБОЙ СЕТИ ПРИ ВЫКУПЕ]{RESET} {e}", flush=True)
 
 async def run_sniper():
     conn = aiohttp.TCPConnector(limit=30, keepalive_timeout=75)
     async with aiohttp.ClientSession(connector=conn) as session:
-        bal = await check_balance(session)
-        print_header(bal)
+        await refresh_account_balance(session)
+        await fetch_current_market_floor(session)
+        print_header()
 
-        max_nano = int(MAX_BUY_PRICE_TON * 1e9)
         seen_ids = set()
-        scan_count = 0
-        last_pulse_time = 0 # 0 чтобы первый пульс напечатался моментально на старте!
-        last_status_time = time.time()
-
-        # Payload поиска миспрайсов (фильтр <= max_nano)
-        search_payload = {
-            "count": 15, "cursor": "",
-            "collectionNames": [], "modelNames": [], "backdropNames": [], "symbolNames": [],
-            "ordering": 2, "lowToHigh": True, "maxPrice": max_nano
-        }
-
-        # Payload для считывания флора и пульса рынка
-        pulse_payload = {
-            "count": 10, "cursor": "",
-            "collectionNames": [], "modelNames": [], "backdropNames": [], "symbolNames": [],
-            "ordering": 2, "lowToHigh": True
-        }
+        last_pulse_time = 0
+        last_radar_time = time.time()
+        last_adjust_time = time.time()
 
         now_init = datetime.now().strftime("%H:%M:%S")
-        print(f"  {C_GRAY}[{now_init}]{RESET} {C_GREEN}● СНАЙПЕР АКТИВИРОВАН:{RESET} Мониторинг ленты MRKT запущен (запросы каждые {int(POLL_INTERVAL_SEC*1000)} мс)...", flush=True)
-
-        current_market_floor = 3.84
+        print(f"  {C_GRAY}[{now_init}]{RESET} {C_GREEN}● ТОРГОВЫЙ ДВИЖОК АКТИВИРОВАН:{RESET} Поиск миспрайсов и редких номеров запущен...", flush=True)
 
         while True:
-            scan_count += 1
+            STATE["total_scans"] += 1
             t_start = time.perf_counter()
             current_time = time.time()
 
-            # Ежеминутный пульс рынка: выводим 2 реальных подарка с MRKT + текущий флор
+            max_nano = int(STATE["max_buy_price"] * 1e9)
+
+            # 1. Пульс рынка (каждые 45 сек)
             if current_time - last_pulse_time >= PULSE_INTERVAL_SEC:
                 last_pulse_time = current_time
                 try:
-                    async with session.post(f"{API_BASE}/gifts/saling", json=pulse_payload, headers=HEADERS, timeout=3.0) as p_resp:
+                    p_load = {
+                        "count": 10, "cursor": "",
+                        "collectionNames": [], "modelNames": [], "backdropNames": [], "symbolNames": [],
+                        "ordering": 2, "lowToHigh": True
+                    }
+                    async with session.post(f"{API_BASE}/gifts/saling", json=p_load, headers=HEADERS, timeout=3.0) as p_resp:
                         if p_resp.status == 200:
                             p_data = await p_resp.json()
                             p_gifts = p_data.get("gifts", [])
                             if p_gifts:
-                                current_market_floor = p_gifts[0].get("salePrice", 0) / 1e9
-                                sample_gifts = random.sample(p_gifts, min(2, len(p_gifts)))
+                                STATE["market_floor"] = p_gifts[0].get("salePrice", 0) / 1e9
+                                sample = random.sample(p_gifts, min(2, len(p_gifts)))
                                 now_str = datetime.now().strftime("%H:%M:%S")
-                                g1, g2 = sample_gifts[0], sample_gifts[1]
-                                p1 = (g1.get("salePrice", 0) / 1e9)
-                                p2 = (g2.get("salePrice", 0) / 1e9)
+                                g1, g2 = sample[0], sample[1]
+                                p1 = g1.get("salePrice", 0) / 1e9
+                                p2 = g2.get("salePrice", 0) / 1e9
                                 t1 = g1.get("title") or g1.get("name")
                                 t2 = g2.get("title") or g2.get("name")
                                 n1 = f"#{g1.get('num')}" if g1.get('num') else ""
                                 n2 = f"#{g2.get('num')}" if g2.get('num') else ""
-                                print(f"  {C_GRAY}[{now_str}]{RESET} {C_PURPLE}● ПУЛЬС РЫНКА:{RESET} {C_WHITE}{t1} {n1}{RESET} ({C_YELLOW}{p1:.2f} TON{RESET}) │ {C_WHITE}{t2} {n2}{RESET} ({C_YELLOW}{p2:.2f} TON{RESET}) {C_DARK}│ Проверок: {scan_count}{RESET}", flush=True)
+                                print(f"  {C_GRAY}[{now_str}]{RESET} {C_PURPLE}● ПУЛЬС РЫНКА:{RESET} {C_WHITE}{t1} {n1}{RESET} ({C_YELLOW}{p1:.2f} TON{RESET}) │ {C_WHITE}{t2} {n2}{RESET} ({C_YELLOW}{p2:.2f} TON{RESET}) {C_DARK}│ Проверок: {STATE['total_scans']}{RESET}", flush=True)
                 except Exception:
                     pass
 
-            # Периодическая строка статуса каждые 12 секунд (чтобы пользователь видел живую активность)
-            if current_time - last_status_time >= 12.0:
-                last_status_time = current_time
+            # 2. Строка радара (каждые 12 сек)
+            if current_time - last_radar_time >= RADAR_INTERVAL_SEC:
+                last_radar_time = current_time
                 now_str = datetime.now().strftime("%H:%M:%S")
-                print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}⚡ СКАНИРОВАНИЕ...{RESET} {C_DARK}Проверок:{RESET} {C_WHITE}{scan_count}{RESET} │ {C_DARK}Флор рынка:{RESET} {C_YELLOW}{current_market_floor:.2f} TON{RESET} │ {C_DARK}Ждем лот:{RESET} {C_GREEN}<= {MAX_BUY_PRICE_TON} TON{RESET}", flush=True)
+                profit_info = f"│ {C_GREEN}Профит: +{STATE['total_profit_ton']:.2f} TON{RESET} " if STATE['total_profit_ton'] > 0 else ""
+                print(f"  {C_GRAY}[{now_str}]{RESET} {C_CYAN}⚡ СКАНИРОВАНИЕ...{RESET} {C_DARK}Проверок:{RESET} {C_WHITE}{STATE['total_scans']}{RESET} │ {C_DARK}Флор:{RESET} {C_YELLOW}{STATE['market_floor']:.2f} TON{RESET} │ {C_DARK}Выкуп до:{RESET} {C_GREEN}{STATE['max_buy_price']:.2f} TON{RESET} {profit_info}", flush=True)
 
-            # Основное сканирование на миспрайсы
+            # 3. Периодическая проверка и смарт-корректировка выставленных лотов (раз в 5 минут)
+            if current_time - last_adjust_time >= 300:
+                last_adjust_time = current_time
+                asyncio.create_task(check_and_adjust_sales(session))
+
+            # 4. Основной поиск: запрашиваем свежие дешевые лоты
+            search_payload = {
+                "count": 15, "cursor": "",
+                "collectionNames": [], "modelNames": [], "backdropNames": [], "symbolNames": [],
+                "ordering": 2, "lowToHigh": True, "maxPrice": max_nano
+            }
+
             try:
                 async with session.post(f"{API_BASE}/gifts/saling", json=search_payload, headers=HEADERS, timeout=3.0) as resp:
                     if resp.status == 200:
@@ -256,12 +342,24 @@ async def run_sniper():
                                 if gid in seen_ids:
                                     continue
                                 seen_ids.add(gid)
-                                if gift.get("salePrice", 0) <= max_nano:
-                                    asyncio.create_task(execute_buy(session, gift))
+
+                                price_nano = gift.get("salePrice", 0)
+                                price_ton = price_nano / 1e9
+                                num = gift.get("num")
+
+                                # Анализ на редкий номер
+                                rarity_label, multiplier = check_rare_number(num)
+
+                                # Условия на выкуп:
+                                # 1. Редкий номер (покупаем с повышенным приоритетом)
+                                # 2. Обычный лот с ценой в пределах нашего лимита баланса
+                                if price_nano <= max_nano:
+                                    asyncio.create_task(execute_buy(session, gift, rarity_label, multiplier))
+
                     elif resp.status == 401:
                         now_str = datetime.now().strftime("%H:%M:%S")
                         print(f"  {C_GRAY}[{now_str}]{RESET} {C_RED}✖ Ошибка 401: Сессия устарела. Обновите токен.{RESET}", flush=True)
-                        await asyncio.sleep(5)
+                        await asyncio.sleep(6)
             except asyncio.CancelledError:
                 break
             except Exception:
