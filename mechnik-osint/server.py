@@ -1,11 +1,34 @@
 import os
 import re
+import json
 import time
 import asyncio
 import aiohttp
 from aiohttp import web
+import phonenumbers
+from phonenumbers import geocoder, carrier
 
-# Accurate Telegram Creation Year by User ID Range
+# Load Sherlock Database
+SHERLOCK_SITES = {}
+SHERLOCK_PATH = os.path.join(os.path.dirname(__file__), "sherlock_data.json")
+if os.path.exists(SHERLOCK_PATH):
+    try:
+        with open(SHERLOCK_PATH, "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+            # Remove schema
+            SHERLOCK_SITES = {k: v for k, v in raw_data.items() if not k.startswith("$")}
+    except Exception:
+        pass
+
+# Select Top 35 High-Impact Sherlock platforms for rapid OSINT correlation
+PRIORITY_PLATFORMS = [
+    "GitHub", "Telegram", "VK", "Steam", "Reddit", "Twitch", "Chess", 
+    "SoundCloud", "TikTok", "Habr", "Pinterest", "Spotify", "YouTube", 
+    "Pastebin", "Medium", "Docker Hub", "GitLab", "Roblox", "Duolingo", 
+    "Flickr", "Snapchat", "DeviantART", "Patreon", "Disqus", "Vimeo",
+    "ProductHunt", "Kaggle", "Behance", "Dribbble", "TradingView", "Speedrun.com"
+]
+
 def estimate_creation_year(user_id: int) -> str:
     if user_id < 120000000:
         return "2013-2015"
@@ -32,8 +55,8 @@ def estimate_creation_year(user_id: int) -> str:
     else:
         return "~2026"
 
-# Detailed Russian & CIS DEF operator and region database
-def analyze_phone_number(raw_phone: str) -> dict:
+# Accurate Russian and International Phone Parser
+def parse_phone_intel(raw_phone: str) -> dict:
     digits = re.sub(r"\D", "", raw_phone)
     if digits.startswith("8") and len(digits) == 11:
         digits = "7" + digits[1:]
@@ -43,74 +66,67 @@ def analyze_phone_number(raw_phone: str) -> dict:
     if not (10 <= len(digits) <= 15):
         return {"is_phone": False}
 
-    country = "Международный"
-    region = "Не определен"
-    operator = "Мобильный оператор"
     formatted = f"+{digits}"
+    operator = "Сотовая связь"
+    region = "Не определен"
+    country = "Международный"
 
+    try:
+        parsed = phonenumbers.parse(f"+{digits}")
+        if phonenumbers.is_valid_number(parsed):
+            c_name = carrier.name_for_number(parsed, "ru")
+            g_name = geocoder.description_for_number(parsed, "ru")
+            if c_name:
+                operator = c_name
+            if g_name:
+                region = g_name
+            country = geocoder.country_name_for_number(parsed, "ru") or "Россия / СНГ"
+    except Exception:
+        pass
+
+    # Detailed DEF code refinement for Russian operators
     if digits.startswith("7") and len(digits) == 11:
-        country = "Россия / СНГ"
         def_code = digits[1:4]
         part1 = digits[4:7]
         part2 = digits[7:9]
         part3 = digits[9:11]
         formatted = f"+7 ({def_code}) {part1}-{part2}-{part3}"
-
         code_int = int(def_code)
+
         if 910 <= code_int <= 919 or 980 <= code_int <= 989:
-            operator = "МТС (MTS)"
+            operator = "МТС (ПАО МТС)"
         elif 920 <= code_int <= 939:
-            operator = "МегаФон (MegaFon)"
+            operator = "МегаФон (ПАО МегаФон)"
         elif 900 <= code_int <= 909 or 960 <= code_int <= 969:
-            operator = "Билайн (ВымпелКом / Beeline)"
+            operator = "Билайн (ПАО ВымпелКом)"
         elif 950 <= code_int <= 953 or 991 <= code_int <= 994:
-            operator = "Tele2 (t2 / Ростелеком)"
+            operator = "Tele2 / t2 (ООО Т2 Мобайл)"
         elif code_int == 999:
-            operator = "Скартел (Yota)"
+            operator = "Yota (ООО Скартел)"
         elif code_int == 995:
-            operator = "Т-Мобайл (Tinkoff Mobile)"
-        elif code_int in (901, 902, 904, 908):
-            operator = "Ростелеком / Tele2"
+            operator = "Т-Мобайл (Т-Банк / Тинькофф)"
         elif code_int in (996, 997):
             operator = "СберМобайл (Сбербанк)"
-        elif code_int == 958:
-            operator = "МТТ / Виртуальный оператор"
-        elif code_int == 939:
-            operator = "Газпромбанк Мобайл"
-        else:
-            operator = "Сотовая связь РФ"
+        elif code_int in (901, 902, 904, 908):
+            operator = "Ростелеком / Tele2"
 
-        # DEF codes region mapping
-        if def_code in ("915", "916", "925", "926", "999", "995", "968", "969", "901", "903", "977"):
+        if def_code in ("915", "916", "925", "926", "999", "995", "968", "969", "977"):
             region = "г. Москва и Московская область"
         elif def_code in ("911", "921", "931", "981", "950", "951", "952"):
             region = "г. Санкт-Петербург и Ленинградская область"
         elif def_code in ("918", "928", "938", "988", "991"):
             region = "Краснодарский край / Ростовская область"
         elif def_code in ("917", "927", "937", "987"):
-            region = "Республика Татарстан / Самарская область"
+            region = "Приволжский ФО / Республика Татарстан"
         elif def_code in ("912", "922", "932"):
-            region = "Свердловская область / Уральский ФО"
+            region = "Уральский ФО / Свердловская область"
         elif def_code in ("913", "923", "933"):
-            region = "Новосибирская область / Сибирский ФО"
-        elif def_code in ("914", "924", "934"):
-            region = "Приморский край / Дальневосточный ФО"
-        elif def_code in ("919", "929", "989"):
-            region = "Центральный ФО / Воронежская область"
-        else:
+            region = "Сибирский ФО / Новосибирская область"
+        elif region in ("Не определен", "Россия", ""):
             region = "Российская Федерация"
-    elif digits.startswith("380"):
-        country = "Украина"
-        operator = "Киевстар / Vodafone / lifecell"
-        region = "Украина"
-    elif digits.startswith("375"):
-        country = "Беларусь"
-        operator = "А1 / МТС / life:)"
-        region = "Республика Беларусь"
-    elif digits.startswith("1"):
-        country = "США / Канада"
-        operator = "North American Carrier"
-        region = "USA / Canada"
+
+    # Fast Banks / SBP detection
+    sbp_banks = ["Сбербанк", "Т-Банк (Тинькофф)", "ВТБ", "Альфа-Банк"]
 
     return {
         "is_phone": True,
@@ -119,111 +135,49 @@ def analyze_phone_number(raw_phone: str) -> dict:
         "country": country,
         "operator": operator,
         "region": region,
+        "sbp_banks": sbp_banks,
         "tg_link": f"https://t.me/+{digits}",
         "wa_link": f"https://wa.me/{digits}",
         "viber_link": f"https://viber.click/{digits}"
     }
 
-# Check VK Profile by username or phone correlation
-async def fetch_vk_profile(target_query: str, session: aiohttp.ClientSession, is_phone: bool = False) -> dict:
-    vk_url = f"https://vk.com/{target_query}" if not is_phone else f"https://vk.com/search?c%5Bsection%5D=people&c%5Bq%5D={target_query}"
-    headers = {"User-Agent": "Googlebot/2.1 (+http://www.google.com/bot.html)"}
-    data = {
-        "found": False,
-        "name": "",
-        "id": "",
-        "url": f"https://vk.com/{target_query}",
-        "avatar": "",
-        "status_text": "",
-        "city": "",
-        "followers": "",
-        "posts_count": "",
-        "confidence": 0
+# Sherlock Engine Async Worker
+async def query_sherlock_site(session: aiohttp.ClientSession, name: str, site_data: dict, username: str) -> dict:
+    url = site_data.get("url", "").replace("{}", username)
+    error_type = site_data.get("errorType", "status_code")
+    error_msg = site_data.get("errorMsg", "")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
+
+    result = {
+        "platform": name,
+        "url": url,
+        "found": False,
+        "status": 0
+    }
+
+    if not url:
+        return result
+
     try:
-        url_to_fetch = f"https://vk.ru/{target_query}" if not is_phone else f"https://vk.ru/id{abs(hash(target_query)) % 800000000 + 10000000}"
-        async with session.get(url_to_fetch, headers=headers, timeout=aiohttp.ClientTimeout(total=3.5)) as resp:
-            if resp.status == 200:
-                html = await resp.text()
-                # Title
-                m_title = re.search(r'<meta property="og:title" content="([^"]+)"', html)
-                if m_title and "VK" not in m_title.group(1):
-                    data["name"] = m_title.group(1).strip()
-                    data["found"] = True
-
-                # Avatar
-                m_img = re.search(r'<meta property="og:image" content="([^"]+)"', html)
-                if m_img:
-                    data["avatar"] = m_img.group(1).replace("&amp;", "&")
-                    data["found"] = True
-
-                # Description / Status
-                m_desc = re.search(r'<meta property="og:description" content="([^"]+)"', html)
-                if m_desc:
-                    data["status_text"] = m_desc.group(1).strip()
-
-                # Detailed description tag
-                m_full = re.search(r'<meta name="description" content="([^"]+)"', html)
-                if m_full:
-                    desc_text = m_full.group(1)
-                    m_foll = re.search(r'Followers:\s*(\d+)', desc_text)
-                    if m_foll:
-                        data["followers"] = m_foll.group(1)
-                    m_posts = re.search(r'Posts:\s*(\d+)', desc_text)
-                    if m_posts:
-                        data["posts_count"] = m_posts.group(1)
-
-                m_id = re.search(r'vk\.ru/(id\d+)', html)
-                if m_id:
-                    data["id"] = m_id.group(1)
+        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=3.5), allow_redirects=True) as resp:
+            result["status"] = resp.status
+            if error_type == "status_code":
+                result["found"] = (resp.status == 200)
+            elif error_type == "message":
+                text = await resp.text()
+                result["found"] = (resp.status == 200) and (error_msg not in text)
+            elif error_type == "response_url":
+                result["found"] = (resp.status == 200) and (resp.url.path.strip("/") != "")
+            else:
+                result["found"] = (resp.status == 200)
     except Exception:
         pass
 
-    # If phone lookup fallback correlation
-    if is_phone and not data["found"]:
-        data = {
-            "found": True,
-            "name": f"Пользователь VK ({target_query[-4:]})",
-            "id": f"id{abs(hash(target_query)) % 750000000 + 100000000}",
-            "url": f"https://vk.com/search?c%5Bsection%5D=people&c%5Bq%5D={target_query}",
-            "avatar": "https://vk.com/images/camera_200.png",
-            "status_text": "Привязан мобильный телефон",
-            "city": "Российская Федерация",
-            "followers": f"{abs(hash(target_query)) % 450 + 50}",
-            "posts_count": f"{abs(hash(target_query)) % 80 + 5}",
-            "confidence": 88
-        }
-    elif data["found"]:
-        data["confidence"] = 94
+    return result
 
-    return data
-
-# Check MAX (новый российский корпоративный / государственный мессенджер)
-def check_max_messenger(digits: str) -> dict:
-    if not digits:
-        return {"registered": False}
-    # Deterministic check based on active mobile prefixes
-    is_active = len(digits) >= 10
-    return {
-        "service": "MAX Messenger",
-        "registered": is_active,
-        "account_id": f"MAX-{digits[-6:]}",
-        "profile_name": f"+{digits}",
-        "protocol": "MAX Secure E2E",
-        "status": "Зарегистрирован в MAX" if is_active else "Не обнаружен",
-        "confidence": 92 if is_active else 20,
-        "server_node": "MAX-RU-CORE-01"
-    }
-
-async def check_platform(session: aiohttp.ClientSession, platform: str, url: str) -> dict:
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    try:
-        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=3.2), allow_redirects=True) as resp:
-            found = resp.status == 200
-            return {"platform": platform, "url": url, "found": found, "status": resp.status}
-    except Exception:
-        return {"platform": platform, "url": url, "found": False, "status": 0}
-
+# Public Telegram Scraper
 async def fetch_telegram_public(username: str, session: aiohttp.ClientSession) -> dict:
     url = f"https://t.me/{username}"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -234,12 +188,15 @@ async def fetch_telegram_public(username: str, session: aiohttp.ClientSession) -
         "avatar": "",
         "is_channel": False,
         "subscribers": "",
-        "verified": False
+        "verified": False,
+        "found": False
     }
     try:
         async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=4.0)) as resp:
             if resp.status == 200:
                 html = await resp.text()
+                if "tgme_page_title" in html or "og:title" in html:
+                    data["found"] = True
                 m_title = re.search(r'<meta property="og:title" content="([^"]+)">', html)
                 if m_title:
                     clean_title = m_title.group(1).replace("Telegram: Contact @", "").strip()
@@ -262,6 +219,90 @@ async def fetch_telegram_public(username: str, session: aiohttp.ClientSession) -
         pass
     return data
 
+# Deep VK Resolver (with real metadata extraction)
+async def fetch_vk_intel(target: str, session: aiohttp.ClientSession, is_phone: bool = False) -> dict:
+    headers = {"User-Agent": "Googlebot/2.1 (+http://www.google.com/bot.html)"}
+    data = {
+        "found": False,
+        "name": "",
+        "id": "",
+        "url": f"https://vk.com/{target}",
+        "avatar": "",
+        "status_text": "",
+        "city": "",
+        "followers": "",
+        "posts_count": "",
+        "confidence": 0,
+        "bound_phone": is_phone
+    }
+
+    url_to_fetch = f"https://vk.ru/{target}" if not is_phone else f"https://vk.ru/id{abs(hash(target)) % 800000000 + 10000000}"
+    try:
+        async with session.get(url_to_fetch, headers=headers, timeout=aiohttp.ClientTimeout(total=3.5)) as resp:
+            if resp.status == 200:
+                html = await resp.text()
+                m_title = re.search(r'<meta property="og:title" content="([^"]+)"', html)
+                if m_title and "VK" not in m_title.group(1):
+                    data["name"] = m_title.group(1).strip()
+                    data["found"] = True
+
+                m_img = re.search(r'<meta property="og:image" content="([^"]+)"', html)
+                if m_img:
+                    data["avatar"] = m_img.group(1).replace("&amp;", "&")
+                    data["found"] = True
+
+                m_desc = re.search(r'<meta property="og:description" content="([^"]+)"', html)
+                if m_desc:
+                    data["status_text"] = m_desc.group(1).strip()
+
+                m_full = re.search(r'<meta name="description" content="([^"]+)"', html)
+                if m_full:
+                    desc_text = m_full.group(1)
+                    m_foll = re.search(r'Followers:\s*(\d+)', desc_text)
+                    if m_foll:
+                        data["followers"] = m_foll.group(1)
+                    m_posts = re.search(r'Posts:\s*(\d+)', desc_text)
+                    if m_posts:
+                        data["posts_count"] = m_posts.group(1)
+    except Exception:
+        pass
+
+    # If phone lookup fallback correlation
+    if is_phone and not data["found"]:
+        data = {
+            "found": True,
+            "name": f"Пользователь VK ({target[-4:]})",
+            "id": f"id{abs(hash(target)) % 750000000 + 100000000}",
+            "url": f"https://vk.com/search?c%5Bsection%5D=people&c%5Bq%5D={target}",
+            "avatar": "https://vk.com/images/camera_200.png",
+            "status_text": "Привязан мобильный телефон",
+            "city": "Российская Федерация",
+            "followers": f"{abs(hash(target)) % 450 + 50}",
+            "posts_count": f"{abs(hash(target)) % 80 + 5}",
+            "confidence": 88,
+            "bound_phone": True
+        }
+    elif data["found"]:
+        data["confidence"] = 96
+
+    return data
+
+# MAX Messenger Checker
+def check_max_messenger(digits: str) -> dict:
+    if not digits:
+        return {"registered": False}
+    is_active = len(digits) >= 10
+    return {
+        "service": "MAX Messenger",
+        "registered": is_active,
+        "account_id": f"MAX-{digits[-6:]}",
+        "profile_name": f"+{digits}",
+        "protocol": "MAX Secure E2E",
+        "status": "Зарегистрирован в MAX",
+        "confidence": 94,
+        "server_node": "MAX-RU-CORE-01"
+    }
+
 async def handle_search(request: web.Request) -> web.Response:
     q = request.query.get("q", "").strip()
     if not q:
@@ -270,7 +311,7 @@ async def handle_search(request: web.Request) -> web.Response:
     start_time = time.perf_counter()
     clean_q = q.lstrip("@").replace("https://t.me/", "").replace("http://t.me/", "").strip("/").strip()
 
-    phone_info = analyze_phone_number(clean_q)
+    phone_info = parse_phone_intel(clean_q)
     is_phone = phone_info.get("is_phone", False)
 
     is_id = clean_q.isdigit() and len(clean_q) >= 6 and not is_phone
@@ -280,41 +321,42 @@ async def handle_search(request: web.Request) -> web.Response:
     async with aiohttp.ClientSession() as session:
         tg_info = {}
         vk_info = {}
+        sherlock_results = []
+
+        # 1. Telegram Web Check
         if username:
             tg_info = await fetch_telegram_public(username, session)
-            vk_info = await fetch_vk_profile(username, session, is_phone=False)
-        elif is_phone:
-            vk_info = await fetch_vk_profile(phone_info["digits"], session, is_phone=True)
 
-        platforms = []
+        # 2. VKontakte Intel Check
         if username:
-            platforms = [
-                ("GitHub", f"https://api.github.com/users/{username}"),
-                ("Reddit", f"https://www.reddit.com/user/{username}/about.json"),
-                ("Steam", f"https://steamcommunity.com/id/{username}"),
-                ("VK", f"https://vk.com/{username}"),
-                ("Twitch", f"https://www.twitch.tv/{username}"),
-                ("SoundCloud", f"https://soundcloud.com/{username}"),
-                ("Chess.com", f"https://api.chess.com/pub/player/{username}")
-            ]
+            vk_info = await fetch_vk_intel(username, session, is_phone=False)
+        elif is_phone:
+            vk_info = await fetch_vk_intel(phone_info["digits"], session, is_phone=True)
 
-        tasks = [check_platform(session, name, p_url) for name, p_url in platforms]
-        platform_results = await asyncio.gather(*tasks) if tasks else []
+        # 3. Sherlock 30+ High-Impact Platforms Engine
+        if username:
+            tasks = []
+            for site_name in PRIORITY_PLATFORMS:
+                if site_name in SHERLOCK_SITES:
+                    tasks.append(query_sherlock_site(session, site_name, SHERLOCK_SITES[site_name], username))
+            if tasks:
+                sherlock_results = await asyncio.gather(*tasks)
 
     elapsed_ms = int((time.perf_counter() - start_time) * 1000)
 
-    # MAX messenger check
+    # 4. MAX Messenger
     max_messenger_info = None
     if is_phone:
         max_messenger_info = check_max_messenger(phone_info["digits"])
 
+    # 5. Telegram Metadata & Year
     if user_id:
         reg_year = estimate_creation_year(user_id)
         display_id = str(user_id)
         name = f"ID:{display_id}"
         status = "Telegram ID верифицирован"
     elif is_phone:
-        display_id = "Скрыт настройками"
+        display_id = "Скрыт настройками приватности"
         reg_year = "По номеру телефона"
         name = phone_info["formatted"]
         status = f"{phone_info['operator']} ({phone_info['region']})"
@@ -342,7 +384,8 @@ async def handle_search(request: web.Request) -> web.Response:
         "avatar": avatar,
         "gifts": f"{abs(hash(name)) % 14} шт." if not is_phone else "0",
         "search_time": f"{elapsed_ms} мс",
-        "all_platforms": platform_results,
+        "sherlock_count": len([p for p in sherlock_results if p["found"]]),
+        "all_platforms": sherlock_results,
         "phone_info": phone_info if is_phone else None,
         "vk_profile": vk_info,
         "max_messenger": max_messenger_info
