@@ -35,25 +35,13 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Configure Git for persistence
-        run: |
-          git config user.name "CryptoBot Runner"
-          git config user.email "bot-runner@users.noreply.github.com"
-
       - name: Run Bot (Continuous loop with state persistence)
         env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN || '8868899126:AAHzT4uBx6VWCWNnHDMXZz7HwXJyARIC0TM' }}
-          OWNER_ID: ${{ secrets.OWNER_ID || '7162454634' }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          OWNER_ID: ${{ secrets.OWNER_ID }}
         run: |
-          echo "Starting CryptoBot..."
-          # Run python main.py for up to 300 minutes (5 hours)
+          echo "Starting CryptoBot on GitHub Cloud Server..."
           timeout 300m python main.py || true
-          
-          # Auto-commit and push database state
-          echo "Saving database state..."
-          git add cryptobot.db cryptobot.db-wal cryptobot.db-shm 2>/dev/null || true
-          git commit -m "chore: persist cryptobot.db state [skip ci]" || true
-          git push origin main || true
 
       - name: Trigger next cycle
         if: always()
@@ -61,6 +49,6 @@ jobs:
           echo "Triggering next run cycle..."
           curl -X POST \
             -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ github.token }}" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/${{ github.repository }}/actions/workflows/bot.yml/dispatches \
             -d '{"ref":"main"}' || true
