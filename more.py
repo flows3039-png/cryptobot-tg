@@ -461,19 +461,46 @@ async def cb_check_confirm(cb: CallbackQuery, state: FSMContext):
     await state.clear()
     await cb.answer()
 
-@router.message(F.text.startswith("/start check_"))
-async def notify_check_creator(bot: Bot, res: dict, activator_user):
+async def notify_check_creator(bot: Bot, res: dict, activator_user) -> None:
     creator_id = res.get("creator_id")
     if not creator_id:
         return
     try:
-        user_mention = f"@{activator_user.username}" if activator_user.username else f'<a href="tg://user?id={activator_user.id}">{activator_user.first_name}</a>'
+        # имя со ссылкой на профиль
+        name = activator_user.first_name or ""
+        if activator_user.last_name:
+            name += f" {activator_user.last_name}"
+        if activator_user.username:
+            user_link = f'<a href="https://t.me/{activator_user.username}">{name}</a>'
+        else:
+            user_link = f'<a href="tg://user?id={activator_user.id}">{name}</a>'
+
         check_icon = '<tg-emoji emoji-id="5311998535032409760">🧾</tg-emoji>'
-        fire_icon = '<tg-emoji emoji-id="5427009714745517609">🎉</tg-emoji>'
+        asset = res["asset"]
+        amount = res["per_activation"]
+
+        # эмодзи валюты
+        if asset == "USDT":
+            asset_icon = '<tg-emoji emoji-id="6035288280562404083">💚</tg-emoji>'
+        else:
+            from config import CURRENCIES
+            cur_info = CURRENCIES.get(asset, {})
+            emoji_id = cur_info.get("emoji_id", "")
+            emoji_fb = cur_info.get("emoji", asset[0])
+            asset_icon = f'<tg-emoji emoji-id="{emoji_id}">{emoji_fb}</tg-emoji>' if emoji_id else emoji_fb
+
+        try:
+            prices = await get_mid_prices()
+            price_usd = prices.get(asset, 0)
+        except Exception:
+            from config import CURRENCIES
+            price_usd = CURRENCIES.get(asset, {}).get("price_usd", 0)
+
+        fiat_val = amount * price_usd
+
         notify_text = (
-            f"{check_icon} <b>Ваш чек успешно активирован!</b>\n\n"
-            f"Пользователь {user_mention} активировал ваш чек на <b>{res['per_activation']:g} {res['asset']}</b>.\n\n"
-            f"{fire_icon} Средства успешно начислены получателю."
+            f"{check_icon} {user_link} активировал(а) ваш чек и получил(а) "
+            f"{asset_icon} {amount:g} {asset} (${fiat_val:.2f})."
         )
         await bot.send_message(creator_id, notify_text, parse_mode="HTML")
         try:
@@ -483,6 +510,7 @@ async def notify_check_creator(bot: Bot, res: dict, activator_user):
             pass
     except Exception as e:
         log.warning("Could not notify check creator: %s", e)
+
 
 async def activate_check_link(msg: Message, state: FSMContext):
     cid = msg.text.split("check_", 1)[1].strip()

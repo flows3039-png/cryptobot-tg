@@ -2,7 +2,14 @@
 *.env
 __pycache__/
 *.pyc
+*.pyo
+*.db
+*.db-shm
+*.db-wal
 mrkt-sniper/.env
 xrocket-catcher/.env
 *.session
 *.session-journal
+bot_log.txt
+checks_errors.txt
+app_code.tmp

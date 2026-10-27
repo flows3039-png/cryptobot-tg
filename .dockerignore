@@ -5,8 +5,16 @@ __pycache__
 .git
 .gitignore
 .env
+*.env
+*.db
 *.db-shm
 *.db-wal
+*.session
+*.session-journal
 checks_errors.txt
+bot_log.txt
 test_verification.py
 start.bat
+mrkt-sniper/
+xrocket-catcher/
+CRYPTO_BOT.bat
