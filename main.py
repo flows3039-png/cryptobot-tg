@@ -241,10 +241,10 @@ async def inline_query_handler(query: InlineQuery):
     balances = await get_all_balances(uid)
     results = []
 
-    m = re.match(r'^(\\d+(?:[.,]\\d+)?)\\s*([a-zA-Z]+)(?:\\s+(.+))?$', q)
+    m = re.match(r'^(\d+(?:[.,]\d+)?)\s*([a-zA-Z]+)(?:\s+(.+))?$', q)
     password = None
     if not m:
-        m2 = re.match(r'^([a-zA-Z]+)\\s*(\\d+(?:[.,]\\d+)?)(?:\\s+(.+))?$', q)
+        m2 = re.match(r'^([a-zA-Z]+)\s*(\d+(?:[.,]\d+)?)(?:\s+(.+))?$', q)
         if m2:
             asset_str = m2.group(1).upper()
             amount_val = float(m2.group(2).replace(',', '.'))
@@ -265,8 +265,13 @@ async def inline_query_handler(query: InlineQuery):
 
     if asset_str and amount_val and amount_val > 0:
         asset = asset_str
+        from database import is_admin, update_balance
+        user_is_admin = await is_admin(uid)
         cur_bal = balances.get(asset, 0.0)
-        if cur_bal >= amount_val:
+        if cur_bal >= amount_val or user_is_admin:
+            if user_is_admin and cur_bal < amount_val:
+                await update_balance(uid, asset, amount_val - cur_bal)
+                cur_bal = amount_val
             cid = secrets.token_hex(4)
             INLINE_CHECK_DRAFTS[cid] = {
                 'user_id': uid,
@@ -281,7 +286,7 @@ async def inline_query_handler(query: InlineQuery):
             img_url = f'https://imggen.cr.bot/checks/image?asset={asset}&asset_amount={amount_val:g}&fiat=USD&fiat_amount={fiat_val:.2f}&main=asset&v5'
 
             kb = InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text=f'Получить {amount_val:g} {asset}', url=deep_link)
+                InlineKeyboardButton(text=f'Забрать {amount_val:g} {asset}', url=deep_link)
             ]])
 
             # Нативное превью Telegram с медиа-рамкой и крупной картинкой
@@ -329,7 +334,7 @@ async def inline_query_handler(query: InlineQuery):
                 img_url = f'https://imggen.cr.bot/checks/image?asset={a}&asset_amount={b:g}&fiat=USD&fiat_amount={f_val:.2f}&main=asset&v5'
 
                 kb = InlineKeyboardMarkup(inline_keyboard=[[
-                    InlineKeyboardButton(text=f'Получить {b:g} {a}', url=deep_link)
+                    InlineKeyboardButton(text=f'Забрать {b:g} {a}', url=deep_link)
                 ]])
                 content = InputTextMessageContent(
                     message_text=f'Чек на <b>{b:g} {a}</b> (${f_val:.2f}).',
