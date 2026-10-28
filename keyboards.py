@@ -286,6 +286,7 @@ def referral_kb(ref_link: str, current_period: str = "all") -> InlineKeyboardMar
 def admin_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Изменить баланс", callback_data="admin:set_bal"), InlineKeyboardButton(text="Выдать баланс", callback_data="admin:bal")],
+        [InlineKeyboardButton(text="Профиль юзера", callback_data="admin:user_info"), InlineKeyboardButton(text="Статистика 24ч", callback_data="admin:stats_24h")],
         [InlineKeyboardButton(text="Статистика базы", callback_data="admin:all")],
         [InlineKeyboardButton(text="Назначить админа", callback_data="admin:add"), InlineKeyboardButton(text="Снять админа", callback_data="admin:del")]
     ])

@@ -643,3 +643,47 @@ async def get_db_stats() -> dict:
         "transactions": tx_count,
         "nft_seen": nft_seen_count
     }
+
+# --- РАСШИРЕННАЯ СТАТИСТИКА И ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ---
+async def get_24h_stats() -> dict:
+    now = int(time.time())
+    day_ago = now - 86400
+    async with db_conn.tx() as c:
+        new_users = (await (await c.execute("SELECT COUNT(*) FROM users WHERE created_at >= ?", (day_ago,))).fetchone())[0]
+        new_checks = (await (await c.execute("SELECT COUNT(*) FROM checks WHERE created_at >= ?", (day_ago,))).fetchone())[0]
+        activations_24h = (await (await c.execute("SELECT COUNT(*) FROM check_activations WHERE created_at >= ?", (day_ago,))).fetchone())[0]
+        tx_24h = (await (await c.execute("SELECT COUNT(*) FROM ledger WHERE created_at >= ?", (day_ago,))).fetchone())[0]
+        
+        # Оборот чеков за 24 часа по валютам
+        async with c.execute("SELECT asset, SUM(total_amount) as total FROM checks WHERE created_at >= ? GROUP BY asset", (day_ago,)) as cur:
+            volume_rows = await cur.fetchall()
+            volume_by_asset = {row["asset"]: row["total"] for row in volume_rows}
+            
+    return {
+        "new_users": new_users,
+        "new_checks": new_checks,
+        "activations_24h": activations_24h,
+        "tx_24h": tx_24h,
+        "volume_by_asset": volume_by_asset
+    }
+
+async def get_user_full_profile(uid: int) -> dict | None:
+    async with db_conn.tx() as c:
+        user_row = await (await c.execute("SELECT * FROM users WHERE id = ?", (uid,))).fetchone()
+        if not user_row:
+            return None
+        user = dict(user_row)
+        
+        # Балансы
+        async with c.execute("SELECT asset, amount FROM balances WHERE user_id = ?", (uid,)) as cur:
+            b_rows = await cur.fetchall()
+            balances = {r["asset"]: r["amount"] for r in b_rows if r["amount"] > 0}
+            
+        # Чеки
+        checks_created = (await (await c.execute("SELECT COUNT(*) FROM checks WHERE creator_id = ?", (uid,))).fetchone())[0]
+        checks_activated = (await (await c.execute("SELECT COUNT(*) FROM check_activations WHERE user_id = ?", (uid,))).fetchone())[0]
+        
+        user["balances"] = balances
+        user["checks_created"] = checks_created
+        user["checks_activated"] = checks_activated
+        return user

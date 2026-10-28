@@ -1,6 +1,8 @@
 # admin.py
 import uuid
 import os
+import time
+import datetime
 import aiosqlite
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
@@ -14,7 +16,7 @@ from database import (
     get_balance, DB_PATH, create_check,
     add_admin, remove_admin, get_all_admins, is_admin,
     create_admin_fake_check, create_admin_multicheck,
-    get_db_stats
+    get_db_stats, get_24h_stats, get_user_full_profile
 )
 from keyboards import (
     admin_menu_kb, admin_back_kb, multicheck_created_kb
@@ -29,6 +31,7 @@ class AdminFSM(StatesGroup):
     waiting_multicheck = State()
     waiting_add_admin = State()
     waiting_del_admin = State()
+    waiting_user_lookup = State()
 
 async def check_admin(user_id: int) -> bool:
     if user_id == OWNER_ID:
@@ -56,7 +59,7 @@ async def cmd_admin(msg: Message):
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
         f"{_e('premium_clean', '⚡')} <b>Панель управления CryptoBot</b>\n\n"
-        "Система управления балансами, чеками и правами администраторов.\n"
+        "Система управления балансами, чеками, аналитикой и правами администраторов.\n"
         "Выберите раздел для работы:"
     )
     if os.path.exists(admin_banner_path):
@@ -69,6 +72,98 @@ async def cmd_admin(msg: Message):
         )
     else:
         await msg.answer(text, reply_markup=admin_menu_kb(), parse_mode="HTML")
+
+# --- СТАТИСТИКА ЗА 24 ЧАСА ---
+@router.callback_query(F.data == "admin:stats_24h")
+async def cb_admin_stats_24h(cb: CallbackQuery):
+    if not await check_admin(cb.from_user.id):
+        await cb.answer("Нет доступа.", show_alert=True)
+        return
+    s = await get_24h_stats()
+    
+    vol_lines = []
+    if s["volume_by_asset"]:
+        for asset, total in s["volume_by_asset"].items():
+            emoji = CURRENCIES.get(asset, {}).get("emoji", "🪙")
+            vol_lines.append(f"• {emoji} <b>{asset}</b>: {total:,.2f}")
+        vol_str = "\n".join(vol_lines)
+    else:
+        vol_str = "<i>за 24ч чеки не создавались</i>"
+
+    text = (
+        f"{_e('lightning', '⚡')} <b>Аналитика за последние 24 часа</b>\n\n"
+        f"• Новых пользователей: <b>{s['new_users']}</b>\n"
+        f"• Создано чеков: <b>{s['new_checks']}</b>\n"
+        f"• Активаций чеков: <b>{s['activations_24h']}</b>\n"
+        f"• Транзакций в реестре: <b>{s['tx_24h']}</b>\n\n"
+        f"<b>Объем созданных чеков за 24ч:</b>\n{vol_str}"
+    )
+    await edit_admin_msg(cb, text, reply_markup=admin_back_kb())
+    await cb.answer()
+
+# --- ПРОСМОТР ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ ---
+@router.callback_query(F.data == "admin:user_info")
+async def cb_admin_user_lookup(cb: CallbackQuery, state: FSMContext):
+    if not await check_admin(cb.from_user.id):
+        await cb.answer("Нет доступа.", show_alert=True)
+        return
+    await state.set_state(AdminFSM.waiting_user_lookup)
+    text = (
+        f"{_e('settings', '🔍')} <b>Поиск профиля пользователя</b>\n\n"
+        "Отправьте Telegram ID пользователя для просмотра полной информации:"
+    )
+    await edit_admin_msg(cb, text, reply_markup=admin_back_kb())
+    await cb.answer()
+
+@router.message(AdminFSM.waiting_user_lookup)
+async def proc_admin_user_lookup(msg: Message, state: FSMContext):
+    if not await check_admin(msg.from_user.id):
+        return
+    raw = (msg.text or "").strip()
+    try:
+        uid = int(raw)
+    except ValueError:
+        await msg.answer("❌ Введите корректный числовой Telegram ID.")
+        return
+
+    profile = await get_user_full_profile(uid)
+    if not profile:
+        await msg.answer(f"❌ Пользователь с ID <code>{uid}</code> не найден в базе данных.", reply_markup=admin_menu_kb(), parse_mode="HTML")
+        await state.clear()
+        return
+
+    created_dt = datetime.datetime.fromtimestamp(profile.get("created_at", time.time())).strftime("%d.%m.%Y %H:%M")
+    uname = f"@{profile['username']}" if profile.get("username") else "<i>нет username</i>"
+    phone = profile.get("phone") or "<i>не привязан</i>"
+    lang = profile.get("language", "ru").upper()
+    fiat = profile.get("fiat_currency", "USD")
+    
+    bals = profile.get("balances", {})
+    if bals:
+        bal_lines = [f"• {CURRENCIES.get(k, {}).get('emoji', '🪙')} <b>{k}</b>: {v:,.4f}" for k, v in bals.items()]
+        bal_str = "\n".join(bal_lines)
+    else:
+        bal_str = "<i>все балансы нулевые</i>"
+
+    text = (
+        f"👤 <b>Профиль пользователя</b> <code>{uid}</code>\n\n"
+        f"• Username: {uname}\n"
+        f"• Телефон: <code>{phone}</code>\n"
+        f"• Язык / Валюта: <b>{lang}</b> / <b>{fiat}</b>\n"
+        f"• Регистрация: <b>{created_dt}</b>\n\n"
+        f"<b>Активность по чекам:</b>\n"
+        f"• Создано чеков: <b>{profile.get('checks_created', 0)}</b>\n"
+        f"• Активировано чеков: <b>{profile.get('checks_activated', 0)}</b>\n\n"
+        f"<b>Балансы:</b>\n{bal_str}"
+    )
+
+    action_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Выдать баланс", callback_data="admin:bal"), InlineKeyboardButton(text="Установить баланс", callback_data="admin:set_bal")],
+        [InlineKeyboardButton(text="‹ Назад в админ-панель", callback_data="admin:menu")]
+    ])
+
+    await msg.answer(text, reply_markup=action_kb, parse_mode="HTML")
+    await state.clear()
 
 # --- ВЫДАТЬ БАЛАНС ---
 @router.callback_query(F.data == "admin:bal")
@@ -537,7 +632,7 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
         f"{_e('premium_clean', '⚡')} <b>Панель управления CryptoBot</b>\n\n"
-        "Система управления балансами, чеками и правами администраторов.\n"
+        "Система управления балансами, чеками, аналитикой и правами администраторов.\n"
         "Выберите раздел для работы:"
     )
     if cb.message.photo:
