@@ -8,6 +8,7 @@ import secrets
 import logging
 import httpx
 import random
+import config
 
 DB_PATH = "cryptobot.db"
 log = logging.getLogger(__name__)
