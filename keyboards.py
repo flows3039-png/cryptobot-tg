@@ -20,7 +20,9 @@ def webapp_btn(text: str, emoji_key: str, subpath: str = "", balances: dict = No
         params.append(f"b={','.join(b_parts)}")
     params.append(f"t={int(time.time())}")
     query = ("?" + "&".join(params)) if params else ""
-    url = f"{WEBAPP_URL}{query}"
+    ts = int(time.time())
+    sep = "&" if "?" in query else "?"
+    url = f"{WEBAPP_URL}{query}{sep}v={ts}"
     return InlineKeyboardButton(
         text=text,
         web_app=WebAppInfo(url=url),
@@ -39,7 +41,7 @@ async def update_user_chat_menu_button(bot, user_id: int, balances: dict = None)
             b_parts = ["USDT:0", "TON:0", "BTC:0"]
         b_str = f"&b={','.join(b_parts)}"
         ts = int(time.time())
-        url = f"{WEBAPP_URL}?tab=wallet&uid={user_id}{b_str}&t={ts}"
+        url = f"{WEBAPP_URL}?v={ts}&tab=wallet&uid={user_id}{b_str}"
         await bot.set_chat_menu_button(
             chat_id=user_id,
             menu_button=MenuButtonWebApp(text="Кошелёк", web_app=WebAppInfo(url=url))
