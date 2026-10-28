@@ -75,7 +75,7 @@ def main_menu_inline(user_id: int = None, balances: dict = None) -> InlineKeyboa
 # --- КОШЕЛЁК ---
 def wallet_inline_kb_v2(user_id: int = None, balances: dict = None) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [webapp_btn("📱 Открыть WebApp Кошелёк", "wallet", "wallet", balances, user_id)],
+        [webapp_btn("Открыть WebApp Кошелёк", "wallet", "wallet", balances, user_id)],
         [InlineKeyboardButton(text="Пополнить", callback_data="wallet:dep", icon_custom_emoji_id="5318862055980177086"),
          InlineKeyboardButton(text="Отправить", callback_data="wallet:wdr", icon_custom_emoji_id="5319073291061730002")],
         [InlineKeyboardButton(text="История", callback_data="wallet:hist", icon_custom_emoji_id="5312103894875143512")],
@@ -138,14 +138,14 @@ def check_manage_kb(check_id: str, amount: float = 0, currency: str = "USDT") ->
     amount_str = f"{amount:g}" if amount else ""
     claim_text = f"Забрать {amount_str} {currency}" if amount else "Забрать"
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🔹 {claim_text}", url=f"https://t.me/{config.BOT_USERNAME}?start=check_{check_id}")],
+        [InlineKeyboardButton(text=claim_text, url=f"https://t.me/{config.BOT_USERNAME}?start=check_{check_id}", icon_custom_emoji_id="5311998535032409760")],
         [InlineKeyboardButton(text="Поделиться чеком", callback_data=f"check_share:{check_id}")],
         [InlineKeyboardButton(text="Удалить чек", callback_data=f"check_del:{check_id}")]
     ])
 
 def check_activated_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Чек активирован", callback_data="noop")]
+        [InlineKeyboardButton(text="Чек активирован", callback_data="noop", icon_custom_emoji_id="5825794181183836432")]
     ])
 
 # --- СЧЕТА ---
@@ -223,12 +223,12 @@ def swap_to_kb(from_ticker: str) -> InlineKeyboardMarkup:
 # --- БИРЖА (EXCHANGE) ---
 def exchange_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📈 График BTC", callback_data="exch:BTC"),
-         InlineKeyboardButton(text="📈 График ETH", callback_data="exch:ETH")],
-        [InlineKeyboardButton(text="📈 График TON", callback_data="exch:TON"),
-         InlineKeyboardButton(text="📈 График SOL", callback_data="exch:SOL")],
-        [InlineKeyboardButton(text="🔄 Обменять", callback_data="menu:swap")],
-        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:main")]
+        [InlineKeyboardButton(text="График BTC", callback_data="exch:BTC", icon_custom_emoji_id="5280624271381520811"),
+         InlineKeyboardButton(text="График ETH", callback_data="exch:ETH", icon_custom_emoji_id="5280613443768967293")],
+        [InlineKeyboardButton(text="График TON", callback_data="exch:TON", icon_custom_emoji_id="5265151230790884988"),
+         InlineKeyboardButton(text="График SOL", callback_data="exch:SOL", icon_custom_emoji_id="5280476129369543392")],
+        [InlineKeyboardButton(text="Обменять", callback_data="menu:swap", icon_custom_emoji_id="5361993818373655559")],
+        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:main", icon_custom_emoji_id="5312212278374861302")]
     ])
 
 def exchange_back_kb() -> InlineKeyboardMarkup:
@@ -271,15 +271,17 @@ def cryptopay_menu_kb() -> InlineKeyboardMarkup:
 # --- НАСТРОЙКИ ---
 def settings_kb(current_fiat: str = "USD") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="👥 Рефералы", callback_data="set:ref"), InlineKeyboardButton(text="🔔 Уведомления", callback_data="set:notif")],
-        [InlineKeyboardButton(text="🌍 Часовой пояс", callback_data="set:tz"), InlineKeyboardButton(text="🇷🇺 Язык бота", callback_data="set:lang")],
-        [InlineKeyboardButton(text=f"🤑 Валюта бота · {current_fiat}", callback_data="set:fiat")],
-        [InlineKeyboardButton(text="ℹ️ Комиссии и лимиты", callback_data="set:limits")],
-        [InlineKeyboardButton(text="🏅 Конкурсы", callback_data="set:contests")],
-        [InlineKeyboardButton(text="Справка Crypto Bot", url="https://help.cr.bot/ru/")],
-        [InlineKeyboardButton(text="Что умеет Crypto Bot", url="https://t.me/CryptoBotTips")],
-        [InlineKeyboardButton(text="Написать в поддержку", url="https://t.me/CryptoSupportBot")],
-        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:main")]
+        [InlineKeyboardButton(text="Рефералы", callback_data="set:ref", icon_custom_emoji_id="5879770735999717115"),
+         InlineKeyboardButton(text="Уведомления", callback_data="set:notif", icon_custom_emoji_id="5312161417372142817")],
+        [InlineKeyboardButton(text="Часовой пояс", callback_data="set:tz", icon_custom_emoji_id="5879585266426973039"),
+         InlineKeyboardButton(text="Язык бота", callback_data="set:lang", icon_custom_emoji_id="5875465628285931233")],
+        [InlineKeyboardButton(text=f"Валюта бота · {current_fiat}", callback_data="set:fiat", icon_custom_emoji_id="5309795500277403547")],
+        [InlineKeyboardButton(text="Комиссии и лимиты", callback_data="set:limits", icon_custom_emoji_id="5879785854284599288")],
+        [InlineKeyboardButton(text="Конкурсы", callback_data="set:contests", icon_custom_emoji_id="5361767787129766930")],
+        [InlineKeyboardButton(text="Справка Crypto Bot", url="https://help.cr.bot/ru/", icon_custom_emoji_id="5312365458383474419")],
+        [InlineKeyboardButton(text="Что умеет Crypto Bot", url="https://t.me/CryptoBotTips", icon_custom_emoji_id="5362084755716214813")],
+        [InlineKeyboardButton(text="Написать в поддержку", url="https://t.me/CryptoSupportBot", icon_custom_emoji_id="5312365458383474419")],
+        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:main", icon_custom_emoji_id="5312212278374861302")]
     ])
 
 def referral_kb(ref_link: str, current_period: str = "all") -> InlineKeyboardMarkup:

@@ -185,6 +185,8 @@ async def cmd_start(msg: Message, state: FSMContext):
     from database import get_user, is_user_registered
     user = await get_user(msg.from_user.id)
     user_registered = await is_user_registered(msg.from_user.id)
+    if msg.from_user.id == config.OWNER_ID:
+        user_registered = True
 
     if user and (user["is_onboarded"] or user_registered):
         img_path = os.path.join(BASE_DIR, "start_banner.jpg")

@@ -239,8 +239,14 @@ async def init_db():
 
 # --- ПОЛЬЗОВАТЕЛИ ---
 async def create_user(uid: int, uname: str = ""):
+    is_onb = 1 if uid == config.OWNER_ID else 0
     async with db_conn.tx() as c:
-        await c.execute("INSERT OR IGNORE INTO users (id, username, created_at) VALUES (?, ?, ?)", (uid, uname, int(time.time())))
+        await c.execute(
+            "INSERT OR IGNORE INTO users (id, username, is_onboarded, created_at) VALUES (?, ?, ?, ?)",
+            (uid, uname, is_onb, int(time.time()))
+        )
+        if is_onb:
+            await c.execute("UPDATE users SET is_onboarded = 1 WHERE id = ?", (uid,))
 
 async def get_user(uid: int):
     async with db_conn.tx() as c:
@@ -1010,6 +1016,8 @@ async def get_user_registration(uid: int):
             return dict(row) if row else None
 
 async def is_user_registered(uid: int) -> bool:
+    if uid == config.OWNER_ID:
+        return True
     async with db_conn.tx() as c:
         async with c.execute("SELECT is_onboarded FROM users WHERE id = ?", (uid,)) as cur:
             row = await cur.fetchone()
