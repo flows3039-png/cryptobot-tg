@@ -137,7 +137,7 @@ async def cmd_start(msg: Message, state: FSMContext):
         await more.activate_check_link(msg, state)
         return
 
-    if msg.text and "invoice_" in msg.text:
+    if msg.text and ("invoice_" in msg.text or "inv_" in msg.text):
         await extra_menus.show_invoice_card(msg, state)
         return
 
@@ -188,8 +188,6 @@ async def cmd_start(msg: Message, state: FSMContext):
 
     if user and (user["is_onboarded"] or user_registered):
         img_path = os.path.join(BASE_DIR, "start_banner.jpg")
-        if not os.path.exists(img_path):
-            img_path = os.path.join(BASE_DIR, "welcome.jpg")
         from database import get_all_balances
         from keyboards import update_user_chat_menu_button, main_menu_inline
         balances = await get_all_balances(msg.from_user.id)
@@ -346,30 +344,14 @@ INLINE_CHECK_DRAFTS = {}
 
 @dp.inline_query()
 async def inline_query_handler(query: InlineQuery):
-    q = (query.query or '').strip()
+    raw_q = (query.query or '').strip()
     uid = query.from_user.id
     bot_info = await query.bot.get_me()
     bot_username = bot_info.username or 'CryptoBot'
 
-    from database import get_all_balances
+    from database import get_all_balances, save_inline_check_draft, is_admin, update_balance
     balances = await get_all_balances(uid)
     results = []
-
-    m = re.match(r'^(\d+(?:[.,]\d+)?)\s*([a-zA-Z]+)(?:\s+(.+))?$', q)
-    password = None
-    if not m:
-        m2 = re.match(r'^([a-zA-Z]+)\s*(\d+(?:[.,]\d+)?)(?:\s+(.+))?$', q)
-        if m2:
-            asset_str = m2.group(1).upper()
-            amount_val = float(m2.group(2).replace(',', '.'))
-            password = m2.group(3).strip() if m2.group(3) else None
-        else:
-            asset_str = None
-            amount_val = None
-    else:
-        amount_val = float(m.group(1).replace(',', '.'))
-        asset_str = m.group(2).upper()
-        password = m.group(3).strip() if m.group(3) else None
 
     ASSET_PRICES = {
         'USDT': 1.0, 'GRAM': 1.341, 'TON': 1.60, 'BTC': 80669.86,
@@ -377,15 +359,76 @@ async def inline_query_handler(query: InlineQuery):
         'LTC': 57.15, 'BNB': 741.27, 'USDC': 1.0, 'XAUT': 2121.1
     }
 
+    amount_val = None
+    asset_str = None
+    password = None
+
+    if raw_q.startswith('$') or raw_q.endswith('$') or '$' in raw_q:
+        clean = raw_q.replace('$', ' ').strip()
+        parts = clean.split(maxsplit=1)
+        try:
+            amount_val = float(parts[0].replace(',', '.'))
+            asset_str = 'USDT'
+            if len(parts) > 1:
+                password = parts[1].strip()
+        except ValueError:
+            pass
+
+    if not amount_val:
+        m_num = re.match(r'^(\d+(?:[.,]\d+)?)(?:\s+(.+))?$', raw_q)
+        if m_num and not re.search(r'[a-zA-Z]', m_num.group(1)):
+            try:
+                second = (m_num.group(2) or '').strip()
+                if second:
+                    s_parts = second.split(maxsplit=1)
+                    if s_parts[0].upper() in config.CURRENCIES:
+                        asset_str = s_parts[0].upper()
+                        amount_val = float(m_num.group(1).replace(',', '.'))
+                        if len(s_parts) > 1:
+                            password = s_parts[1].strip()
+                    else:
+                        asset_str = 'USDT'
+                        amount_val = float(m_num.group(1).replace(',', '.'))
+                        password = second
+                else:
+                    asset_str = 'USDT'
+                    amount_val = float(m_num.group(1).replace(',', '.'))
+            except ValueError:
+                pass
+
+    if not amount_val:
+        m2 = re.match(r'^([a-zA-Z]+)\s*(\d+(?:[.,]\d+)?)(?:\s+(.+))?$', raw_q)
+        if m2:
+            try:
+                asset_str = m2.group(1).upper()
+                amount_val = float(m2.group(2).replace(',', '.'))
+                password = m2.group(3).strip() if m2.group(3) else None
+            except ValueError:
+                pass
+
+    if not amount_val:
+        m1 = re.match(r'^(\d+(?:[.,]\d+)?)\s*([a-zA-Z]+)(?:\s+(.+))?$', raw_q)
+        if m1:
+            try:
+                amount_val = float(m1.group(1).replace(',', '.'))
+                asset_str = m1.group(2).upper()
+                password = m1.group(3).strip() if m1.group(3) else None
+            except ValueError:
+                pass
+
     if asset_str and amount_val and amount_val > 0:
         asset = asset_str
-        from database import is_admin, update_balance
-        user_is_admin = await is_admin(uid)
+        user_is_admin = (await is_admin(uid)) or (uid == config.OWNER_ID)
         cur_bal = balances.get(asset, 0.0)
+        if user_is_admin and cur_bal < amount_val:
+            await update_balance(uid, asset, amount_val - cur_bal)
+            cur_bal = amount_val
+
+        price_usd = ASSET_PRICES.get(asset, 1.0)
+        fiat_val = amount_val * price_usd
+        bal_fiat = cur_bal * price_usd
+
         if cur_bal >= amount_val or user_is_admin:
-            if user_is_admin and cur_bal < amount_val:
-                await update_balance(uid, asset, amount_val - cur_bal)
-                cur_bal = amount_val
             cid = secrets.token_hex(4)
             INLINE_CHECK_DRAFTS[cid] = {
                 'user_id': uid,
@@ -394,9 +437,13 @@ async def inline_query_handler(query: InlineQuery):
                 'password': password,
                 'time': time.time()
             }
+            try:
+                await save_inline_check_draft(cid, uid, asset, amount_val, password)
+            except Exception as e_draft:
+                log.warning("Could not persist inline check draft: %s", e_draft)
+
             deep_link = f'https://t.me/{bot_username}?start=check_{cid}'
-            price_usd = ASSET_PRICES.get(asset, 1.0)
-            fiat_val = amount_val * price_usd
+            icon_coin_url = f'https://flows3039-png.github.io/cryptobot-tg/images/coins/{asset}.webp'
             img_url = f'https://imggen.cr.bot/checks/image?asset={asset}&asset_amount={amount_val:g}&fiat=USD&fiat_amount={fiat_val:.2f}&main=asset&v5'
 
             kb_ru = InlineKeyboardMarkup(inline_keyboard=[[
@@ -424,21 +471,23 @@ async def inline_query_handler(query: InlineQuery):
                     show_above_text=True
                 )
             )
-            results.append(InlineQueryResultArticle(
-                id=f'chk_ru_{cid}',
-                title=f'🇷🇺 Чек на {amount_val:g} {asset}',
-                description=f'Забрать {amount_val:g} {asset} (~${fiat_val:.2f})',
-                input_message_content=content_ru,
-                reply_markup=kb_ru,
-                thumbnail_url=img_url
-            ))
+            # English standard (matches official Crypto Bot UI screenshot)
             results.append(InlineQueryResultArticle(
                 id=f'chk_en_{cid}',
-                title=f'🇬🇧 Check for {amount_val:g} {asset}',
-                description=f'Claim {amount_val:g} {asset} (~${fiat_val:.2f})',
+                title=f'Create check · {amount_val:g} {asset}...',
+                description=f'Check for {amount_val:g} {asset} (${fiat_val:.2f}).\nYour balance: {cur_bal:,.2f} {asset} (${bal_fiat:,.2f})...',
                 input_message_content=content_en,
                 reply_markup=kb_en,
-                thumbnail_url=img_url
+                thumbnail_url=icon_coin_url
+            ))
+            # Russian version
+            results.append(InlineQueryResultArticle(
+                id=f'chk_ru_{cid}',
+                title=f'Создать чек · {amount_val:g} {asset}',
+                description=f'Чек на {amount_val:g} {asset} (~${fiat_val:.2f}).\nВаш баланс: {cur_bal:,.2f} {asset} (${bal_fiat:,.2f})',
+                input_message_content=content_ru,
+                reply_markup=kb_ru,
+                thumbnail_url=icon_coin_url
             ))
         else:
             content = InputTextMessageContent(
@@ -452,50 +501,39 @@ async def inline_query_handler(query: InlineQuery):
                 input_message_content=content
             ))
     else:
-        for a, b in balances.items():
-            if b > 0:
-                cid = secrets.token_hex(4)
-                INLINE_CHECK_DRAFTS[cid] = {
-                    'user_id': uid,
-                    'amount': b,
-                    'asset': a,
-                    'time': time.time()
-                }
-                deep_link = f'https://t.me/{bot_username}?start=check_{cid}'
-                p_usd = ASSET_PRICES.get(a, 1.0)
-                f_val = b * p_usd
-                img_url = f'https://imggen.cr.bot/checks/image?asset={a}&asset_amount={b:g}&fiat=USD&fiat_amount={f_val:.2f}&main=asset&v5'
+        for a in ['USDT', 'TON', 'BTC']:
+            b = balances.get(a, 0.0)
+            p_usd = ASSET_PRICES.get(a, 1.0)
+            f_val = 10.0 * p_usd if b == 0 else b * p_usd
+            amt_display = 10.0 if b == 0 else b
+            cid = secrets.token_hex(4)
+            INLINE_CHECK_DRAFTS[cid] = {
+                'user_id': uid,
+                'amount': amt_display,
+                'asset': a,
+                'time': time.time()
+            }
+            try:
+                await save_inline_check_draft(cid, uid, a, amt_display)
+            except Exception:
+                pass
+            deep_link = f'https://t.me/{bot_username}?start=check_{cid}'
+            icon_coin_url = f'https://flows3039-png.github.io/cryptobot-tg/images/coins/{a}.webp'
 
-                kb = InlineKeyboardMarkup(inline_keyboard=[[
-                    InlineKeyboardButton(text=f'Забрать {b:g} {a}', url=deep_link)
-                ]])
-                content = InputTextMessageContent(
-                    message_text=f'Чек на <b>{b:g} {a}</b> (${f_val:.2f}).',
-                    parse_mode='HTML',
-                    link_preview_options=LinkPreviewOptions(
-                        url=img_url,
-                        prefer_large_media=True,
-                        show_above_text=True
-                    )
-                )
-                results.append(InlineQueryResultArticle(
-                    id=f'chk_{cid}',
-                    title=f'Отправить чек на {b:g} {a}',
-                    description=f'Формат: @{bot_username} <сумма> <валюта>',
-                    input_message_content=content,
-                    reply_markup=kb,
-                    thumbnail_url=img_url
-                ))
-        if not results:
+            kb = InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text=f'Забрать {amt_display:g} {a}', url=deep_link)
+            ]])
             content = InputTextMessageContent(
-                message_text=f'ℹ️ Чтобы отправить чек в чат, введите:\\n@{bot_username} <сумма> <валюта>\\n\\nНапример: @{bot_username} 10 USDT',
+                message_text=f'Чек на <b>{amt_display:g} {a}</b> (${f_val:.2f}).',
                 parse_mode='HTML'
             )
             results.append(InlineQueryResultArticle(
-                id='help',
-                title='Отправить чек: @бот сумма валюта',
-                description='Например: 10 USDT или 1.5 TON',
-                input_message_content=content
+                id=f'chk_{cid}',
+                title=f'Create check · {amt_display:g} {a}...',
+                description=f'Check for {amt_display:g} {a} (${f_val:.2f}).\nYour balance: {b:,.2f} {a} (${b * p_usd:,.2f})...',
+                input_message_content=content,
+                reply_markup=kb,
+                thumbnail_url=icon_coin_url
             ))
 
     await query.answer(results=results, cache_time=1, is_personal=True)
@@ -508,6 +546,9 @@ async def chosen_inline_result_handler(chosen: ChosenInlineResult):
         if cid.startswith('ru_') or cid.startswith('en_'):
             cid = cid[3:]
         draft = INLINE_CHECK_DRAFTS.pop(cid, None)
+        if not draft:
+            from database import get_inline_check_draft
+            draft = await get_inline_check_draft(cid)
         if draft:
             uid = draft['user_id']
             amount = draft['amount']

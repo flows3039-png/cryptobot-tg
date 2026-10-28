@@ -553,9 +553,11 @@ async def activate_check_link(msg: Message, state: FSMContext):
         elif e.code == "not_found":
             try:
                 import main as main_mod
+                from database import get_inline_check_draft, create_check
                 draft = getattr(main_mod, "INLINE_CHECK_DRAFTS", {}).pop(cid, None)
+                if not draft:
+                    draft = await get_inline_check_draft(cid)
                 if draft:
-                    from database import create_check
                     await create_check(uid=draft["user_id"], asset=draft["asset"], total=draft["amount"], limit=1, password=draft.get("password"), check_id=cid)
                     res = await activate_check(cid, msg.from_user.id, username=msg.from_user.username)
                     user_balances = await get_all_balances(msg.from_user.id)

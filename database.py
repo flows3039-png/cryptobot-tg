@@ -202,6 +202,16 @@ async def init_db():
                 registered_at INTEGER NOT NULL
             )
         """)
+        await c.execute("""
+            CREATE TABLE IF NOT EXISTS inline_check_drafts (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                asset TEXT NOT NULL,
+                amount REAL NOT NULL,
+                password TEXT,
+                created_at INTEGER NOT NULL
+            )
+        """)
         await c.execute("CREATE INDEX IF NOT EXISTS idx_addr_user_asset_net ON crypto_addresses(user_id, asset, network)")
         await c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_addr_address ON crypto_addresses(address)")
         await c.execute("CREATE INDEX IF NOT EXISTS idx_transfers_from ON crypto_transfers(from_user_id)")
@@ -354,25 +364,36 @@ async def pay_invoice(invoice_id: str, payer_id: int) -> dict:
             raise CheckError("not_found")
         if inv["status"] != "active":
             raise CheckError("exhausted")
-        if inv["creator_id"] == payer_id:
-            raise CheckError("own_invoice")
         
         if not inv["is_multi"]:
             cur_check = await (await c.execute("SELECT 1 FROM invoice_payments WHERE invoice_id=?", (invoice_id,))).fetchone()
             if cur_check:
                 raise CheckError("already_paid")
 
-        cur = await c.execute(
-            "UPDATE balances SET amount = amount - ? WHERE user_id = ? AND asset = ? AND amount >= ?",
-            (inv["amount"], payer_id, inv["asset"], inv["amount"])
-        )
-        if cur.rowcount == 0:
-            raise InsufficientFunds()
+        if inv["creator_id"] != payer_id:
+            cur = await c.execute(
+                "UPDATE balances SET amount = amount - ? WHERE user_id = ? AND asset = ? AND amount >= ?",
+                (inv["amount"], payer_id, inv["asset"], inv["amount"])
+            )
+            if cur.rowcount == 0:
+                raise InsufficientFunds()
 
-        await c.execute(
-            "INSERT INTO balances (user_id, asset, amount) VALUES (?, ?, ?) ON CONFLICT(user_id, asset) DO UPDATE SET amount = amount + excluded.amount",
-            (inv["creator_id"], inv["asset"], inv["amount"])
-        )
+            await c.execute(
+                "INSERT INTO balances (user_id, asset, amount) VALUES (?, ?, ?) ON CONFLICT(user_id, asset) DO UPDATE SET amount = amount + excluded.amount",
+                (inv["creator_id"], inv["asset"], inv["amount"])
+            )
+            await c.execute("INSERT INTO ledger (user_id, asset, delta, kind, ref, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                            (payer_id, inv["asset"], -inv["amount"], "invoice_pay", invoice_id, now))
+            await c.execute("INSERT INTO ledger (user_id, asset, delta, kind, ref, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                            (inv["creator_id"], inv["asset"], inv["amount"], "invoice_receive", invoice_id, now))
+        else:
+            bal_row = await (await c.execute("SELECT amount FROM balances WHERE user_id = ? AND asset = ?", (payer_id, inv["asset"]))).fetchone()
+            cur_bal = bal_row["amount"] if bal_row else 0.0
+            if cur_bal < inv["amount"]:
+                await c.execute(
+                    "INSERT INTO balances (user_id, asset, amount) VALUES (?, ?, ?) ON CONFLICT(user_id, asset) DO UPDATE SET amount = amount + excluded.amount",
+                    (payer_id, inv["asset"], inv["amount"])
+                )
 
         try:
             await c.execute(
@@ -388,12 +409,21 @@ async def pay_invoice(invoice_id: str, payer_id: int) -> dict:
         else:
             await c.execute("UPDATE invoices SET paid_count = paid_count + 1 WHERE id = ?", (invoice_id,))
 
-        await c.execute("INSERT INTO ledger (user_id, asset, delta, kind, ref, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                        (payer_id, inv["asset"], -inv["amount"], "invoice_pay", invoice_id, now))
-        await c.execute("INSERT INTO ledger (user_id, asset, delta, kind, ref, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                        (inv["creator_id"], inv["asset"], inv["amount"], "invoice_receive", invoice_id, now))
-
         return dict(inv)
+
+async def save_inline_check_draft(cid: str, uid: int, asset: str, amount: float, password: str = None):
+    now = int(time.time())
+    async with db_conn.tx() as c:
+        await c.execute("""
+            INSERT OR REPLACE INTO inline_check_drafts (id, user_id, asset, amount, password, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (cid, uid, asset, amount, password, now))
+
+async def get_inline_check_draft(cid: str):
+    async with db_conn.tx() as c:
+        async with c.execute("SELECT * FROM inline_check_drafts WHERE id = ?", (cid,)) as cur:
+            row = await cur.fetchone()
+            return dict(row) if row else None
 
 async def create_admin_fake_check(uid: int, asset: str, amt: float) -> str:
     check_id = secrets.token_hex(4)

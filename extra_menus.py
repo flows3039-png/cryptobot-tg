@@ -166,7 +166,13 @@ async def cb_invoice_desc(msg: Message, state: FSMContext):
     await state.clear()
 
 async def show_invoice_card(msg: Message, state: FSMContext):
-    inv_id = msg.text.split("invoice_", 1)[1].strip() if "invoice_" in msg.text else ""
+    inv_id = ""
+    if "invoice_" in msg.text:
+        inv_id = msg.text.split("invoice_", 1)[1].strip()
+    elif "inv_" in msg.text:
+        inv_id = msg.text.split("inv_", 1)[1].strip()
+
+    inv_id = inv_id.split()[0] if inv_id else ""
     if not inv_id:
         await msg.answer("❌ Неверная ссылка на счёт.")
         return
