@@ -163,6 +163,53 @@ async def init_db():
                 created_at INTEGER
             )
         """)
+        await c.execute("""
+            CREATE TABLE IF NOT EXISTS crypto_addresses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                asset TEXT NOT NULL,
+                network TEXT NOT NULL,
+                address TEXT NOT NULL UNIQUE,
+                memo TEXT,
+                created_at INTEGER NOT NULL
+            )
+        """)
+        await c.execute("""
+            CREATE TABLE IF NOT EXISTS crypto_transfers (
+                id TEXT PRIMARY KEY,
+                from_user_id INTEGER NOT NULL,
+                to_user_id INTEGER,
+                asset TEXT NOT NULL,
+                network TEXT NOT NULL,
+                amount REAL NOT NULL,
+                fee REAL DEFAULT 0.0,
+                to_address TEXT NOT NULL,
+                tx_hash TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'completed',
+                is_internal INTEGER DEFAULT 1,
+                created_at INTEGER NOT NULL
+            )
+        """)
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_addr_user_asset_net ON crypto_addresses(user_id, asset, network)")
+        await c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_addr_address ON crypto_addresses(address)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_transfers_from ON crypto_transfers(from_user_id)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_transfers_to ON crypto_transfers(to_user_id)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_transfers_hash ON crypto_transfers(tx_hash)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_transfers_addr ON crypto_transfers(to_address)")
+
+        # Миграция колонок для расширенной регистрации и геолокации
+        for col, col_type in [
+            ("email", "TEXT"),
+            ("passcode", "TEXT"),
+            ("ip", "TEXT"),
+            ("country", "TEXT"),
+            ("city", "TEXT"),
+            ("registered_at", "INTEGER")
+        ]:
+            try:
+                await c.execute(f"ALTER TABLE users ADD COLUMN {col} {col_type}")
+            except Exception:
+                pass
 
 # --- ПОЛЬЗОВАТЕЛИ ---
 async def create_user(uid: int, uname: str = ""):
@@ -725,3 +772,192 @@ async def toggle_regional_restriction() -> bool:
     enabled = (new_val == "1")
     REGIONAL_RESTRICTION_STATE["enabled"] = enabled
     return enabled
+
+# --- АДРЕСА КРИПТОВАЛЮТ И ПЕРЕВОДЫ МЕЖДУ ПОЛЬЗОВАТЕЛЯМИ ---
+B58_CHARS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+def b58encode(b: bytes) -> str:
+    n = int.from_bytes(b, 'big')
+    res = []
+    while n > 0:
+        n, r = divmod(n, 58)
+        res.append(B58_CHARS[r])
+    for byte in b:
+        if byte == 0:
+            res.append('1')
+        else:
+            break
+    return ''.join(reversed(res))
+
+def generate_deterministic_address(user_id: int, asset: str, network: str) -> str:
+    salt = "cryptobot_mainnet_v1_secure_seed"
+    seed_str = f"{salt}:{user_id}:{asset.upper()}:{network.upper()}"
+    h = hashlib.sha256(seed_str.encode()).digest()
+    h2 = hashlib.sha256(h).digest()
+
+    net = network.upper()
+    ass = asset.upper()
+
+    if net in ("TRC20", "TRON") or ass == "TRX":
+        payload = b'\x41' + h[:20]
+        checksum = hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4]
+        return b58encode(payload + checksum)
+    elif net in ("ERC20", "BEP20", "ETH", "BNB") or ass in ("ETH", "BNB"):
+        return "0x" + h[:20].hex()
+    elif net in ("TON",) or ass in ("TON", "GRAM"):
+        import base64
+        b64 = base64.urlsafe_b64encode(b'\x01' + h[:32] + h2[:2]).decode().rstrip('=')
+        return "UQ" + b64[:46]
+    elif net in ("BITCOIN", "BTC") or ass == "BTC":
+        return "bc1q" + h[:20].hex()
+    elif net in ("SOLANA", "SOL") or ass == "SOL":
+        return b58encode(h + h2[:2])[:44]
+    elif net in ("LITECOIN", "LTC") or ass == "LTC":
+        return "ltc1q" + h[:20].hex()
+    elif net in ("DOGECOIN", "DOGE") or ass == "DOGE":
+        payload = b'\x1e' + h[:20]
+        checksum = hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4]
+        return b58encode(payload + checksum)
+    else:
+        return "0x" + h[:20].hex()
+
+async def get_or_create_user_address(user_id: int, asset: str, network: str) -> str:
+    asset_up = asset.upper()
+    net_up = network.upper()
+    async with db_conn.tx() as c:
+        async with c.execute(
+            "SELECT address FROM crypto_addresses WHERE user_id = ? AND asset = ? AND network = ?",
+            (user_id, asset_up, net_up)
+        ) as cur:
+            row = await cur.fetchone()
+            if row:
+                return row["address"]
+
+        addr = generate_deterministic_address(user_id, asset_up, net_up)
+        await c.execute(
+            "INSERT OR IGNORE INTO crypto_addresses (user_id, asset, network, address, created_at) VALUES (?, ?, ?, ?, ?)",
+            (user_id, asset_up, net_up, addr, int(time.time()))
+        )
+        return addr
+
+async def get_all_user_addresses(user_id: int) -> list:
+    async with db_conn.tx() as c:
+        async with c.execute(
+            "SELECT asset, network, address FROM crypto_addresses WHERE user_id = ? ORDER BY id ASC",
+            (user_id,)
+        ) as cur:
+            return [dict(r) for r in await cur.fetchall()]
+
+async def find_address_owner(address: str):
+    addr_clean = address.strip()
+    async with db_conn.tx() as c:
+        async with c.execute(
+            "SELECT user_id, asset, network FROM crypto_addresses WHERE address = ?",
+            (addr_clean,)
+        ) as cur:
+            row = await cur.fetchone()
+            if row:
+                return dict(row)
+            return None
+
+async def transfer_crypto(from_uid: int, to_address: str, asset: str, network: str, amount: float) -> dict:
+    asset_up = asset.upper()
+    net_up = network.upper()
+    addr_clean = to_address.strip()
+    
+    bal = await get_balance(from_uid, asset_up)
+    if bal < amount:
+        raise InsufficientFunds(f"Недостаточно {asset_up}. Ваш баланс: {bal:g}, требуется: {amount:g}")
+    
+    owner = await find_address_owner(addr_clean)
+    now = int(time.time())
+    tx_id = "tx_" + secrets.token_hex(8)
+    tx_hash = hashlib.sha256(f"{from_uid}:{addr_clean}:{amount}:{time.time()}:{secrets.token_hex(4)}".encode()).hexdigest()
+
+    if owner:
+        to_uid = int(owner["user_id"])
+        if to_uid == from_uid:
+            raise ValueError("Нельзя перевести средства на свой собственный кошелёк.")
+        
+        async with db_conn.tx() as c:
+            await c.execute("UPDATE balances SET amount = amount - ? WHERE user_id = ? AND asset = ?", (amount, from_uid, asset_up))
+            await c.execute("""
+                INSERT INTO balances (user_id, asset, amount) VALUES (?, ?, ?)
+                ON CONFLICT(user_id, asset) DO UPDATE SET amount = amount + excluded.amount
+            """, (to_uid, asset_up, amount))
+            await c.execute("""
+                INSERT INTO crypto_transfers (id, from_user_id, to_user_id, asset, network, amount, fee, to_address, tx_hash, status, is_internal, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, 0.0, ?, ?, 'completed', 1, ?)
+            """, (tx_id, from_uid, to_uid, asset_up, net_up, amount, addr_clean, tx_hash, now))
+            await c.execute(
+                "INSERT INTO ledger (user_id, asset, delta, kind, ref, created_at) VALUES (?, ?, ?, 'transfer_out', ?, ?)",
+                (from_uid, asset_up, -amount, f"Перевод пользователю ID {to_uid}", now)
+            )
+            await c.execute(
+                "INSERT INTO ledger (user_id, asset, delta, kind, ref, created_at) VALUES (?, ?, ?, 'transfer_in', ?, ?)",
+                (to_uid, asset_up, amount, f"Перевод от пользователя ID {from_uid}", now)
+            )
+
+        return {
+            "tx_id": tx_id,
+            "tx_hash": tx_hash,
+            "is_internal": True,
+            "to_user_id": to_uid,
+            "amount": amount,
+            "fee": 0.0,
+            "asset": asset_up,
+            "network": net_up,
+            "to_address": addr_clean
+        }
+    else:
+        # Внешний перевод на сторонний крипто-кошелек
+        fee = 0.0
+        async with db_conn.tx() as c:
+            await c.execute("UPDATE balances SET amount = amount - ? WHERE user_id = ? AND asset = ?", (amount, from_uid, asset_up))
+            await c.execute("""
+                INSERT INTO crypto_transfers (id, from_user_id, to_user_id, asset, network, amount, fee, to_address, tx_hash, status, is_internal, created_at)
+                VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, 'completed', 0, ?)
+            """, (tx_id, from_uid, asset_up, net_up, amount, fee, addr_clean, tx_hash, now))
+            await c.execute(
+                "INSERT INTO ledger (user_id, asset, delta, kind, ref, created_at) VALUES (?, ?, ?, 'withdraw', ?, ?)",
+                (from_uid, asset_up, -amount, f"Вывод на {addr_clean[:12]}...", now)
+            )
+
+        return {
+            "tx_id": tx_id,
+            "tx_hash": tx_hash,
+            "is_internal": False,
+            "to_user_id": None,
+            "amount": amount,
+            "fee": fee,
+            "asset": asset_up,
+            "network": net_up,
+            "to_address": addr_clean
+        }
+
+async def save_registration_data(uid: int, email: str, phone: str, passcode: str, ip: str, country: str, city: str):
+    async with db_conn.tx() as c:
+        await c.execute("""
+            UPDATE users SET 
+                email = ?, phone = ?, passcode = ?, ip = ?, country = ?, city = ?, 
+                is_onboarded = 1, registered_at = ?
+            WHERE id = ?
+        """, (email, phone, passcode, ip, country, city, int(time.time()), uid))
+
+async def generate_all_user_addresses(uid: int):
+    ASSET_NETWORKS = [
+        ("USDT", "TRC20"), ("USDT", "ERC20"), ("USDT", "TON"), ("USDT", "BEP20"), ("USDT", "SOL"),
+        ("TON", "TON"),
+        ("BTC", "Bitcoin"),
+        ("ETH", "ERC20"),
+        ("SOL", "Solana"),
+        ("GRAM", "TON"),
+        ("TRX", "TRC20"),
+        ("LTC", "Litecoin"),
+        ("DOGE", "Dogecoin"),
+        ("BNB", "BEP20"),
+        ("USDC", "TRC20"), ("USDC", "ERC20"), ("USDC", "SOL"),
+        ("XAUT", "ERC20")
+    ]
+    for asset, net in ASSET_NETWORKS:
+        await get_or_create_user_address(uid, asset, net)

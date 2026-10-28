@@ -105,20 +105,35 @@ async def cb_dep(cb: CallbackQuery):
 
 @router.callback_query(F.data.startswith("wallet:dep:"))
 async def cb_dep_currency(cb: CallbackQuery):
-    ticker = cb.data.split(":")[2]
-    fake_address = f"T{cb.from_user.id}X{ticker}Address123456789"
+    parts = cb.data.split(":")
+    ticker = parts[2].upper()
+    net = parts[3] if len(parts) > 3 else ("TRC20" if ticker in ("USDT", "TRX", "USDC") else ("TON" if ticker in ("TON", "GRAM") else ("ERC20" if ticker in ("ETH", "XAUT") else ("BEP20" if ticker == "BNB" else ("Bitcoin" if ticker == "BTC" else ("Solana" if ticker == "SOL" else ("Litecoin" if ticker == "LTC" else ("Dogecoin" if ticker == "DOGE" else ticker))))))))
     
+    from database import get_or_create_user_address
+    real_address = await get_or_create_user_address(cb.from_user.id, ticker, net)
+    
+    qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={real_address}"
+
     text = (
         f"{_e('arrow_down', '📥')} <b>Пополнение {ticker}</b>\n\n"
-        f"Отправьте {ticker} на этот адрес:\n"
-        f"<code>{fake_address}</code>\n\n"
-        f"{_e('danger', '⚠️')} Минимум 1 {ticker}. "
-        f"Средства зачислятся после 2 подтверждений сети."
+        f"Сеть перевода: <b>{net}</b>\n"
+        f"Ваш персональный адрес для пополнения:\n"
+        f"<code>{real_address}</code>\n\n"
+        f"{_e('danger', '⚠️')} <i>Отправляйте только {ticker} в сети {net}. "
+        f"Внутренние переводы между пользователями Crypto Bot зачисляются моментально и без комиссии.</i>"
     )
     
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="‹ Назад", callback_data="wallet:menu")]
-    ])
+    kb_rows = []
+    if ticker in ("USDT", "USDC"):
+        # Selectable networks
+        nets = ["TRC20", "TON", "BEP20", "ERC20", "SOL"]
+        row1 = [InlineKeyboardButton(text=f"{'✓ ' if n == net else ''}{n}", callback_data=f"wallet:dep:{ticker}:{n}") for n in nets[:3]]
+        row2 = [InlineKeyboardButton(text=f"{'✓ ' if n == net else ''}{n}", callback_data=f"wallet:dep:{ticker}:{n}") for n in nets[3:]]
+        kb_rows.append(row1)
+        kb_rows.append(row2)
+        
+    kb_rows.append([InlineKeyboardButton(text="‹ Назад к выбору", callback_data="wallet:dep")])
+    kb = InlineKeyboardMarkup(inline_keyboard=kb_rows)
     
     await cb.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
     await cb.answer()
@@ -191,23 +206,65 @@ async def proc_wdr_address(msg: Message, state: FSMContext):
         return
 
     data = await state.get_data()
-    ticker = data["cur"]
+    ticker = data["cur"].upper()
     amt = data["amt"]
+    net = "TRC20" if ticker in ("USDT", "TRX", "USDC") else ("TON" if ticker in ("TON", "GRAM") else ("ERC20" if ticker in ("ETH", "XAUT") else ("BEP20" if ticker == "BNB" else ("Bitcoin" if ticker == "BTC" else ("Solana" if ticker == "SOL" else ("Litecoin" if ticker == "LTC" else ("Dogecoin" if ticker == "DOGE" else ticker)))))))
 
-    await update_balance(msg.from_user.id, ticker, -amt)
-    await log_tx(msg.from_user.id, "withdraw", ticker, -amt, "success", f"To: {address}")
+    from database import transfer_crypto, InsufficientFunds
+    try:
+        res = await transfer_crypto(msg.from_user.id, address, ticker, net, amt)
+    except InsufficientFunds as e:
+        await msg.answer(f"❌ {e}")
+        return
+    except ValueError as e:
+        await msg.answer(f"❌ {e}")
+        return
+    except Exception as e:
+        await msg.answer(f"❌ Ошибка перевода: {e}")
+        return
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="‹ В кошелёк", callback_data="wallet:menu")]
     ])
 
-    await msg.answer(
-        f"✅ <b>Заявка на отправку создана!</b>\n\n"
-        f"Сумма: {amt} {ticker}\n"
-        f"Адрес: <code>{address}</code>\n\n"
-        f"Средства будут отправлены в течение 10 минут.",
-        parse_mode="HTML", reply_markup=kb
-    )
+    if res["is_internal"]:
+        recipient_id = res["to_user_id"]
+        await msg.answer(
+            f"✅ <b>Внутренний перевод отправлен!</b>\n\n"
+            f"💰 Сумма: <b>{amt:g} {ticker}</b>\n"
+            f"👤 Получатель: <code>{recipient_id}</code>\n"
+            f"📍 Адрес: <code>{address}</code>\n"
+            f"⚡️ Сеть: <b>{res['network']}</b>\n"
+            f"💸 Комиссия: <b>0.00 {ticker}</b> (Внутри Crypto Bot)\n"
+            f"⏱ Статус: <b>Завершено мгновенно</b>",
+            parse_mode="HTML", reply_markup=kb
+        )
+        # Notify recipient
+        try:
+            sender_tag = f"@{msg.from_user.username}" if msg.from_user.username else f"ID {msg.from_user.id}"
+            await msg.bot.send_message(
+                recipient_id,
+                f"⚡️ <b>Входящий перевод криптовалюты!</b>\n\n"
+                f"Вам зачислено: <b>+{amt:g} {ticker}</b>\n"
+                f"От: <b>{sender_tag}</b>\n"
+                f"На ваш адрес: <code>{address}</code>\n"
+                f"Сеть: <b>{res['network']}</b>\n\n"
+                f"Средства зачислены на ваш баланс без комиссии.",
+                parse_mode="HTML"
+            )
+        except Exception as e:
+            pass
+    else:
+        await msg.answer(
+            f"✅ <b>Транзакция отправлена в блокчейн!</b>\n\n"
+            f"💰 Сумма: <b>{amt:g} {ticker}</b>\n"
+            f"📍 Адрес: <code>{address}</code>\n"
+            f"⚡️ Сеть: <b>{res['network']}</b>\n"
+            f"🔗 TXID: <code>{res['tx_hash'][:24]}...{res['tx_hash'][-8:]}</code>\n"
+            f"⏱ Статус: <b>Отправлено в мемпул</b>",
+            parse_mode="HTML", reply_markup=kb
+        )
+
     await state.clear()
 
 

