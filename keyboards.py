@@ -284,11 +284,10 @@ def referral_kb(ref_link: str, current_period: str = "all") -> InlineKeyboardMar
 
 # --- АДМИН-ПАНЕЛЬ ---
 def admin_menu_kb() -> InlineKeyboardMarkup:
-    # Без стандартных системных эмодзи Windows — премиальный стиль
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Изменить баланс", callback_data="admin:set_bal"), InlineKeyboardButton(text="Выдать баланс", callback_data="admin:bal")],
-        [InlineKeyboardButton(text="NFT-парсер подарков", callback_data="admin:nft")],
-        [InlineKeyboardButton(text="Статистика базы", callback_data="admin:all"), InlineKeyboardButton(text="Назначить админа", callback_data="admin:add")]
+        [InlineKeyboardButton(text="Статистика базы", callback_data="admin:all")],
+        [InlineKeyboardButton(text="Назначить админа", callback_data="admin:add"), InlineKeyboardButton(text="Снять админа", callback_data="admin:del")]
     ])
 
 def admin_back_kb() -> InlineKeyboardMarkup:

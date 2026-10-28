@@ -129,6 +129,14 @@ async def init_db():
                 user_id INTEGER PRIMARY KEY
             )
         """)
+        # Индексы для оптимизации запросов
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_balances_user ON balances(user_id)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_checks_creator ON checks(creator_id)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_checks_status ON checks(status)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_activations_check ON check_activations(check_id)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_activations_user ON check_activations(user_id)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_ledger_user ON ledger(user_id)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)")
         await c.execute("""
             CREATE TABLE IF NOT EXISTS invoices (
                 id TEXT PRIMARY KEY, creator_id INTEGER NOT NULL, asset TEXT NOT NULL,
@@ -596,6 +604,16 @@ async def is_admin(uid: int) -> bool:
     async with db_conn.tx() as c:
         async with c.execute("SELECT 1 FROM admins WHERE user_id = ?", (uid,)) as r:
             return bool(await r.fetchone())
+
+async def remove_admin(uid: int):
+    async with db_conn.tx() as c:
+        await c.execute("DELETE FROM admins WHERE user_id = ?", (uid,))
+
+async def get_all_admins() -> list:
+    async with db_conn.tx() as c:
+        async with c.execute("SELECT user_id FROM admins") as r:
+            rows = await r.fetchall()
+            return [row["user_id"] for row in rows]
 # --- SEEN NFT GIFTS ---
 async def is_nft_gift_seen(slug: str) -> bool:
     async with db_conn.tx() as c:

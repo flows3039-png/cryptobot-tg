@@ -3,7 +3,7 @@ import uuid
 import os
 import aiosqlite
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import Command
@@ -12,12 +12,12 @@ from config import OWNER_ID, CURRENCIES, _e
 from database import (
     update_balance, set_balance, log_tx, get_all_balances, 
     get_balance, DB_PATH, create_check,
-    add_admin, is_admin, create_admin_fake_check, create_admin_multicheck,
+    add_admin, remove_admin, get_all_admins, is_admin,
+    create_admin_fake_check, create_admin_multicheck,
     get_db_stats
 )
 from keyboards import (
-    admin_menu_kb, admin_back_kb, nft_parser_menu_kb, 
-    nft_found_actions_kb, multicheck_created_kb
+    admin_menu_kb, admin_back_kb, multicheck_created_kb
 )
 
 router = Router()
@@ -28,8 +28,7 @@ class AdminFSM(StatesGroup):
     waiting_fake_check = State()
     waiting_multicheck = State()
     waiting_add_admin = State()
-    waiting_nft_range = State()
-    waiting_nft_link = State()
+    waiting_del_admin = State()
 
 async def check_admin(user_id: int) -> bool:
     if user_id == OWNER_ID:
@@ -57,7 +56,7 @@ async def cmd_admin(msg: Message):
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
         f"{_e('premium_clean', '⚡')} <b>Панель управления CryptoBot</b>\n\n"
-        "Система мониторинга, балансов, чеков и NFT-радара Telegram.\n"
+        "Система управления балансами, чеками и правами администраторов.\n"
         "Выберите раздел для работы:"
     )
     if os.path.exists(admin_banner_path):
@@ -120,7 +119,6 @@ async def proc_admin_bal(msg: Message, state: FSMContext):
         parse_mode="HTML"
     )
     await state.clear()
-
 
 # --- ИЗМЕНИТЬ БАЛАНС (УСТАНОВИТЬ) ---
 @router.callback_query(F.data == "admin:set_bal")
@@ -439,12 +437,14 @@ async def cb_admin_all(cb: CallbackQuery):
         return
     stats = await get_db_stats()
     balances = await get_all_balances(cb.from_user.id)
+    admins = await get_all_admins()
+    admin_list_str = ", ".join(f"<code>{a}</code>" for a in admins) if admins else "<i>нет дополнительных админов</i>"
     text = (
         f"{_e('message', '📊')} <b>Статистика базы данных</b>\n\n"
         f"• Пользователей в базе: <b>{stats['users']}</b>\n"
         f"• Всего чеков: <b>{stats['checks_total']}</b> (активных: <b>{stats['checks_active']}</b>)\n"
         f"• Операций в реестре: <b>{stats['transactions']}</b>\n"
-        f"• В базе NFT-радара: <b>{stats['nft_seen']}</b>\n\n"
+        f"• Назначенные администраторы: {admin_list_str}\n\n"
         f"<b>Балансы администратора:</b>\n"
     )
     if not balances:
@@ -489,44 +489,45 @@ async def proc_admin_add(msg: Message, state: FSMContext):
     )
     await state.clear()
 
-# --- NFT ПАРСЕР ПОДАРКОВ TELEGRAM ---
-# Глобальное состояние фонового авто-мониторинга
-AUTO_HUNTER_TASK = None
-AUTO_HUNTER_ACTIVE = False
-
-@router.callback_query(F.data == "admin:nft")
-async def cb_admin_nft(cb: CallbackQuery, state: FSMContext):
-    if not await check_admin(cb.from_user.id):
-        await cb.answer("Нет доступа.", show_alert=True)
+# --- УДАЛИТЬ АДМИНА ---
+@router.callback_query(F.data == "admin:del")
+async def cb_admin_del(cb: CallbackQuery, state: FSMContext):
+    if cb.from_user.id != OWNER_ID:
+        await cb.answer("Только главный владелец может снимать админов.", show_alert=True)
         return
-    await state.clear()
-    nft_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nft_banner.png")
+    admins = await get_all_admins()
+    if not admins:
+        await cb.answer("Список администраторов пуст.", show_alert=True)
+        return
+    await state.set_state(AdminFSM.waiting_del_admin)
+    list_str = "\n".join([f"• <code>{a}</code>" for a in admins])
     text = (
-        f"{_e('diamond_check', '💎')} <b>NFT-радар подарков Telegram</b>\n\n"
-        "Парсер в реальном времени мониторит рынок Fragment и сеть TON:\n"
-        "• Арбитраж флора и расчет дисконта\n"
-        "• Фильтр редких узоров (&lt; 1% drop rate)\n"
-        "• Детектор красивых и зеркальных номеров\n"
-        "• Резолв реального @username владельца\n"
-        "• Быстрый переход в ЛС владельца в 1 клик\n\n"
-        "Выберите ценовой диапазон или фильтр:"
+        "🗑 <b>Удаление администратора</b>\n\n"
+        f"Текущие админы:\n{list_str}\n\n"
+        "Отправьте Telegram ID админа, которого нужно снять:"
     )
-    from aiogram.types import FSInputFile
-    if os.path.exists(nft_banner_path):
-        await cb.message.answer_photo(
-            photo=FSInputFile(nft_banner_path),
-            caption=text,
-            reply_markup=nft_parser_menu_kb(AUTO_HUNTER_ACTIVE),
-            parse_mode="HTML"
-        )
-        try:
-            await cb.message.delete()
-        except Exception:
-            pass
-    else:
-        await cb.message.edit_text(text, reply_markup=nft_parser_menu_kb(AUTO_HUNTER_ACTIVE), parse_mode="HTML")
+    await edit_admin_msg(cb, text, reply_markup=admin_back_kb())
     await cb.answer()
 
+@router.message(AdminFSM.waiting_del_admin)
+async def proc_admin_del(msg: Message, state: FSMContext):
+    if msg.from_user.id != OWNER_ID:
+        return
+    try:
+        target_admin_id = int(msg.text.strip())
+    except ValueError:
+        await msg.answer("❌ Отправьте корректный числовой ID.")
+        return
+
+    await remove_admin(target_admin_id)
+    await msg.answer(
+        f"✅ Администратор <code>{target_admin_id}</code> успешно снят!",
+        reply_markup=admin_menu_kb(),
+        parse_mode="HTML"
+    )
+    await state.clear()
+
+# --- ВОЗВРАТ В ГЛАВНОЕ МЕНЮ АДМИНКИ ---
 @router.callback_query(F.data == "admin:menu")
 async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
     if not await check_admin(cb.from_user.id):
@@ -536,7 +537,7 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
         f"{_e('premium_clean', '⚡')} <b>Панель управления CryptoBot</b>\n\n"
-        "Система мониторинга, балансов, чеков и NFT-радара Telegram.\n"
+        "Система управления балансами, чеками и правами администраторов.\n"
         "Выберите раздел для работы:"
     )
     if cb.message.photo:
@@ -562,275 +563,3 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
     else:
         await cb.message.edit_text(text, reply_markup=admin_menu_kb(), parse_mode="HTML")
     await cb.answer()
-
-@router.callback_query(F.data.startswith("nft:range:"))
-async def cb_nft_range(cb: CallbackQuery, state: FSMContext):
-    if not await check_admin(cb.from_user.id):
-        await cb.answer("Нет доступа.", show_alert=True)
-        return
-    range_key = cb.data.split("nft:range:", 1)[1]
-    
-    if range_key == "custom":
-        await state.set_state(AdminFSM.waiting_nft_range)
-        await cb.message.answer(
-            f"{_e('settings', '⚙️')} <b>Поиск по своему диапазону цен</b>\n\n"
-            "Введите минимальную и максимальную цену в TON через дефис (например: <code>10-50</code>):",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="‹ Отмена", callback_data="admin:nft")]]),
-            parse_mode="HTML"
-        )
-        await cb.answer()
-        return
-
-    ranges = {
-        "low": (2.0, 5.0, "Лёгкий (2 – 5 TON)"),
-        "mid": (15.0, 25.0, "Средний (15 – 25 TON)"),
-        "high": (45.0, 100.0, "Высокий (45 – 100 TON)")
-    }
-    cfg = ranges.get(range_key)
-    if not cfg:
-        await cb.answer("Неверный диапазон", show_alert=True)
-        return
-
-    min_t, max_t, title = cfg
-    await cb.answer()
-    status_msg = await cb.message.answer(
-        f"{_e('arrows_cycle2', '⏳')} <b>Поиск NFT-подарков ({title})...</b>\n"
-        "Сканирование рынка, отсеивание арендованных пулов и резолв юзернеймов...",
-        parse_mode="HTML"
-    )
-
-    from nft_parser import search_gifts_by_range
-    gifts = await search_gifts_by_range(min_t, max_t, limit=3)
-    try:
-        await status_msg.delete()
-    except Exception:
-        pass
-
-    if not gifts:
-        await cb.message.answer(
-            f"В диапазоне <b>{title}</b> новых доступных лотов с подтвержденным владельцем не найдено.",
-            reply_markup=nft_parser_menu_kb(AUTO_HUNTER_ACTIVE),
-            parse_mode="HTML"
-        )
-        return
-
-    for g in gifts:
-        extra_lines = []
-        if g.get("discount_pct", 0) > 0:
-            extra_lines.append(f"Флор: {g['floor_price']:g} TON | Дисконт: -{g['discount_pct']}% (~+{g['est_profit']} TON)")
-        if g.get("special_serial"):
-            extra_lines.append(f"Номер: {g['special_serial']}")
-        if g.get("rare_traits"):
-            extra_lines.append(f"Редкость: {', '.join(g['rare_traits'])}")
-        
-        portfolio = g.get("portfolio", {})
-        if portfolio.get("tier"):
-            extra_lines.append(f"Инвентарь: {portfolio['tier']}")
-
-        extra_text = ("\n" + "\n".join(extra_lines)) if extra_lines else ""
-
-        out_text = (
-            f"Подарок {g['link']} был успешно найден!\n\n"
-            f"Цена : {g['price']:g} TON\n\n"
-            f"Владелец : {g['owner']}{extra_text}"
-        )
-        await cb.message.answer(
-            out_text,
-            reply_markup=nft_found_actions_kb(g["link"], g.get("outreach_url"), range_key),
-            disable_web_page_preview=False
-        )
-
-@router.callback_query(F.data.startswith("nft:filter:"))
-async def cb_nft_filter(cb: CallbackQuery):
-    if not await check_admin(cb.from_user.id):
-        await cb.answer("Нет доступа.", show_alert=True)
-        return
-    filter_type = cb.data.split("nft:filter:", 1)[1]
-    rare_only = filter_type == "rare"
-    serial_only = filter_type == "serial"
-    title = "Редкие узоры (&lt;1%)" if rare_only else "Красивые номера"
-    
-    await cb.answer()
-    status_msg = await cb.message.answer(
-        f"{_e('arrows_cycle2', '⏳')} <b>Сканирование рынка на {title}...</b>",
-        parse_mode="HTML"
-    )
-    from nft_parser import search_gifts_by_range
-    gifts = await search_gifts_by_range(1.0, 500.0, limit=3, rare_only=rare_only, serial_only=serial_only)
-    try:
-        await status_msg.delete()
-    except Exception:
-        pass
-
-    if not gifts:
-        await cb.message.answer(
-            f"По фильтру <b>{title}</b> новых лотов на продажу не обнаружено.",
-            reply_markup=nft_parser_menu_kb(AUTO_HUNTER_ACTIVE),
-            parse_mode="HTML"
-        )
-        return
-
-    for g in gifts:
-        extra_lines = []
-        if g.get("special_serial"):
-            extra_lines.append(f"Номер: {g['special_serial']}")
-        if g.get("rare_traits"):
-            extra_lines.append(f"Редкость: {', '.join(g['rare_traits'])}")
-        extra_text = ("\n" + "\n".join(extra_lines)) if extra_lines else ""
-
-        out_text = (
-            f"Подарок {g['link']} был успешно найден!\n\n"
-            f"Цена : {g['price']:g} TON\n\n"
-            f"Владелец : {g['owner']}{extra_text}"
-        )
-        await cb.message.answer(
-            out_text,
-            reply_markup=nft_found_actions_kb(g["link"], g.get("outreach_url")),
-            disable_web_page_preview=False
-        )
-
-@router.message(AdminFSM.waiting_nft_range)
-async def proc_nft_custom_range(msg: Message, state: FSMContext):
-    if not await check_admin(msg.from_user.id):
-        return
-    nums = re.findall(r"[\d.]+", msg.text or "")
-    if len(nums) < 2:
-        await msg.answer("Введите две цифры диапазона через дефис (например: <code>10-50</code>):", parse_mode="HTML")
-        return
-    try:
-        min_t = float(nums[0])
-        max_t = float(nums[1])
-        if min_t > max_t:
-            min_t, max_t = max_t, min_t
-    except ValueError:
-        await msg.answer("Некорректные числа.")
-        return
-
-    await state.clear()
-    status_msg = await msg.answer(f"{_e('arrows_cycle2', '⏳')} <b>Поиск NFT-подарков в диапазоне {min_t:g} – {max_t:g} TON...</b>", parse_mode="HTML")
-    from nft_parser import search_gifts_by_range
-    gifts = await search_gifts_by_range(min_t, max_t, limit=3)
-    try:
-        await status_msg.delete()
-    except Exception:
-        pass
-
-    if not gifts:
-        await msg.answer(f"В диапазоне <b>{min_t:g} – {max_t:g} TON</b> лотов не найдено.", reply_markup=nft_parser_menu_kb(AUTO_HUNTER_ACTIVE), parse_mode="HTML")
-        return
-
-    for g in gifts:
-        out_text = (
-            f"Подарок {g['link']} был успешно найден!\n\n"
-            f"Цена : {g['price']:g} TON\n\n"
-            f"Владелец : {g['owner']}"
-        )
-        await msg.answer(out_text, reply_markup=nft_found_actions_kb(g["link"], g.get("outreach_url"), "custom"), disable_web_page_preview=False)
-
-@router.callback_query(F.data == "nft:check_link")
-async def cb_nft_check_link(cb: CallbackQuery, state: FSMContext):
-    if not await check_admin(cb.from_user.id):
-        await cb.answer("Нет доступа.", show_alert=True)
-        return
-    await state.set_state(AdminFSM.waiting_nft_link)
-    await cb.message.answer(
-        f"{_e('settings', '🔍')} <b>Проверка NFT-подарка по ссылке</b>\n\n"
-        "Отправьте ссылку на подарок (например: <code>https://t.me/nft/chillflame-344906</code>) или его название/номер:",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="‹ Отмена", callback_data="admin:nft")]]),
-        parse_mode="HTML"
-    )
-    await cb.answer()
-
-@router.message(AdminFSM.waiting_nft_link)
-async def proc_nft_link(msg: Message, state: FSMContext):
-    if not await check_admin(msg.from_user.id):
-        return
-    raw_val = (msg.text or "").strip()
-    status_msg = await msg.answer(f"{_e('arrows_cycle2', '⏳')} <b>Парсинг данных NFT-подарка и определение владельца...</b>", parse_mode="HTML")
-    from nft_parser import parse_single_nft_gift
-    info = await parse_single_nft_gift(raw_val, skip_seen=False)
-    try:
-        await status_msg.delete()
-    except Exception:
-        pass
-
-    if not info:
-        await msg.answer("Не удалось найти информацию о данном подарке или его владелец скрыт.", reply_markup=nft_parser_menu_kb(AUTO_HUNTER_ACTIVE))
-        return
-
-    await state.clear()
-    extra_lines = []
-    if info.get("discount_pct", 0) > 0:
-        extra_lines.append(f"Флор: {info['floor_price']:g} TON | Дисконт: -{info['discount_pct']}%")
-    if info.get("special_serial"):
-        extra_lines.append(f"Номер: {info['special_serial']}")
-    if info.get("rare_traits"):
-        extra_lines.append(f"Редкость: {', '.join(info['rare_traits'])}")
-    extra_text = ("\n" + "\n".join(extra_lines)) if extra_lines else ""
-
-    out_text = (
-        f"Подарок {info['link']} был успешно найден!\n\n"
-        f"Цена : {info['price']:g} TON\n\n"
-        f"Владелец : {info['owner']}{extra_text}"
-    )
-    await msg.answer(out_text, reply_markup=nft_found_actions_kb(info["link"], info.get("outreach_url")), disable_web_page_preview=False)
-
-@router.callback_query(F.data == "nft:export_csv")
-async def cb_nft_export_csv(cb: CallbackQuery):
-    if not await check_admin(cb.from_user.id):
-        await cb.answer("Нет доступа.", show_alert=True)
-        return
-    await cb.answer("Формирование CSV базы...")
-    from nft_parser import export_seen_gifts_csv
-    from aiogram.types import BufferedInputFile
-    csv_bytes = await export_seen_gifts_csv()
-    doc = BufferedInputFile(csv_bytes, filename="nft_holders_export.csv")
-    await cb.message.answer_document(
-        document=doc,
-        caption=f"{_e('premium_clean', '⚡')} <b>Экспорт базы спарсенных холдеров NFT</b>\n\nФайл содержит историю находок, цены и прямые ссылки на владельцев.",
-        parse_mode="HTML"
-    )
-
-@router.callback_query(F.data == "nft:auto_toggle")
-async def cb_nft_auto_toggle(cb: CallbackQuery):
-    global AUTO_HUNTER_ACTIVE, AUTO_HUNTER_TASK
-    if not await check_admin(cb.from_user.id):
-        await cb.answer("Нет доступа.", show_alert=True)
-        return
-    import asyncio
-    AUTO_HUNTER_ACTIVE = not AUTO_HUNTER_ACTIVE
-    
-    if AUTO_HUNTER_ACTIVE:
-        async def hunter_loop():
-            from nft_parser import search_gifts_by_range
-            while AUTO_HUNTER_ACTIVE:
-                try:
-                    gifts = await search_gifts_by_range(2.0, 100.0, limit=2)
-                    for g in gifts:
-                        out_text = (
-                            f"{_e('premium_clean', '⚡')} <b>[Авто-охота] Найден лот!</b>\n\n"
-                            f"Подарок {g['link']} был успешно найден!\n\n"
-                            f"Цена : {g['price']:g} TON\n\n"
-                            f"Владелец : {g['owner']}"
-                        )
-                        await cb.bot.send_message(
-                            cb.from_user.id,
-                            out_text,
-                            reply_markup=nft_found_actions_kb(g["link"], g.get("outreach_url")),
-                            disable_web_page_preview=False
-                        )
-                except Exception as ex:
-                    log.error("Hunter error: %s", ex)
-                await asyncio.sleep(45)
-
-        AUTO_HUNTER_TASK = asyncio.create_task(hunter_loop())
-        await cb.answer("Авто-охота 24/7 активирована!", show_alert=True)
-    else:
-        if AUTO_HUNTER_TASK:
-            AUTO_HUNTER_TASK.cancel()
-        await cb.answer("Авто-охота остановлена.", show_alert=True)
-
-    try:
-        await cb.message.edit_reply_markup(reply_markup=nft_parser_menu_kb(AUTO_HUNTER_ACTIVE))
-    except Exception:
-        pass
