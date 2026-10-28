@@ -7,578 +7,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Crypto Bot</title>
-  <script src="https://telegram.org/js/telegram-web-app.js">
-    // ==========================================
-    // INTERACTIVE EXCHANGE ORDER TYPES & DEALS
-    // ==========================================
-    let currentOrderType = 'limit';
-    function openOrderTypeModal() {
-      const current = currentOrderType || 'limit';
-      openModal('Тип ордера', `
-        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
-          Выберите тип исполнения торгового ордера на бирже:
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <div class="market-cur-row" onclick="selectOrderType('limit')" style="padding: 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; border: ${current === 'limit' ? '1.5px solid var(--accent-blue)' : '1px solid rgba(255,255,255,0.05)'};">
-            <div style="font-weight: 600; font-size: 15px; margin-bottom: 3px;">Лимитный ордер</div>
-            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.4;">Позволяет указать фиксированную желаемую цену покупки или продажи.</div>
-          </div>
-          <div class="market-cur-row" onclick="selectOrderType('market')" style="padding: 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; border: ${current === 'market' ? '1.5px solid var(--accent-blue)' : '1px solid rgba(255,255,255,0.05)'};">
-            <div style="font-weight: 600; font-size: 15px; margin-bottom: 3px;">Рыночный ордер</div>
-            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.4;">Мгновенное исполнение сделки по лучшей доступной цене в стакане.</div>
-          </div>
-          <div class="market-cur-row" onclick="selectOrderType('stop_limit')" style="padding: 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; border: ${current === 'stop_limit' ? '1.5px solid var(--accent-blue)' : '1px solid rgba(255,255,255,0.05)'};">
-            <div style="font-weight: 600; font-size: 15px; margin-bottom: 3px;">Стоп-лимит</div>
-            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.4;">Автоматическое выставление лимитного ордера при достижении стоп-цены.</div>
-          </div>
-        </div>
-      `);
-    }
-
-    function selectOrderType(type) {
-      currentOrderType = type;
-      const labels = {
-        limit: 'Лимитный ордер',
-        market: 'Рыночный ордер',
-        stop_limit: 'Стоп-лимит'
-      };
-      const picker = document.getElementById('order-type-label');
-      if (picker) picker.innerText = labels[type] || 'Лимитный ордер';
-      const priceInput = document.getElementById('trade-price-input');
-      if (type === 'market' && priceInput) {
-        priceInput.value = 'Рыночная';
-        priceInput.disabled = true;
-      } else if (priceInput) {
-        priceInput.disabled = false;
-        priceInput.value = (currentExchangePair?.price || 0.9948).toFixed(4);
-      }
-      closeModal();
-      updateTradeCalc();
-      showToast('Тип ордера', labels[type]);
-    }
-
-    function filterExOpenOrders(el, filter) {
-      if (!el || !el.parentElement) return;
-      el.parentElement.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-      el.classList.add('active');
-    }
-
-    // ==========================================
-    // DYNAMIC LIVE DEALS GENERATION WITH STREAM
-    // ==========================================
-    let exchangeTradesData = [];
-    let isTradesLoadingMore = false;
-
-    function initExchangeTrades() {
-      const mid = currentExchangePair?.price || 0.9948;
-      const now = Date.now();
-      exchangeTradesData = [];
-      for (let i = 0; i < 24; i++) {
-        const isBuy = Math.random() > 0.48;
-        const pr = (mid * (1 + (Math.random() - 0.5) * 0.0016)).toFixed(4);
-        const amt = (Math.random() * 450 + 15).toFixed(2);
-        const t = new Date(now - i * (Math.random() * 8000 + 3000));
-        exchangeTradesData.push({ price: pr, amount: amt, time: t, isBuy });
-      }
-      renderExTradesHtml();
-    }
-
-    function renderExTradesHtml() {
-      const container = document.getElementById('ex-trades-list');
-      if (!container) return;
-      const rows = exchangeTradesData.map(tr => {
-        const color = tr.isBuy ? 'var(--accent-green)' : 'var(--accent-red)';
-        const timeStr = tr.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        return `
-          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.3s;" class="trade-live-row">
-            <span class="num-rounded" style="color: ${color}; font-weight: 600;">${tr.price}</span>
-            <span class="num-rounded">${tr.amount}</span>
-            <span class="num-rounded" style="color: var(--text-secondary); font-size: 11px;">${timeStr}</span>
-          </div>
-        `;
-      }).join('');
-
-      container.innerHTML = `
-        <div id="trades-scroll-wrap" style="max-height: 280px; overflow-y: auto;" onscroll="handleTradesScroll(this)">
-          ${rows}
-          <div id="trades-loader" style="display: none; text-align: center; padding: 12px; color: var(--text-secondary); font-size: 12px;">
-            <div style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -2px; margin-right: 6px;"></div>
-            Загрузка сделок...
-          </div>
-        </div>
-      `;
-    }
-
-    function handleTradesScroll(el) {
-      if (!el || isTradesLoadingMore) return;
-      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
-        isTradesLoadingMore = true;
-        const loader = document.getElementById('trades-loader');
-        if (loader) loader.style.display = 'block';
-
-        setTimeout(() => {
-          const mid = currentExchangePair?.price || 0.9948;
-          const oldestTime = exchangeTradesData.length ? exchangeTradesData[exchangeTradesData.length - 1].time.getTime() : Date.now();
-          for (let i = 1; i <= 12; i++) {
-            const isBuy = Math.random() > 0.48;
-            const pr = (mid * (1 + (Math.random() - 0.5) * 0.002)).toFixed(4);
-            const amt = (Math.random() * 500 + 20).toFixed(2);
-            const t = new Date(oldestTime - i * (Math.random() * 12000 + 5000));
-            exchangeTradesData.push({ price: pr, amount: amt, time: t, isBuy });
-          }
-          if (loader) loader.style.display = 'none';
-          isTradesLoadingMore = false;
-          renderExTradesHtml();
-        }, 600);
-      }
-    }
-
-    // Auto-stream incoming live trades every 2-3 seconds
-    setInterval(() => {
-      const tabEx = document.getElementById('tab-exchange');
-      if (!tabEx || !tabEx.classList.contains('active')) return;
-      const tradesSub = document.getElementById('ex-subtab-trades-content');
-      if (!tradesSub || tradesSub.style.display === 'none') return;
-
-      const mid = currentExchangePair?.price || 0.9948;
-      const isBuy = Math.random() > 0.46;
-      const pr = (mid * (1 + (Math.random() - 0.5) * 0.0012)).toFixed(4);
-      const amt = (Math.random() * 320 + 10).toFixed(2);
-      exchangeTradesData.unshift({ price: pr, amount: amt, time: new Date(), isBuy });
-      if (exchangeTradesData.length > 80) exchangeTradesData.pop();
-      renderExTradesHtml();
-    }, 2400);
-
-    // ==========================================
-    // P2P INTERACTIVE FILTERS
-    // ==========================================
-    function openP2PStatusModal() {
-      openModal('Статус сделки', `
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <div class="market-cur-row" onclick="selectP2PFilter('status', 'Все')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer;">Все статусы</div>
-          <div class="market-cur-row" onclick="selectP2PFilter('status', 'В процессе')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer;">В процессе</div>
-          <div class="market-cur-row" onclick="selectP2PFilter('status', 'Завершённые')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer;">Завершённые</div>
-          <div class="market-cur-row" onclick="selectP2PFilter('status', 'Отменённые')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer;">Отменённые</div>
-        </div>
-      `);
-    }
-
-    function openP2PTypeModal() {
-      openModal('Тип операции', `
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <div class="market-cur-row" onclick="selectP2PFilter('type', 'Все')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer;">Все типы</div>
-          <div class="market-cur-row" onclick="selectP2PFilter('type', 'Покупка')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; color: var(--accent-green); font-weight: 600;">Покупка</div>
-          <div class="market-cur-row" onclick="selectP2PFilter('type', 'Продажа')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; color: var(--accent-red); font-weight: 600;">Продажа</div>
-        </div>
-      `);
-    }
-
-    function openP2PCoinModal() {
-      const rows = ASSETS.map(c => `
-        <div class="market-cur-row" onclick="selectP2PFilter('coin', '${c.id}')" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; margin-bottom: 6px;">
-          <img src="./images/coins/${c.id}.webp" onerror="this.src='./images/coins/USDT.webp'" style="width: 28px; height: 28px; border-radius: 50%;">
-          <div>
-            <div style="font-weight: 600; font-size: 15px;">${c.name}</div>
-            <div style="font-size: 12px; color: var(--text-secondary);">${c.symbol}</div>
-          </div>
-        </div>
-      `).join('');
-
-      openModal('Выбрать криптовалюту', `
-        <div class="market-cur-row" onclick="selectP2PFilter('coin', 'Все')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; margin-bottom: 8px; font-weight: 600;">Все монеты</div>
-        <div style="max-height: 50vh; overflow-y: auto;">
-          ${rows}
-        </div>
-      `);
-    }
-
-    function selectP2PFilter(kind, val) {
-      if (kind === 'status') {
-        const el = document.getElementById('p2p-chip-status');
-        if (el) el.innerText = val === 'Все' ? 'Статус ▾' : `${val} ▾`;
-      } else if (kind === 'type') {
-        const el = document.getElementById('p2p-chip-type');
-        if (el) el.innerText = val === 'Все' ? 'Тип ▾' : `${val} ▾`;
-      } else if (kind === 'coin') {
-        const el = document.getElementById('p2p-chip-coin');
-        if (el) el.innerText = val === 'Все' ? 'Монета ▾' : `${val} ▾`;
-      }
-      closeModal();
-      showToast('Фильтр P2P', `${val}`);
-    }
-
-    function setP2PAdsFilter(el, filter) {
-      if (!el || !el.parentElement) return;
-      el.parentElement.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-      el.classList.add('active');
-    }
-
-    // ==========================================
-    // FLOATING PILL DOCK BAR SMOOTH SCROLL SHRINK
-    // ==========================================
-    let lastScrollY = window.scrollY;
-    let scrollTicking = false;
-    window.addEventListener('scroll', () => {
-      if (!scrollTicking) {
-        window.requestAnimationFrame(() => {
-          const currentScrollY = window.scrollY;
-          const dock = document.querySelector('.dock-pill-bar');
-          if (dock) {
-            if (currentScrollY > lastScrollY + 8 && currentScrollY > 40) {
-              dock.classList.add('dock-shrunk');
-            } else if (currentScrollY < lastScrollY - 6) {
-              dock.classList.remove('dock-shrunk');
-            }
-          }
-          lastScrollY = currentScrollY;
-          scrollTicking = false;
-        });
-        scrollTicking = true;
-      }
-    }, { passive: true });
-
-    // ==========================================
-    // QR PAY SCANNER WITH FULL RECOGNITION & JSQR FALLBACK
-    // ==========================================
-    function scanVideoFrame() {
-      const video = document.getElementById('qr-camera-video');
-      if (!video || !activeCameraStream) return;
-
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        let scannedText = null;
-
-        // 1. Try BarcodeDetector if natively supported
-        if ('BarcodeDetector' in window) {
-          try {
-            const detector = new BarcodeDetector({ formats: ['qr_code'] });
-            detector.detect(video).then(barcodes => {
-              if (barcodes && barcodes.length > 0) {
-                stopCameraStream();
-                closeModal();
-                handleScannedQrResult(barcodes[0].rawValue);
-              } else {
-                requestAnimationFrame(scanVideoFrame);
-              }
-            }).catch(() => {
-              tryJsQrFallback(video);
-            });
-            return;
-          } catch(e) {}
-        }
-
-        // 2. Fallback to jsQR canvas scanning
-        tryJsQrFallback(video);
-      } else {
-        requestAnimationFrame(scanVideoFrame);
-      }
-    }
-
-    function tryJsQrFallback(video) {
-      if (typeof jsQR !== 'undefined') {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imgData.data, imgData.width, imgData.height, {
-            inversionAttempts: "dontInvert"
-          });
-          if (code && code.data) {
-            stopCameraStream();
-            closeModal();
-            handleScannedQrResult(code.data);
-            return;
-          }
-        }
-      }
-      requestAnimationFrame(scanVideoFrame);
-    }
-
-  
-    // ==========================================
-    // INTERACTIVE CHART ENGINE (LINE & CANDLESTICK)
-    // ==========================================
-    let chartTimeframe = '1h';
-    let chartType = 'line';
-    let cachedCandles = [];
-
-    function generateCandlesData(count = 24) {
-      const mid = currentExchangePair?.price || 0.9948;
-      const candles = [];
-      let currentPrice = mid * (1 - 0.004);
-      for (let i = 0; i < count; i++) {
-        const delta = (Math.random() - 0.48) * (mid * 0.0025);
-        const open = currentPrice;
-        const close = open + delta;
-        const high = Math.max(open, close) + Math.random() * (mid * 0.001);
-        const low = Math.min(open, close) - Math.random() * (mid * 0.001);
-        const volume = Math.random() * 5000 + 1000;
-        candles.push({ open, close, high, low, volume });
-        currentPrice = close;
-      }
-      // Force last close to match exact current pair price
-      candles[candles.length - 1].close = mid;
-      return candles;
-    }
-
-    function renderExchangeChart() {
-      const svg = document.getElementById('exchange-chart-svg');
-      if (!svg) return;
-      if (!cachedCandles || cachedCandles.length === 0) {
-        cachedCandles = generateCandlesData(24);
-      }
-
-      const W = 380;
-      const H = 140;
-      const padding = 12;
-
-      let minP = Math.min(...cachedCandles.map(c => c.low));
-      let maxP = Math.max(...cachedCandles.map(c => c.high));
-      if (minP === maxP) { minP -= 0.001; maxP += 0.001; }
-
-      const getY = (val) => H - padding - ((val - minP) / (maxP - minP)) * (H - padding * 2);
-
-      let content = `
-        <defs>
-          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#2b8cff" stop-opacity="0.32"/>
-            <stop offset="100%" stop-color="#2b8cff" stop-opacity="0.0"/>
-          </linearGradient>
-          <linearGradient id="gridGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="rgba(255,255,255,0.02)"/>
-            <stop offset="100%" stop-color="rgba(255,255,255,0.06)"/>
-          </linearGradient>
-        </defs>
-        <!-- Horizontal Grid Lines -->
-        <line x1="0" y1="${H * 0.25}" x2="${W}" y2="${H * 0.25}" stroke="rgba(255,255,255,0.04)" stroke-dasharray="3,3"/>
-        <line x1="0" y1="${H * 0.5}" x2="${W}" y2="${H * 0.5}" stroke="rgba(255,255,255,0.04)" stroke-dasharray="3,3"/>
-        <line x1="0" y1="${H * 0.75}" x2="${W}" y2="${H * 0.75}" stroke="rgba(255,255,255,0.04)" stroke-dasharray="3,3"/>
-      `;
-
-      if (chartType === 'line') {
-        const stepX = W / (cachedCandles.length - 1);
-        const points = cachedCandles.map((c, i) => ({ x: i * stepX, y: getY(c.close) }));
-
-        let d = `M ${points[0].x} ${points[0].y}`;
-        for (let i = 1; i < points.length; i++) {
-          const prev = points[i - 1];
-          const curr = points[i];
-          const cx1 = prev.x + (curr.x - prev.x) * 0.45;
-          const cy1 = prev.y;
-          const cx2 = prev.x + (curr.x - prev.x) * 0.55;
-          const cy2 = curr.y;
-          d += ` C ${cx1} ${cy1}, ${cx2} ${cy2}, ${curr.x} ${curr.y}`;
-        }
-
-        const areaD = `${d} L ${points[points.length - 1].x} ${H} L ${points[0].x} ${H} Z`;
-
-        const lastPt = points[points.length - 1];
-        content += `
-          <path d="${areaD}" fill="url(#chartGrad)"/>
-          <path d="${d}" fill="none" stroke="#2b8cff" stroke-width="2.2" stroke-linecap="round"/>
-          <circle cx="${lastPt.x}" cy="${lastPt.y}" r="4" fill="#2b8cff"/>
-          <circle cx="${lastPt.x}" cy="${lastPt.y}" r="8" fill="rgba(43,140,255,0.25)" class="pulse-ring"/>
-        `;
-      } else {
-        // Candlesticks Mode
-        const candleW = (W / cachedCandles.length) * 0.65;
-        const stepX = W / cachedCandles.length;
-
-        cachedCandles.forEach((c, i) => {
-          const x = i * stepX + stepX * 0.5;
-          const isUp = c.close >= c.open;
-          const color = isUp ? '#34c759' : '#ff3b30';
-
-          const yOpen = getY(c.open);
-          const yClose = getY(c.close);
-          const yHigh = getY(c.high);
-          const yLow = getY(c.low);
-
-          const bodyTop = Math.min(yOpen, yClose);
-          const bodyH = Math.max(2, Math.abs(yClose - yOpen));
-
-          content += `
-            <line x1="${x}" y1="${yHigh}" x2="${x}" y2="${yLow}" stroke="${color}" stroke-width="1.2"/>
-            <rect x="${x - candleW / 2}" y="${bodyTop}" width="${candleW}" height="${bodyH}" rx="1" fill="${color}"/>
-          `;
-        });
-      }
-
-      // Add Current Price Marker Badge on the right
-      const lastClose = cachedCandles[cachedCandles.length - 1].close;
-      const lastY = getY(lastClose);
-      content += `
-        <line x1="0" y1="${lastY}" x2="${W}" y2="${lastY}" stroke="rgba(43,140,255,0.4)" stroke-dasharray="2,2"/>
-        <rect x="${W - 64}" y="${Math.max(2, lastY - 9)}" width="64" height="18" rx="5" fill="#2b8cff"/>
-        <text x="${W - 32}" y="${Math.max(2, lastY - 9) + 12}" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle" font-family="system-ui">${lastClose.toFixed(4)}</text>
-      `;
-
-      svg.innerHTML = content;
-    }
-
-    function setChartTf(tf) {
-      chartTimeframe = tf;
-      document.querySelectorAll('#chart-tf-pills .chart-tf-btn').forEach(b => b.classList.remove('active'));
-      const activeBtn = document.getElementById(`tf-${tf}`);
-      if (activeBtn) activeBtn.classList.add('active');
-      cachedCandles = generateCandlesData(24);
-      renderExchangeChart();
-    }
-
-    function setChartType(type) {
-      chartType = type;
-      document.getElementById('chart-type-line')?.classList.toggle('active', type === 'line');
-      document.getElementById('chart-type-candles')?.classList.toggle('active', type === 'candles');
-      renderExchangeChart();
-    }
-
-    // ==========================================
-    // NOTIFICATION CENTER (КОЛОКОЛЬЧИК)
-    // ==========================================
-    let userNotifications = [
-      { id: 1, title: 'Зачисление средств', desc: 'Успешно получен ваучер на ваш кошелёк', time: '10 мин назад', read: false, icon: '💰' },
-      { id: 2, title: 'Безопасность', desc: 'Установлен персональный код-пароль кошелька', time: '1 час назад', read: false, icon: '🛡' },
-      { id: 3, title: 'P2P Маркет', desc: 'Обновлены комиссии и лимиты для торговли', time: 'Вчера', read: false, icon: '🤝' }
-    ];
-
-    function updateNotificationBadge() {
-      const badge = document.getElementById('bell-unread-badge');
-      if (!badge) return;
-      const unreadCount = userNotifications.filter(n => !n.read).length;
-      if (unreadCount > 0) {
-        badge.innerText = unreadCount;
-        badge.style.display = 'flex';
-      } else {
-        badge.style.display = 'none';
-      }
-    }
-
-    function openNotificationsCenterModal() {
-      const listHtml = userNotifications.map(n => `
-        <div style="background: var(--bg-card); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 12px; border: 1px solid rgba(255,255,255,0.04); opacity: ${n.read ? '0.65' : '1'};">
-          <div style="font-size: 20px; width: 36px; height: 36px; border-radius: 50%; background: var(--bg-card-secondary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">${n.icon}</div>
-          <div style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: 600; font-size: 14px;">${n.title}</span>
-              <span style="font-size: 11px; color: var(--text-secondary);">${n.time}</span>
-            </div>
-            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.4;">${n.desc}</div>
-          </div>
-        </div>
-      `).join('');
-
-      openModal('Уведомления', `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <span style="font-size: 13px; color: var(--text-secondary);">Важные события аккаунта</span>
-          <button onclick="markAllNotificationsRead()" style="background: transparent; border: none; color: var(--accent-blue); font-size: 13px; font-weight: 600; cursor: pointer;">
-            Прочитать все
-          </button>
-        </div>
-        <div style="max-height: 55vh; overflow-y: auto;">
-          ${listHtml || '<div style="text-align: center; color: var(--text-secondary); padding: 30px;">Уведомлений нет</div>'}
-        </div>
-      `);
-    }
-
-    function markAllNotificationsRead() {
-      userNotifications.forEach(n => n.read = true);
-      updateNotificationBadge();
-      closeModal();
-      showToast('Уведомления', 'Все уведомления отмечены как прочитанные');
-    }
-
-    // ==========================================
-    // INVOICE PAYMENT GENERATOR (СЧЕТА / QR PAY)
-    // ==========================================
-    function openCreateInvoiceModal() {
-      openModal('Создать счёт на оплату', `
-        <div style="margin-bottom: 14px;">
-          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Выберите валюту:</div>
-          <select id="invoice-coin-select" style="width: 100%; height: 44px; border-radius: 12px; background: var(--bg-card-secondary); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.08); padding: 0 12px; font-size: 14px; font-weight: 600; outline: none; margin-bottom: 12px;">
-            <option value="USDT">Tether (USDT)</option>
-            <option value="TON">Toncoin (TON)</option>
-            <option value="BTC">Bitcoin (BTC)</option>
-            <option value="GRAM">Gram (GRAM)</option>
-            <option value="SOL">Solana (SOL)</option>
-          </select>
-
-          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Сумма счёта:</div>
-          <input type="number" step="any" id="invoice-amount-input" class="num-rounded" placeholder="0.00" style="width: 100%; height: 46px; border-radius: 12px; background: var(--bg-card-secondary); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.08); padding: 0 14px; font-size: 16px; font-weight: 600; outline: none; margin-bottom: 12px;">
-
-          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Описание / назначение (необязательно):</div>
-          <input type="text" id="invoice-desc-input" placeholder="Например: За разработку проекта" style="width: 100%; height: 44px; border-radius: 12px; background: var(--bg-card-secondary); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.08); padding: 0 14px; font-size: 13px; outline: none; margin-bottom: 20px;">
-
-          <button class="primary-btn" onclick="generateInvoiceResult()" style="margin: 0;">
-            Сгенерировать счёт и QR-код
-          </button>
-        </div>
-      `);
-    }
-
-    function generateInvoiceResult() {
-      const coin = document.getElementById('invoice-coin-select')?.value || 'USDT';
-      const amount = parseFloat(document.getElementById('invoice-amount-input')?.value) || 0;
-      const desc = document.getElementById('invoice-desc-input')?.value || 'Оплата счёта';
-
-      if (amount <= 0) {
-        showToast('Ошибка', 'Укажите корректную сумму счёта', false);
-        return;
-      }
-
-      const invId = Math.random().toString(36).substring(2, 10).toUpperCase();
-      const botUsername = 'CryptoBotOfficialbot';
-      const invLink = `https://t.me/${botUsername}?start=inv_${invId}`;
-      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(invLink)}&color=ffffff&bgcolor=1c1c1e`;
-
-      openModal('Счёт выставлен', `
-        <div style="text-align: center; padding: 10px 0;">
-          <div style="font-size: 26px; font-weight: 800; margin-bottom: 4px;" class="num-rounded">${amount} ${coin}</div>
-          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">${desc} · Счёт #${invId}</div>
-
-          <div style="width: 190px; height: 190px; margin: 0 auto 16px; background: #1c1c1e; border-radius: 18px; padding: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
-            <img src="${qrApiUrl}" width="170" height="170" style="border-radius: 12px; display: block;" alt="QR Code">
-          </div>
-
-          <div style="background: var(--bg-card); border-radius: 12px; padding: 10px 14px; font-family: monospace; font-size: 12px; word-break: break-all; margin-bottom: 16px; color: var(--accent-blue);">
-            ${invLink}
-          </div>
-
-          <div style="display: flex; gap: 8px;">
-            <button class="primary-btn" onclick="navigator.clipboard.writeText('${invLink}'); showToast('Скопировано', 'Ссылка на счёт скопирована');" style="flex: 1; margin: 0;">
-              Копировать
-            </button>
-            <button class="action-btn" onclick="if (window.Telegram?.WebApp?.openTelegramLink) { window.Telegram.WebApp.openTelegramLink('https://t.me/share/url?url=${encodeURIComponent(invLink)}&text=${encodeURIComponent('Оплатите счёт на ' + amount + ' ' + coin)}'); } else { navigator.clipboard.writeText('${invLink}'); } showToast('Поделиться', 'Готово');" style="flex: 1; margin: 0; background: var(--bg-card-secondary);">
-              Поделиться
-            </button>
-          </div>
-        </div>
-      `);
-    }
-
-    // ==========================================
-    // SYNC REGIONAL RESTRICTION SETTING FROM BOT
-    // ==========================================
-    function checkRegionalRestrictionFlag() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const reg = urlParams.get('reg');
-      if (reg === '0') {
-        document.querySelectorAll('.cb-banner').forEach(el => {
-          el.style.display = 'none';
-        });
-      }
-    }
-
-  
-    // Initialize stage 2 features
-    setTimeout(() => {
-      renderExchangeChart();
-      updateNotificationBadge();
-      checkRegionalRestrictionFlag();
-    }, 200);
-
-  </script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     @font-face {
       font-family: 'SF Pro Rounded';
@@ -5121,6 +4550,580 @@
         renderOrderBook();
       }
     }, 3500);
+  
+    // ==========================================
+    // STAGE 2 INTERACTIVE ENHANCEMENTS
+    // ==========================================
+    // ==========================================
+    // INTERACTIVE EXCHANGE ORDER TYPES & DEALS
+    // ==========================================
+    let currentOrderType = 'limit';
+    function openOrderTypeModal() {
+      const current = currentOrderType || 'limit';
+      openModal('Тип ордера', `
+        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+          Выберите тип исполнения торгового ордера на бирже:
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="market-cur-row" onclick="selectOrderType('limit')" style="padding: 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; border: ${current === 'limit' ? '1.5px solid var(--accent-blue)' : '1px solid rgba(255,255,255,0.05)'};">
+            <div style="font-weight: 600; font-size: 15px; margin-bottom: 3px;">Лимитный ордер</div>
+            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.4;">Позволяет указать фиксированную желаемую цену покупки или продажи.</div>
+          </div>
+          <div class="market-cur-row" onclick="selectOrderType('market')" style="padding: 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; border: ${current === 'market' ? '1.5px solid var(--accent-blue)' : '1px solid rgba(255,255,255,0.05)'};">
+            <div style="font-weight: 600; font-size: 15px; margin-bottom: 3px;">Рыночный ордер</div>
+            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.4;">Мгновенное исполнение сделки по лучшей доступной цене в стакане.</div>
+          </div>
+          <div class="market-cur-row" onclick="selectOrderType('stop_limit')" style="padding: 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; border: ${current === 'stop_limit' ? '1.5px solid var(--accent-blue)' : '1px solid rgba(255,255,255,0.05)'};">
+            <div style="font-weight: 600; font-size: 15px; margin-bottom: 3px;">Стоп-лимит</div>
+            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.4;">Автоматическое выставление лимитного ордера при достижении стоп-цены.</div>
+          </div>
+        </div>
+      `);
+    }
+
+    function selectOrderType(type) {
+      currentOrderType = type;
+      const labels = {
+        limit: 'Лимитный ордер',
+        market: 'Рыночный ордер',
+        stop_limit: 'Стоп-лимит'
+      };
+      const picker = document.getElementById('order-type-label');
+      if (picker) picker.innerText = labels[type] || 'Лимитный ордер';
+      const priceInput = document.getElementById('trade-price-input');
+      if (type === 'market' && priceInput) {
+        priceInput.value = 'Рыночная';
+        priceInput.disabled = true;
+      } else if (priceInput) {
+        priceInput.disabled = false;
+        priceInput.value = (currentExchangePair?.price || 0.9948).toFixed(4);
+      }
+      closeModal();
+      updateTradeCalc();
+      showToast('Тип ордера', labels[type]);
+    }
+
+    function filterExOpenOrders(el, filter) {
+      if (!el || !el.parentElement) return;
+      el.parentElement.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    // ==========================================
+    // DYNAMIC LIVE DEALS GENERATION WITH STREAM
+    // ==========================================
+    let exchangeTradesData = [];
+    let isTradesLoadingMore = false;
+
+    function initExchangeTrades() {
+      const mid = currentExchangePair?.price || 0.9948;
+      const now = Date.now();
+      exchangeTradesData = [];
+      for (let i = 0; i < 24; i++) {
+        const isBuy = Math.random() > 0.48;
+        const pr = (mid * (1 + (Math.random() - 0.5) * 0.0016)).toFixed(4);
+        const amt = (Math.random() * 450 + 15).toFixed(2);
+        const t = new Date(now - i * (Math.random() * 8000 + 3000));
+        exchangeTradesData.push({ price: pr, amount: amt, time: t, isBuy });
+      }
+      renderExTradesHtml();
+    }
+
+    function renderExTradesHtml() {
+      const container = document.getElementById('ex-trades-list');
+      if (!container) return;
+      const rows = exchangeTradesData.map(tr => {
+        const color = tr.isBuy ? 'var(--accent-green)' : 'var(--accent-red)';
+        const timeStr = tr.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        return `
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.3s;" class="trade-live-row">
+            <span class="num-rounded" style="color: ${color}; font-weight: 600;">${tr.price}</span>
+            <span class="num-rounded">${tr.amount}</span>
+            <span class="num-rounded" style="color: var(--text-secondary); font-size: 11px;">${timeStr}</span>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div id="trades-scroll-wrap" style="max-height: 280px; overflow-y: auto;" onscroll="handleTradesScroll(this)">
+          ${rows}
+          <div id="trades-loader" style="display: none; text-align: center; padding: 12px; color: var(--text-secondary); font-size: 12px;">
+            <div style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -2px; margin-right: 6px;"></div>
+            Загрузка сделок...
+          </div>
+        </div>
+      `;
+    }
+
+    function handleTradesScroll(el) {
+      if (!el || isTradesLoadingMore) return;
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
+        isTradesLoadingMore = true;
+        const loader = document.getElementById('trades-loader');
+        if (loader) loader.style.display = 'block';
+
+        setTimeout(() => {
+          const mid = currentExchangePair?.price || 0.9948;
+          const oldestTime = exchangeTradesData.length ? exchangeTradesData[exchangeTradesData.length - 1].time.getTime() : Date.now();
+          for (let i = 1; i <= 12; i++) {
+            const isBuy = Math.random() > 0.48;
+            const pr = (mid * (1 + (Math.random() - 0.5) * 0.002)).toFixed(4);
+            const amt = (Math.random() * 500 + 20).toFixed(2);
+            const t = new Date(oldestTime - i * (Math.random() * 12000 + 5000));
+            exchangeTradesData.push({ price: pr, amount: amt, time: t, isBuy });
+          }
+          if (loader) loader.style.display = 'none';
+          isTradesLoadingMore = false;
+          renderExTradesHtml();
+        }, 600);
+      }
+    }
+
+    // Auto-stream incoming live trades every 2-3 seconds
+    setInterval(() => {
+      const tabEx = document.getElementById('tab-exchange');
+      if (!tabEx || !tabEx.classList.contains('active')) return;
+      const tradesSub = document.getElementById('ex-subtab-trades-content');
+      if (!tradesSub || tradesSub.style.display === 'none') return;
+
+      const mid = currentExchangePair?.price || 0.9948;
+      const isBuy = Math.random() > 0.46;
+      const pr = (mid * (1 + (Math.random() - 0.5) * 0.0012)).toFixed(4);
+      const amt = (Math.random() * 320 + 10).toFixed(2);
+      exchangeTradesData.unshift({ price: pr, amount: amt, time: new Date(), isBuy });
+      if (exchangeTradesData.length > 80) exchangeTradesData.pop();
+      renderExTradesHtml();
+    }, 2400);
+
+    // ==========================================
+    // P2P INTERACTIVE FILTERS
+    // ==========================================
+    function openP2PStatusModal() {
+      openModal('Статус сделки', `
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="market-cur-row" onclick="selectP2PFilter('status', 'Все')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer;">Все статусы</div>
+          <div class="market-cur-row" onclick="selectP2PFilter('status', 'В процессе')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer;">В процессе</div>
+          <div class="market-cur-row" onclick="selectP2PFilter('status', 'Завершённые')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer;">Завершённые</div>
+          <div class="market-cur-row" onclick="selectP2PFilter('status', 'Отменённые')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer;">Отменённые</div>
+        </div>
+      `);
+    }
+
+    function openP2PTypeModal() {
+      openModal('Тип операции', `
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="market-cur-row" onclick="selectP2PFilter('type', 'Все')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer;">Все типы</div>
+          <div class="market-cur-row" onclick="selectP2PFilter('type', 'Покупка')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; color: var(--accent-green); font-weight: 600;">Покупка</div>
+          <div class="market-cur-row" onclick="selectP2PFilter('type', 'Продажа')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; color: var(--accent-red); font-weight: 600;">Продажа</div>
+        </div>
+      `);
+    }
+
+    function openP2PCoinModal() {
+      const rows = ASSETS.map(c => `
+        <div class="market-cur-row" onclick="selectP2PFilter('coin', '${c.id}')" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; margin-bottom: 6px;">
+          <img src="./images/coins/${c.id}.webp" onerror="this.src='./images/coins/USDT.webp'" style="width: 28px; height: 28px; border-radius: 50%;">
+          <div>
+            <div style="font-weight: 600; font-size: 15px;">${c.name}</div>
+            <div style="font-size: 12px; color: var(--text-secondary);">${c.symbol}</div>
+          </div>
+        </div>
+      `).join('');
+
+      openModal('Выбрать криптовалюту', `
+        <div class="market-cur-row" onclick="selectP2PFilter('coin', 'Все')" style="padding: 13px 14px; background: var(--bg-card); border-radius: 12px; cursor: pointer; margin-bottom: 8px; font-weight: 600;">Все монеты</div>
+        <div style="max-height: 50vh; overflow-y: auto;">
+          ${rows}
+        </div>
+      `);
+    }
+
+    function selectP2PFilter(kind, val) {
+      if (kind === 'status') {
+        const el = document.getElementById('p2p-chip-status');
+        if (el) el.innerText = val === 'Все' ? 'Статус ▾' : `${val} ▾`;
+      } else if (kind === 'type') {
+        const el = document.getElementById('p2p-chip-type');
+        if (el) el.innerText = val === 'Все' ? 'Тип ▾' : `${val} ▾`;
+      } else if (kind === 'coin') {
+        const el = document.getElementById('p2p-chip-coin');
+        if (el) el.innerText = val === 'Все' ? 'Монета ▾' : `${val} ▾`;
+      }
+      closeModal();
+      showToast('Фильтр P2P', `${val}`);
+    }
+
+    function setP2PAdsFilter(el, filter) {
+      if (!el || !el.parentElement) return;
+      el.parentElement.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    // ==========================================
+    // FLOATING PILL DOCK BAR SMOOTH SCROLL SHRINK
+    // ==========================================
+    let lastScrollY = window.scrollY;
+    let scrollTicking = false;
+    window.addEventListener('scroll', () => {
+      if (!scrollTicking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          const dock = document.querySelector('.dock-pill-bar');
+          if (dock) {
+            if (currentScrollY > lastScrollY + 8 && currentScrollY > 40) {
+              dock.classList.add('dock-shrunk');
+            } else if (currentScrollY < lastScrollY - 6) {
+              dock.classList.remove('dock-shrunk');
+            }
+          }
+          lastScrollY = currentScrollY;
+          scrollTicking = false;
+        });
+        scrollTicking = true;
+      }
+    }, { passive: true });
+
+    // ==========================================
+    // QR PAY SCANNER WITH FULL RECOGNITION & JSQR FALLBACK
+    // ==========================================
+    function scanVideoFrame() {
+      const video = document.getElementById('qr-camera-video');
+      if (!video || !activeCameraStream) return;
+
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        let scannedText = null;
+
+        // 1. Try BarcodeDetector if natively supported
+        if ('BarcodeDetector' in window) {
+          try {
+            const detector = new BarcodeDetector({ formats: ['qr_code'] });
+            detector.detect(video).then(barcodes => {
+              if (barcodes && barcodes.length > 0) {
+                stopCameraStream();
+                closeModal();
+                handleScannedQrResult(barcodes[0].rawValue);
+              } else {
+                requestAnimationFrame(scanVideoFrame);
+              }
+            }).catch(() => {
+              tryJsQrFallback(video);
+            });
+            return;
+          } catch(e) {}
+        }
+
+        // 2. Fallback to jsQR canvas scanning
+        tryJsQrFallback(video);
+      } else {
+        requestAnimationFrame(scanVideoFrame);
+      }
+    }
+
+    function tryJsQrFallback(video) {
+      if (typeof jsQR !== 'undefined') {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imgData.data, imgData.width, imgData.height, {
+            inversionAttempts: "dontInvert"
+          });
+          if (code && code.data) {
+            stopCameraStream();
+            closeModal();
+            handleScannedQrResult(code.data);
+            return;
+          }
+        }
+      }
+      requestAnimationFrame(scanVideoFrame);
+    }
+
+  
+    // ==========================================
+    // INTERACTIVE CHART ENGINE (LINE & CANDLESTICK)
+    // ==========================================
+    let chartTimeframe = '1h';
+    let chartType = 'line';
+    let cachedCandles = [];
+
+    function generateCandlesData(count = 24) {
+      const mid = currentExchangePair?.price || 0.9948;
+      const candles = [];
+      let currentPrice = mid * (1 - 0.004);
+      for (let i = 0; i < count; i++) {
+        const delta = (Math.random() - 0.48) * (mid * 0.0025);
+        const open = currentPrice;
+        const close = open + delta;
+        const high = Math.max(open, close) + Math.random() * (mid * 0.001);
+        const low = Math.min(open, close) - Math.random() * (mid * 0.001);
+        const volume = Math.random() * 5000 + 1000;
+        candles.push({ open, close, high, low, volume });
+        currentPrice = close;
+      }
+      // Force last close to match exact current pair price
+      candles[candles.length - 1].close = mid;
+      return candles;
+    }
+
+    function renderExchangeChart() {
+      const svg = document.getElementById('exchange-chart-svg');
+      if (!svg) return;
+      if (!cachedCandles || cachedCandles.length === 0) {
+        cachedCandles = generateCandlesData(24);
+      }
+
+      const W = 380;
+      const H = 140;
+      const padding = 12;
+
+      let minP = Math.min(...cachedCandles.map(c => c.low));
+      let maxP = Math.max(...cachedCandles.map(c => c.high));
+      if (minP === maxP) { minP -= 0.001; maxP += 0.001; }
+
+      const getY = (val) => H - padding - ((val - minP) / (maxP - minP)) * (H - padding * 2);
+
+      let content = `
+        <defs>
+          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2b8cff" stop-opacity="0.32"/>
+            <stop offset="100%" stop-color="#2b8cff" stop-opacity="0.0"/>
+          </linearGradient>
+          <linearGradient id="gridGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="rgba(255,255,255,0.02)"/>
+            <stop offset="100%" stop-color="rgba(255,255,255,0.06)"/>
+          </linearGradient>
+        </defs>
+        <!-- Horizontal Grid Lines -->
+        <line x1="0" y1="${H * 0.25}" x2="${W}" y2="${H * 0.25}" stroke="rgba(255,255,255,0.04)" stroke-dasharray="3,3"/>
+        <line x1="0" y1="${H * 0.5}" x2="${W}" y2="${H * 0.5}" stroke="rgba(255,255,255,0.04)" stroke-dasharray="3,3"/>
+        <line x1="0" y1="${H * 0.75}" x2="${W}" y2="${H * 0.75}" stroke="rgba(255,255,255,0.04)" stroke-dasharray="3,3"/>
+      `;
+
+      if (chartType === 'line') {
+        const stepX = W / (cachedCandles.length - 1);
+        const points = cachedCandles.map((c, i) => ({ x: i * stepX, y: getY(c.close) }));
+
+        let d = `M ${points[0].x} ${points[0].y}`;
+        for (let i = 1; i < points.length; i++) {
+          const prev = points[i - 1];
+          const curr = points[i];
+          const cx1 = prev.x + (curr.x - prev.x) * 0.45;
+          const cy1 = prev.y;
+          const cx2 = prev.x + (curr.x - prev.x) * 0.55;
+          const cy2 = curr.y;
+          d += ` C ${cx1} ${cy1}, ${cx2} ${cy2}, ${curr.x} ${curr.y}`;
+        }
+
+        const areaD = `${d} L ${points[points.length - 1].x} ${H} L ${points[0].x} ${H} Z`;
+
+        const lastPt = points[points.length - 1];
+        content += `
+          <path d="${areaD}" fill="url(#chartGrad)"/>
+          <path d="${d}" fill="none" stroke="#2b8cff" stroke-width="2.2" stroke-linecap="round"/>
+          <circle cx="${lastPt.x}" cy="${lastPt.y}" r="4" fill="#2b8cff"/>
+          <circle cx="${lastPt.x}" cy="${lastPt.y}" r="8" fill="rgba(43,140,255,0.25)" class="pulse-ring"/>
+        `;
+      } else {
+        // Candlesticks Mode
+        const candleW = (W / cachedCandles.length) * 0.65;
+        const stepX = W / cachedCandles.length;
+
+        cachedCandles.forEach((c, i) => {
+          const x = i * stepX + stepX * 0.5;
+          const isUp = c.close >= c.open;
+          const color = isUp ? '#34c759' : '#ff3b30';
+
+          const yOpen = getY(c.open);
+          const yClose = getY(c.close);
+          const yHigh = getY(c.high);
+          const yLow = getY(c.low);
+
+          const bodyTop = Math.min(yOpen, yClose);
+          const bodyH = Math.max(2, Math.abs(yClose - yOpen));
+
+          content += `
+            <line x1="${x}" y1="${yHigh}" x2="${x}" y2="${yLow}" stroke="${color}" stroke-width="1.2"/>
+            <rect x="${x - candleW / 2}" y="${bodyTop}" width="${candleW}" height="${bodyH}" rx="1" fill="${color}"/>
+          `;
+        });
+      }
+
+      // Add Current Price Marker Badge on the right
+      const lastClose = cachedCandles[cachedCandles.length - 1].close;
+      const lastY = getY(lastClose);
+      content += `
+        <line x1="0" y1="${lastY}" x2="${W}" y2="${lastY}" stroke="rgba(43,140,255,0.4)" stroke-dasharray="2,2"/>
+        <rect x="${W - 64}" y="${Math.max(2, lastY - 9)}" width="64" height="18" rx="5" fill="#2b8cff"/>
+        <text x="${W - 32}" y="${Math.max(2, lastY - 9) + 12}" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle" font-family="system-ui">${lastClose.toFixed(4)}</text>
+      `;
+
+      svg.innerHTML = content;
+    }
+
+    function setChartTf(tf) {
+      chartTimeframe = tf;
+      document.querySelectorAll('#chart-tf-pills .chart-tf-btn').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById(`tf-${tf}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      cachedCandles = generateCandlesData(24);
+      renderExchangeChart();
+    }
+
+    function setChartType(type) {
+      chartType = type;
+      document.getElementById('chart-type-line')?.classList.toggle('active', type === 'line');
+      document.getElementById('chart-type-candles')?.classList.toggle('active', type === 'candles');
+      renderExchangeChart();
+    }
+
+    // ==========================================
+    // NOTIFICATION CENTER (КОЛОКОЛЬЧИК)
+    // ==========================================
+    let userNotifications = [
+      { id: 1, title: 'Зачисление средств', desc: 'Успешно получен ваучер на ваш кошелёк', time: '10 мин назад', read: false, icon: '💰' },
+      { id: 2, title: 'Безопасность', desc: 'Установлен персональный код-пароль кошелька', time: '1 час назад', read: false, icon: '🛡' },
+      { id: 3, title: 'P2P Маркет', desc: 'Обновлены комиссии и лимиты для торговли', time: 'Вчера', read: false, icon: '🤝' }
+    ];
+
+    function updateNotificationBadge() {
+      const badge = document.getElementById('bell-unread-badge');
+      if (!badge) return;
+      const unreadCount = userNotifications.filter(n => !n.read).length;
+      if (unreadCount > 0) {
+        badge.innerText = unreadCount;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function openNotificationsCenterModal() {
+      const listHtml = userNotifications.map(n => `
+        <div style="background: var(--bg-card); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 12px; border: 1px solid rgba(255,255,255,0.04); opacity: ${n.read ? '0.65' : '1'};">
+          <div style="font-size: 20px; width: 36px; height: 36px; border-radius: 50%; background: var(--bg-card-secondary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">${n.icon}</div>
+          <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 600; font-size: 14px;">${n.title}</span>
+              <span style="font-size: 11px; color: var(--text-secondary);">${n.time}</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.4;">${n.desc}</div>
+          </div>
+        </div>
+      `).join('');
+
+      openModal('Уведомления', `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <span style="font-size: 13px; color: var(--text-secondary);">Важные события аккаунта</span>
+          <button onclick="markAllNotificationsRead()" style="background: transparent; border: none; color: var(--accent-blue); font-size: 13px; font-weight: 600; cursor: pointer;">
+            Прочитать все
+          </button>
+        </div>
+        <div style="max-height: 55vh; overflow-y: auto;">
+          ${listHtml || '<div style="text-align: center; color: var(--text-secondary); padding: 30px;">Уведомлений нет</div>'}
+        </div>
+      `);
+    }
+
+    function markAllNotificationsRead() {
+      userNotifications.forEach(n => n.read = true);
+      updateNotificationBadge();
+      closeModal();
+      showToast('Уведомления', 'Все уведомления отмечены как прочитанные');
+    }
+
+    // ==========================================
+    // INVOICE PAYMENT GENERATOR (СЧЕТА / QR PAY)
+    // ==========================================
+    function openCreateInvoiceModal() {
+      openModal('Создать счёт на оплату', `
+        <div style="margin-bottom: 14px;">
+          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Выберите валюту:</div>
+          <select id="invoice-coin-select" style="width: 100%; height: 44px; border-radius: 12px; background: var(--bg-card-secondary); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.08); padding: 0 12px; font-size: 14px; font-weight: 600; outline: none; margin-bottom: 12px;">
+            <option value="USDT">Tether (USDT)</option>
+            <option value="TON">Toncoin (TON)</option>
+            <option value="BTC">Bitcoin (BTC)</option>
+            <option value="GRAM">Gram (GRAM)</option>
+            <option value="SOL">Solana (SOL)</option>
+          </select>
+
+          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Сумма счёта:</div>
+          <input type="number" step="any" id="invoice-amount-input" class="num-rounded" placeholder="0.00" style="width: 100%; height: 46px; border-radius: 12px; background: var(--bg-card-secondary); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.08); padding: 0 14px; font-size: 16px; font-weight: 600; outline: none; margin-bottom: 12px;">
+
+          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Описание / назначение (необязательно):</div>
+          <input type="text" id="invoice-desc-input" placeholder="Например: За разработку проекта" style="width: 100%; height: 44px; border-radius: 12px; background: var(--bg-card-secondary); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.08); padding: 0 14px; font-size: 13px; outline: none; margin-bottom: 20px;">
+
+          <button class="primary-btn" onclick="generateInvoiceResult()" style="margin: 0;">
+            Сгенерировать счёт и QR-код
+          </button>
+        </div>
+      `);
+    }
+
+    function generateInvoiceResult() {
+      const coin = document.getElementById('invoice-coin-select')?.value || 'USDT';
+      const amount = parseFloat(document.getElementById('invoice-amount-input')?.value) || 0;
+      const desc = document.getElementById('invoice-desc-input')?.value || 'Оплата счёта';
+
+      if (amount <= 0) {
+        showToast('Ошибка', 'Укажите корректную сумму счёта', false);
+        return;
+      }
+
+      const invId = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const botUsername = 'CryptoBotOfficialbot';
+      const invLink = `https://t.me/${botUsername}?start=inv_${invId}`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(invLink)}&color=ffffff&bgcolor=1c1c1e`;
+
+      openModal('Счёт выставлен', `
+        <div style="text-align: center; padding: 10px 0;">
+          <div style="font-size: 26px; font-weight: 800; margin-bottom: 4px;" class="num-rounded">${amount} ${coin}</div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">${desc} · Счёт #${invId}</div>
+
+          <div style="width: 190px; height: 190px; margin: 0 auto 16px; background: #1c1c1e; border-radius: 18px; padding: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
+            <img src="${qrApiUrl}" width="170" height="170" style="border-radius: 12px; display: block;" alt="QR Code">
+          </div>
+
+          <div style="background: var(--bg-card); border-radius: 12px; padding: 10px 14px; font-family: monospace; font-size: 12px; word-break: break-all; margin-bottom: 16px; color: var(--accent-blue);">
+            ${invLink}
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="primary-btn" onclick="navigator.clipboard.writeText('${invLink}'); showToast('Скопировано', 'Ссылка на счёт скопирована');" style="flex: 1; margin: 0;">
+              Копировать
+            </button>
+            <button class="action-btn" onclick="if (window.Telegram?.WebApp?.openTelegramLink) { window.Telegram.WebApp.openTelegramLink('https://t.me/share/url?url=${encodeURIComponent(invLink)}&text=${encodeURIComponent('Оплатите счёт на ' + amount + ' ' + coin)}'); } else { navigator.clipboard.writeText('${invLink}'); } showToast('Поделиться', 'Готово');" style="flex: 1; margin: 0; background: var(--bg-card-secondary);">
+              Поделиться
+            </button>
+          </div>
+        </div>
+      `);
+    }
+
+    // ==========================================
+    // SYNC REGIONAL RESTRICTION SETTING FROM BOT
+    // ==========================================
+    function checkRegionalRestrictionFlag() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const reg = urlParams.get('reg');
+      if (reg === '0') {
+        document.querySelectorAll('.cb-banner').forEach(el => {
+          el.style.display = 'none';
+        });
+      }
+    }
+
+  
+    // Initialize stage 2 features
+    setTimeout(() => {
+      renderExchangeChart();
+      updateNotificationBadge();
+      checkRegionalRestrictionFlag();
+    }, 200);
+
   </script>
 </body>
 </html>
