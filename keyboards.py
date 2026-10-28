@@ -30,7 +30,8 @@ def webapp_btn(text: str, emoji_key: str, subpath: str = "", balances: dict = No
     url = f"{WEBAPP_URL}{query}{sep}v={ts}"
     return InlineKeyboardButton(
         text=text,
-        web_app=WebAppInfo(url=url)
+        web_app=WebAppInfo(url=url),
+        icon_custom_emoji_id=EMOJI.get(emoji_key)
     )
 
 async def update_user_chat_menu_button(bot, user_id: int, balances: dict = None):
@@ -58,7 +59,8 @@ async def update_user_chat_menu_button(bot, user_id: int, balances: dict = None)
 def btn(text: str, emoji_key: str, callback_data: str) -> InlineKeyboardButton:
     return InlineKeyboardButton(
         text=text,
-        callback_data=callback_data
+        callback_data=callback_data,
+        icon_custom_emoji_id=EMOJI.get(emoji_key)
     )
 
 def main_menu_inline(user_id: int = None, balances: dict = None) -> InlineKeyboardMarkup:
@@ -74,10 +76,10 @@ def main_menu_inline(user_id: int = None, balances: dict = None) -> InlineKeyboa
 def wallet_inline_kb_v2(user_id: int = None, balances: dict = None) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [webapp_btn("📱 Открыть WebApp Кошелёк", "wallet", "wallet", balances, user_id)],
-        [InlineKeyboardButton(text="Пополнить", callback_data="wallet:dep"),
-         InlineKeyboardButton(text="Отправить", callback_data="wallet:wdr")],
-        [InlineKeyboardButton(text="История", callback_data="wallet:hist")],
-        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:main")]
+        [InlineKeyboardButton(text="Пополнить", callback_data="wallet:dep", icon_custom_emoji_id="5318862055980177086"),
+         InlineKeyboardButton(text="Отправить", callback_data="wallet:wdr", icon_custom_emoji_id="5319073291061730002")],
+        [InlineKeyboardButton(text="История", callback_data="wallet:hist", icon_custom_emoji_id="5312103894875143512")],
+        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:main", icon_custom_emoji_id="5312212278374861302")]
     ])
 
 def check_activated_user_kb(user_id: int, balances: dict = None) -> InlineKeyboardMarkup:
@@ -93,14 +95,15 @@ def wallet_currency_select_kb(action: str) -> InlineKeyboardMarkup:
             continue
         row.append(InlineKeyboardButton(
             text=ticker,
-            callback_data=f"wallet:{action}:{ticker}"
+            callback_data=f"wallet:{action}:{ticker}",
+            icon_custom_emoji_id=info.get("emoji_id")
         ))
         if len(row) == 2:
             buttons.append(row)
             row = []
     if row:
         buttons.append(row)
-    buttons.append([InlineKeyboardButton(text="‹ Назад", callback_data="wallet:menu")])
+    buttons.append([InlineKeyboardButton(text="‹ Назад", callback_data="wallet:menu", icon_custom_emoji_id="5312212278374861302")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 # --- СТАРАЯ ФУНКЦИЯ ДЛЯ ЧЕКОВ ---
@@ -112,7 +115,8 @@ def currency_select_kb(action: str) -> InlineKeyboardMarkup:
             continue
         row.append(InlineKeyboardButton(
             text=ticker,
-            callback_data=f"wallet:{action}:{ticker}"
+            callback_data=f"wallet:{action}:{ticker}",
+            icon_custom_emoji_id=info.get("emoji_id")
         ))
         if len(row) == 2:
             buttons.append(row)
@@ -147,7 +151,7 @@ def check_activated_kb() -> InlineKeyboardMarkup:
 # --- СЧЕТА ---
 def invoices_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Создать счёт", callback_data="invoice:create")],
+        [InlineKeyboardButton(text="Создать счёт", callback_data="invoice:create", icon_custom_emoji_id="5312043357311111246")],
         [InlineKeyboardButton(text="Создать счёт из чата", switch_inline_query="invoice")],
         [InlineKeyboardButton(text="‹ Назад", callback_data="menu:main")]
     ])
@@ -161,10 +165,10 @@ def invoice_type_kb() -> InlineKeyboardMarkup:
 
 def invoice_currency_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="USDT", callback_data="inv_cur:USDT"),
-         InlineKeyboardButton(text="TON", callback_data="inv_cur:TON")],
-        [InlineKeyboardButton(text="BTC", callback_data="inv_cur:BTC"),
-         InlineKeyboardButton(text="ETH", callback_data="inv_cur:ETH")],
+        [InlineKeyboardButton(text="USDT", callback_data="inv_cur:USDT", icon_custom_emoji_id="5280846677673010353"),
+         InlineKeyboardButton(text="TON", callback_data="inv_cur:TON", icon_custom_emoji_id="5265151230790884988")],
+        [InlineKeyboardButton(text="BTC", callback_data="inv_cur:BTC", icon_custom_emoji_id="5280624271381520811"),
+         InlineKeyboardButton(text="ETH", callback_data="inv_cur:ETH", icon_custom_emoji_id="5280613443768967293")],
         [InlineKeyboardButton(text="‹ Назад", callback_data="invoice:create")]
     ])
 
@@ -186,14 +190,15 @@ def swap_from_kb() -> InlineKeyboardMarkup:
             continue
         row.append(InlineKeyboardButton(
             text=ticker,
-            callback_data=f"swap:from:{ticker}"
+            callback_data=f"swap:from:{ticker}",
+            icon_custom_emoji_id=info.get("emoji_id")
         ))
         if len(row) == 2:
             buttons.append(row)
             row = []
     if row:
         buttons.append(row)
-    buttons.append([InlineKeyboardButton(text="‹ Назад", callback_data="menu:main")])
+    buttons.append([InlineKeyboardButton(text="‹ Назад", callback_data="menu:main", icon_custom_emoji_id="5312212278374861302")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def swap_to_kb(from_ticker: str) -> InlineKeyboardMarkup:
@@ -204,14 +209,15 @@ def swap_to_kb(from_ticker: str) -> InlineKeyboardMarkup:
             continue
         row.append(InlineKeyboardButton(
             text=ticker,
-            callback_data=f"swap:to:{ticker}"
+            callback_data=f"swap:to:{ticker}",
+            icon_custom_emoji_id=info.get("emoji_id")
         ))
         if len(row) == 2:
             buttons.append(row)
             row = []
     if row:
         buttons.append(row)
-    buttons.append([InlineKeyboardButton(text="‹ Назад", callback_data="menu:swap")])
+    buttons.append([InlineKeyboardButton(text="‹ Назад", callback_data="menu:swap", icon_custom_emoji_id="5312212278374861302")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 # --- БИРЖА (EXCHANGE) ---

@@ -3,6 +3,7 @@ import asyncio
 import logging
 import os
 import random
+import time
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
@@ -76,64 +77,60 @@ def get_start_text() -> str:
 
 @dp.message(CommandStart())
 async def cmd_start(msg: Message, state: FSMContext):
-    try:
-        if msg.text and "check_" in msg.text:
-            await more.activate_check_link(msg, state)
-            return
+    if msg.text and "check_" in msg.text:
+        await more.activate_check_link(msg, state)
+        return
 
-        if msg.text and "invoice_" in msg.text:
-            await extra_menus.show_invoice_card(msg, state)
-            return
+    if msg.text and "invoice_" in msg.text:
+        await extra_menus.show_invoice_card(msg, state)
+        return
 
-        await state.clear()
-        await create_user(msg.from_user.id, msg.from_user.username or "")
-        user = await get_user(msg.from_user.id)
+    await state.clear()
+    await create_user(msg.from_user.id, msg.from_user.username or "")
+    user = await get_user(msg.from_user.id)
 
-        if user and user["is_onboarded"]:
-            from database import get_all_balances
-            from keyboards import update_user_chat_menu_button, main_menu_inline
-            balances = await get_all_balances(msg.from_user.id)
-            try:
-                await update_user_chat_menu_button(msg.bot, msg.from_user.id, balances)
-            except Exception as e:
-                log.warning("Menu button update failed: %s", e)
-            kb = main_menu_inline(user_id=msg.from_user.id, balances=balances)
-            text = get_start_text()
-            img_path = os.path.join(BASE_DIR, "start_banner.jpg")
-            if os.path.exists(img_path):
-                try:
-                    await msg.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML")
-                    return
-                except Exception:
-                    pass
-            await msg.answer(text, reply_markup=kb, parse_mode="HTML")
-            return
-
-        # Регистрация нового пользователя
-        text = (
-            "🦋 <b>Добро пожаловать в Crypto Bot</b>\n\n"
-            "Кошелёк успешно создан. Завершите настройку аккаунта, чтобы получить доступ ко всем возможностям сервиса."
-        )
-        webapp_reg_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&v={int(time.time())}"
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Начать", web_app=WebAppInfo(url=webapp_reg_url))]
-        ])
-        img_path = os.path.join(BASE_DIR, "welcome.jpg")
+    if user and user["is_onboarded"]:
+        img_path = os.path.join(BASE_DIR, "start_banner.jpg")
+        if not os.path.exists(img_path):
+            img_path = os.path.join(BASE_DIR, "welcome.jpg")
+        from database import get_all_balances
+        from keyboards import update_user_chat_menu_button, main_menu_inline
+        balances = await get_all_balances(msg.from_user.id)
+        try:
+            await update_user_chat_menu_button(msg.bot, msg.from_user.id, balances)
+        except Exception as e:
+            log.warning("Menu button update failed: %s", e)
+        kb = main_menu_inline(user_id=msg.from_user.id, balances=balances)
+        text = get_start_text()
         if os.path.exists(img_path):
             try:
-                await msg.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML")
-                await state.set_state(Onboarding.waiting_start)
+                await msg.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
                 return
             except Exception as e:
-                log.warning("Failed answer_photo welcome: %s, falling back to message", e)
-        await msg.answer(text, reply_markup=kb, parse_mode="HTML")
-        await state.set_state(Onboarding.waiting_start)
-    except Exception as e:
-        log.error("Fatal error in cmd_start: %s", e, exc_info=True)
+                log.warning("answer_photo error: %s", e)
+        await msg.answer(text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
+        return
+
+    # Регистрация нового пользователя
+    img_path = os.path.join(BASE_DIR, "welcome.jpg")
+    text = (
+        '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
+        "Кошелёк успешно создан. Завершите настройку аккаунта, чтобы получить доступ ко всем возможностям сервиса."
+    )
+    webapp_reg_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&v={int(time.time())}"
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Начать", web_app=WebAppInfo(url=webapp_reg_url))]
+    ])
+    
+    if os.path.exists(img_path):
         try:
-            await msg.answer("🦋 <b>Добро пожаловать в Crypto Bot!</b>\n\nКошелёк готов к работе.", parse_mode="HTML")
-        except Exception:
-            pass
+            await msg.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML")
+            await state.set_state(Onboarding.waiting_start)
+            return
+        except Exception as e:
+            log.warning("Failed answer_photo welcome: %s", e)
+    await msg.answer(text, reply_markup=kb, parse_mode="HTML")
+    await state.set_state(Onboarding.waiting_start)
 
 @dp.callback_query(Onboarding.waiting_start, F.data == "onb:start")
 async def onb_start(cb: CallbackQuery, state: FSMContext):
@@ -433,26 +430,32 @@ async def chosen_inline_result_handler(chosen: ChosenInlineResult):
 
 @dp.message(Command("testreg"))
 async def cmd_testreg(msg: Message, state: FSMContext):
-    if msg.from_user.id != config.OWNER_ID:
+    from database import is_admin
+    user_is_admin = await is_admin(msg.from_user.id)
+    if msg.from_user.id != config.OWNER_ID and not user_is_admin:
         return
     await state.clear()
-    from database import db_conn
-    async with db_conn.tx() as c:
-        await c.execute("UPDATE users SET is_onboarded = 0 WHERE id = ?", (msg.from_user.id,))
-    
-    webapp_reg_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&v={int(time.time())}"
-    text = (
-        '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
-        "Кошелёк успешно создан. Завершите настройку аккаунта, чтобы получить доступ ко всем возможностям сервиса."
-    )
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Начать", web_app=WebAppInfo(url=webapp_reg_url))]
-    ])
-    img_path = os.path.join(BASE_DIR, "welcome.jpg")
-    if os.path.exists(img_path):
-        await msg.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML")
-    else:
-        await msg.answer(text, reply_markup=kb, parse_mode="HTML")
+    try:
+        from database import db_conn
+        async with db_conn.tx() as c:
+            await c.execute("UPDATE users SET is_onboarded = 0 WHERE id = ?", (msg.from_user.id,))
+        
+        webapp_reg_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&v={int(time.time())}"
+        text = (
+            '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
+            "Кошелёк успешно создан. Завершите настройку аккаунта, чтобы получить доступ ко всем возможностям сервиса."
+        )
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Начать", web_app=WebAppInfo(url=webapp_reg_url))]
+        ])
+        img_path = os.path.join(BASE_DIR, "welcome.jpg")
+        if os.path.exists(img_path):
+            await msg.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML")
+        else:
+            await msg.answer(text, reply_markup=kb, parse_mode="HTML")
+    except Exception as e:
+        log.error("cmd_testreg error: %s", e, exc_info=True)
+        await msg.answer(f"❌ Ошибка testreg: {e}")
 
 @dp.message(F.web_app_data)
 async def web_app_data_handler(msg: Message, state: FSMContext):
