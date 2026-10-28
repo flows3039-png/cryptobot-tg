@@ -2063,11 +2063,11 @@
         <div class="more-icons-grid">
           <div class="more-grid-item" onclick="switchTab('swap')">
             <div class="more-squircle-icon" style="background: var(--accent-purple);">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20.5 8a8.5 8.5 0 0 0-14.5-3.5L3 7.5"/>
-                <polyline points="3 3 3 7.5 7.5 7.5"/>
-                <path d="M3.5 16a8.5 8.5 0 0 0 14.5 3.5L21 16.5"/>
-                <polyline points="21 21 21 16.5 16.5 16.5"/>
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 7H7a4 4 0 0 0-4 4v1"/>
+                <polyline points="17 3 21 7 17 11"/>
+                <path d="M3 17h14a4 4 0 0 0 4-4v-1"/>
+                <polyline points="7 21 3 17 7 13"/>
               </svg>
             </div>
             <span class="more-grid-label">Обмен</span>
@@ -2506,8 +2506,14 @@
       view.classList.add('active');
     }
     function closePasscodeView() {
-      document.getElementById('passcode-view').classList.remove('active');
-      currentPasscodeInput = '';
+      const view = document.getElementById('passcode-view');
+      if (!view || !view.classList.contains('active')) return;
+      view.classList.add('closing');
+      setTimeout(() => {
+        view.classList.remove('active', 'closing');
+        document.body.classList.remove('modal-sheet-open');
+        currentPasscodeInput = '';
+      }, 240);
     }
     function togglePasscodeLength() {
       currentPasscodeLength = currentPasscodeLength === 6 ? 4 : 6;
@@ -4798,10 +4804,10 @@
       const modal = document.getElementById('general-modal');
       if (!modal || !modal.classList.contains('active')) return;
       modal.classList.add('closing');
-      document.body.classList.remove('modal-sheet-open');
       setTimeout(() => {
         modal.classList.remove('active', 'closing');
-      }, 200);
+        document.body.classList.remove('modal-sheet-open');
+      }, 240);
     }
     function closeModalOnOverlay(e) {
       if (e.target.id === 'general-modal') closeModal();
