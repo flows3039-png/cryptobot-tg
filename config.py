@@ -115,7 +115,4 @@ EMOJI = {
 }
 
 def _e(key: str, fallback: str) -> str:
-    emoji_id = EMOJI.get(key)
-    if not emoji_id:
-        return fallback
-    return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
+    return fallback
