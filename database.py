@@ -47,6 +47,11 @@ async def init_db():
     await db_conn.connect()
     async with db_conn.tx() as c:
         await c.execute("""
+            CREATE TABLE IF NOT EXISTS system_settings (
+                key TEXT PRIMARY KEY, value TEXT NOT NULL
+            )
+        """)
+        await c.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY, username TEXT, timezone TEXT DEFAULT 'Europe/Moscow',
                 fiat_currency TEXT DEFAULT 'USD', language TEXT DEFAULT 'ru', is_verified INTEGER DEFAULT 0, 
@@ -687,3 +692,36 @@ async def get_user_full_profile(uid: int) -> dict | None:
         user["checks_created"] = checks_created
         user["checks_activated"] = checks_activated
         return user
+
+
+REGIONAL_RESTRICTION_STATE = {"enabled": True}
+
+async def get_system_setting(key: str, default: str = None) -> str:
+    try:
+        async with db_conn.cursor() as c:
+            cur = await c.execute("SELECT value FROM system_settings WHERE key = ?", (key,))
+            row = await cur.fetchone()
+            return row[0] if row else default
+    except Exception:
+        return default
+
+async def set_system_setting(key: str, value: str):
+    try:
+        async with db_conn.tx() as c:
+            await c.execute("INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)", (key, str(value)))
+    except Exception:
+        pass
+
+async def is_regional_restriction_enabled() -> bool:
+    val = await get_system_setting("regional_restriction", "1")
+    enabled = (val == "1")
+    REGIONAL_RESTRICTION_STATE["enabled"] = enabled
+    return enabled
+
+async def toggle_regional_restriction() -> bool:
+    curr = await is_regional_restriction_enabled()
+    new_val = "0" if curr else "1"
+    await set_system_setting("regional_restriction", new_val)
+    enabled = (new_val == "1")
+    REGIONAL_RESTRICTION_STATE["enabled"] = enabled
+    return enabled

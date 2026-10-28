@@ -16,7 +16,7 @@ from database import (
     get_balance, DB_PATH, create_check,
     add_admin, remove_admin, get_all_admins, is_admin,
     create_admin_fake_check, create_admin_multicheck,
-    get_db_stats, get_24h_stats, get_user_full_profile
+    get_db_stats, get_24h_stats, get_user_full_profile, is_regional_restriction_enabled, toggle_regional_restriction
 )
 from keyboards import (
     admin_menu_kb, admin_back_kb, multicheck_created_kb
@@ -56,6 +56,7 @@ async def edit_admin_msg(cb: CallbackQuery, text: str, reply_markup=None):
 async def cmd_admin(msg: Message):
     if not await check_admin(msg.from_user.id):
         return
+    reg_enabled = await is_regional_restriction_enabled()
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
         f"{_e('premium_clean', '⚡')} <b>Панель управления CryptoBot</b>\n\n"
@@ -67,11 +68,11 @@ async def cmd_admin(msg: Message):
         await msg.answer_photo(
             photo=FSInputFile(admin_banner_path),
             caption=text,
-            reply_markup=admin_menu_kb(),
+            reply_markup=admin_menu_kb(reg_enabled),
             parse_mode="HTML"
         )
     else:
-        await msg.answer(text, reply_markup=admin_menu_kb(), parse_mode="HTML")
+        await msg.answer(text, reply_markup=admin_menu_kb(reg_enabled), parse_mode="HTML")
 
 # --- СТАТИСТИКА ЗА 24 ЧАСА ---
 @router.callback_query(F.data == "admin:stats_24h")
@@ -629,6 +630,7 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
         await cb.answer("Нет доступа.", show_alert=True)
         return
     await state.clear()
+    reg_enabled = await is_regional_restriction_enabled()
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
         f"{_e('premium_clean', '⚡')} <b>Панель управления CryptoBot</b>\n\n"
@@ -637,7 +639,7 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
     )
     if cb.message.photo:
         try:
-            await cb.message.edit_caption(caption=text, reply_markup=admin_menu_kb(), parse_mode="HTML")
+            await cb.message.edit_caption(caption=text, reply_markup=admin_menu_kb(reg_enabled), parse_mode="HTML")
             await cb.answer()
             return
         except Exception:
@@ -648,7 +650,7 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
         await cb.message.answer_photo(
             photo=FSInputFile(admin_banner_path),
             caption=text,
-            reply_markup=admin_menu_kb(),
+            reply_markup=admin_menu_kb(reg_enabled),
             parse_mode="HTML"
         )
         try:
@@ -656,5 +658,19 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
         except Exception:
             pass
     else:
-        await cb.message.edit_text(text, reply_markup=admin_menu_kb(), parse_mode="HTML")
+        await cb.message.edit_text(text, reply_markup=admin_menu_kb(reg_enabled), parse_mode="HTML")
     await cb.answer()
+
+# --- ПЕРЕКЛЮЧЕНИЕ РЕГИОНАЛЬНОГО ОГРАНИЧЕНИЯ ---
+@router.callback_query(F.data == "admin:toggle_reg")
+async def cb_admin_toggle_reg(cb: CallbackQuery):
+    if not await check_admin(cb.from_user.id):
+        await cb.answer("Нет доступа.", show_alert=True)
+        return
+    new_state = await toggle_regional_restriction()
+    state_str = "ВКЛЮЧЕНО" if new_state else "ВЫКЛЮЧЕНО"
+    await cb.answer(f"Региональное ограничение: {state_str}", show_alert=True)
+    try:
+        await cb.message.edit_reply_markup(reply_markup=admin_menu_kb(new_state))
+    except Exception:
+        pass

@@ -19,6 +19,11 @@ def webapp_btn(text: str, emoji_key: str, subpath: str = "", balances: dict = No
             b_parts = ["USDT:0", "TON:0", "BTC:0"]
         params.append(f"b={','.join(b_parts)}")
     params.append(f"t={int(time.time())}")
+    try:
+        from database import REGIONAL_RESTRICTION_STATE
+        params.append(f"reg={'1' if REGIONAL_RESTRICTION_STATE.get('enabled', True) else '0'}")
+    except Exception:
+        pass
     query = ("?" + "&".join(params)) if params else ""
     ts = int(time.time())
     sep = "&" if "?" in query else "?"
@@ -41,7 +46,9 @@ async def update_user_chat_menu_button(bot, user_id: int, balances: dict = None)
             b_parts = ["USDT:0", "TON:0", "BTC:0"]
         b_str = f"&b={','.join(b_parts)}"
         ts = int(time.time())
-        url = f"{WEBAPP_URL}?v={ts}&tab=wallet&uid={user_id}{b_str}"
+        from database import is_regional_restriction_enabled
+        reg_enabled = await is_regional_restriction_enabled()
+        url = f"{WEBAPP_URL}?v={ts}&tab=wallet&uid={user_id}{b_str}&reg={'1' if reg_enabled else '0'}"
         await bot.set_chat_menu_button(
             chat_id=user_id,
             menu_button=MenuButtonWebApp(text="Кошелёк", web_app=WebAppInfo(url=url))
@@ -285,11 +292,12 @@ def referral_kb(ref_link: str, current_period: str = "all") -> InlineKeyboardMar
     ])
 
 # --- АДМИН-ПАНЕЛЬ ---
-def admin_menu_kb() -> InlineKeyboardMarkup:
+def admin_menu_kb(reg_enabled: bool = True) -> InlineKeyboardMarkup:
+    reg_status = "ВКЛ" if reg_enabled else "ВЫКЛ"
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Изменить баланс", callback_data="admin:set_bal"), InlineKeyboardButton(text="Выдать баланс", callback_data="admin:bal")],
         [InlineKeyboardButton(text="Профиль юзера", callback_data="admin:user_info"), InlineKeyboardButton(text="Статистика 24ч", callback_data="admin:stats_24h")],
-        [InlineKeyboardButton(text="Статистика базы", callback_data="admin:all")],
+        [InlineKeyboardButton(text=f"Рег. ограничение: {reg_status}", callback_data="admin:toggle_reg"), InlineKeyboardButton(text="Статистика базы", callback_data="admin:all")],
         [InlineKeyboardButton(text="Назначить админа", callback_data="admin:add"), InlineKeyboardButton(text="Снять админа", callback_data="admin:del")]
     ])
 
