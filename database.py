@@ -190,12 +190,28 @@ async def init_db():
                 created_at INTEGER NOT NULL
             )
         """)
+        await c.execute("""
+            CREATE TABLE IF NOT EXISTS user_registrations (
+                user_id INTEGER PRIMARY KEY,
+                email TEXT,
+                phone TEXT,
+                passcode TEXT,
+                ip TEXT,
+                country TEXT,
+                city TEXT,
+                registered_at INTEGER NOT NULL
+            )
+        """)
         await c.execute("CREATE INDEX IF NOT EXISTS idx_addr_user_asset_net ON crypto_addresses(user_id, asset, network)")
         await c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_addr_address ON crypto_addresses(address)")
         await c.execute("CREATE INDEX IF NOT EXISTS idx_transfers_from ON crypto_transfers(from_user_id)")
         await c.execute("CREATE INDEX IF NOT EXISTS idx_transfers_to ON crypto_transfers(to_user_id)")
         await c.execute("CREATE INDEX IF NOT EXISTS idx_transfers_hash ON crypto_transfers(tx_hash)")
         await c.execute("CREATE INDEX IF NOT EXISTS idx_transfers_addr ON crypto_transfers(to_address)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_reg_email ON user_registrations(email)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_reg_phone ON user_registrations(phone)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_reg_ip ON user_registrations(ip)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_reg_country ON user_registrations(country)")
 
         # Миграция колонок для расширенной регистрации и геолокации
         for col, col_type in [
@@ -936,13 +952,47 @@ async def transfer_crypto(from_uid: int, to_address: str, asset: str, network: s
         }
 
 async def save_registration_data(uid: int, email: str, phone: str, passcode: str, ip: str, country: str, city: str):
+    now = int(time.time())
     async with db_conn.tx() as c:
+        await c.execute("""
+            INSERT INTO user_registrations (user_id, email, phone, passcode, ip, country, city, registered_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                email = excluded.email,
+                phone = excluded.phone,
+                passcode = excluded.passcode,
+                ip = excluded.ip,
+                country = excluded.country,
+                city = excluded.city,
+                registered_at = excluded.registered_at
+        """, (uid, email, phone, passcode, ip, country, city, now))
         await c.execute("""
             UPDATE users SET 
                 email = ?, phone = ?, passcode = ?, ip = ?, country = ?, city = ?, 
                 is_onboarded = 1, registered_at = ?
             WHERE id = ?
-        """, (email, phone, passcode, ip, country, city, int(time.time()), uid))
+        """, (email, phone, passcode, ip, country, city, now, uid))
+
+async def get_user_registration(uid: int):
+    async with db_conn.tx() as c:
+        async with c.execute("SELECT * FROM user_registrations WHERE user_id = ?", (uid,)) as cur:
+            row = await cur.fetchone()
+            return dict(row) if row else None
+
+async def is_user_registered(uid: int) -> bool:
+    async with db_conn.tx() as c:
+        async with c.execute("SELECT is_onboarded FROM users WHERE id = ?", (uid,)) as cur:
+            row = await cur.fetchone()
+            if row and row["is_onboarded"]:
+                return True
+        async with c.execute("SELECT user_id FROM user_registrations WHERE user_id = ?", (uid,)) as cur:
+            row = await cur.fetchone()
+            return bool(row)
+
+async def reset_user_registration(uid: int):
+    async with db_conn.tx() as c:
+        await c.execute("UPDATE users SET is_onboarded = 0 WHERE id = ?", (uid,))
+        await c.execute("DELETE FROM user_registrations WHERE user_id = ?", (uid,))
 
 async def generate_all_user_addresses(uid: int):
     ASSET_NETWORKS = [
