@@ -285,13 +285,24 @@ async def inline_query_handler(query: InlineQuery):
             fiat_val = amount_val * price_usd
             img_url = f'https://imggen.cr.bot/checks/image?asset={asset}&asset_amount={amount_val:g}&fiat=USD&fiat_amount={fiat_val:.2f}&main=asset&v5'
 
-            kb = InlineKeyboardMarkup(inline_keyboard=[[
+            kb_ru = InlineKeyboardMarkup(inline_keyboard=[[
                 InlineKeyboardButton(text=f'Забрать {amount_val:g} {asset}', url=deep_link)
             ]])
+            kb_en = InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text=f'Claim {amount_val:g} {asset}', url=deep_link)
+            ]])
 
-            # Нативное превью Telegram с медиа-рамкой и крупной картинкой
-            content = InputTextMessageContent(
-                message_text=f'Чек на <b>{amount_val:g} {asset}</b> (${fiat_val:.2f}).',
+            content_ru = InputTextMessageContent(
+                message_text=f'Чек на <b>{amount_val:g} {asset}</b> (~${fiat_val:.2f}).\n<i>Check for {amount_val:g} {asset}</i>',
+                parse_mode='HTML',
+                link_preview_options=LinkPreviewOptions(
+                    url=img_url,
+                    prefer_large_media=True,
+                    show_above_text=True
+                )
+            )
+            content_en = InputTextMessageContent(
+                message_text=f'Check for <b>{amount_val:g} {asset}</b> (~${fiat_val:.2f}).\n<i>Чек на {amount_val:g} {asset}</i>',
                 parse_mode='HTML',
                 link_preview_options=LinkPreviewOptions(
                     url=img_url,
@@ -300,11 +311,19 @@ async def inline_query_handler(query: InlineQuery):
                 )
             )
             results.append(InlineQueryResultArticle(
-                id=f'chk_{cid}',
-                title=f'Отправить чек на {amount_val:g} {asset}',
-                description=f'Баланс: {cur_bal:g} {asset} (~${fiat_val:.2f})',
-                input_message_content=content,
-                reply_markup=kb,
+                id=f'chk_ru_{cid}',
+                title=f'🇷🇺 Чек на {amount_val:g} {asset}',
+                description=f'Забрать {amount_val:g} {asset} (~${fiat_val:.2f})',
+                input_message_content=content_ru,
+                reply_markup=kb_ru,
+                thumbnail_url=img_url
+            ))
+            results.append(InlineQueryResultArticle(
+                id=f'chk_en_{cid}',
+                title=f'🇬🇧 Check for {amount_val:g} {asset}',
+                description=f'Claim {amount_val:g} {asset} (~${fiat_val:.2f})',
+                input_message_content=content_en,
+                reply_markup=kb_en,
                 thumbnail_url=img_url
             ))
         else:
@@ -372,6 +391,8 @@ async def chosen_inline_result_handler(chosen: ChosenInlineResult):
     res_id = chosen.result_id
     if res_id.startswith('chk_'):
         cid = res_id[4:]
+        if cid.startswith('ru_') or cid.startswith('en_'):
+            cid = cid[3:]
         draft = INLINE_CHECK_DRAFTS.pop(cid, None)
         if draft:
             uid = draft['user_id']
