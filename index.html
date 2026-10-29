@@ -7,7 +7,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Crypto Bot</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     @font-face {
       font-family: 'SF Pro Rounded';
@@ -329,8 +329,9 @@
       transform-origin: center bottom;
     }
     .dock-pill-bar.dock-shrunk {
-      transform: translateY(18px) scale(0.9);
-      opacity: 0.65;
+      transform: translateY(120px) scale(0.82) !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
     .dock-pill-item {
       background: none;
@@ -1775,7 +1776,7 @@
     }
 
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -1793,7 +1794,7 @@
           </div>
           <div class="header-top-bar-btn" onclick="openNotificationsCenterModal()" title="Центр уведомлений">
             <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            <span class="bell-badge-pill" id="bell-unread-badge">3</span>
+            <span class="bell-badge-pill" id="bell-unread-badge" style="display: none;">0</span>
           </div>
         </div>
       </div>
@@ -1859,6 +1860,11 @@
           <div class="ex-sub-label">Изменение за 24ч</div>
           <div id="ex-24h-change" class="ex-sub-val num-rounded red">-0.0002 -0.02%</div>
         </div>
+        <div style="text-align: right;">
+          <div class="ex-sub-label">Объём за 24ч (USDT)</div>
+          <div id="ex-24h-vol" class="ex-sub-val num-rounded">9 696.1</div>
+        </div>
+      </div>
 
       <!-- INTERACTIVE TRADINGVIEW / CANDLESTICK CHART -->
       <div id="exchange-chart-container" style="background: var(--bg-card); border-radius: 16px; padding: 12px 14px 10px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.05);">
@@ -1880,12 +1886,6 @@
         </div>
         <div style="position: relative; width: 100%; height: 140px;">
           <svg id="exchange-chart-svg" width="100%" height="140" viewBox="0 0 380 140" style="overflow: visible; display: block;"></svg>
-        </div>
-      </div>
-
-        <div style="text-align: right;">
-          <div class="ex-sub-label">Объём за 24ч (USDT)</div>
-          <div id="ex-24h-vol" class="ex-sub-val num-rounded">9 696.1</div>
         </div>
       </div>
       <div class="cb-banner" style="margin-bottom: 14px;" onclick="openRegionalRestrictionModal()">
@@ -2210,7 +2210,7 @@
             </div>
             <span class="more-grid-label">Верификация</span>
           </div>
-          <div class="more-grid-item" onclick="openNotificationsModal()">
+          <div class="more-grid-item" onclick="openNotificationsCenterModal()">
             <div class="more-squircle-icon" style="background: var(--accent-orange);">
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             </div>
@@ -2381,6 +2381,24 @@
     </div>
   </div>
   <script>
+    // --- GLOBAL HOISTING FOR P2P & CHARTS ---
+    var p2pDealsData = [];
+    var isP2PLoadingMore = false;
+    var currentP2PFilter = { status: 'Все', type: 'Все', coin: 'USDT' };
+    var currentOrderType = 'limit';
+    var cachedCandles = [];
+    var chartType = 'line';
+    var currentTradeMode = 'buy';
+    var userNotifications = [];
+
+    // Force purge legacy fake notifications from previous sessions
+    try {
+      const raw = localStorage.getItem('cb_notifications');
+      if (raw && (raw.includes('HAYZ') || raw.includes('500.00') || raw.includes('ваучер') || raw.includes('P2P') || raw.includes('Верификация'))) {
+        localStorage.removeItem('cb_notifications');
+      }
+    } catch(e) {}
+
     // 24 Local Currencies Configuration
     const FIAT_CONFIG = {
       RUB: { symbol: '₽', name: 'Российский рубль' },
@@ -3506,7 +3524,7 @@
         r.style.display = text.includes(q) ? 'flex' : 'none';
       });
     }
-    let currentTradeMode = 'buy';
+    currentTradeMode = 'buy';
     function setTradeMode(mode) {
       currentTradeMode = mode;
       const buyBtn = document.getElementById('trade-btn-buy');
@@ -5088,6 +5106,8 @@
       }
       if (tabId === 'exchange') {
         renderOrderBook();
+        if (typeof renderExchangeChart === 'function') renderExchangeChart();
+        if (typeof updateTradeCalc === 'function') updateTradeCalc();
       } else if (tabId === 'swap') {
         calculateSwap();
       } else if (tabId === 'p2p') {
@@ -5108,21 +5128,7 @@
       }
       switchTab('wallet');
     }
-    // ==========================================
-    // SYNCHRONOUS IMMEDIATE APP INITIALIZATION
-    // ==========================================
-    function initApp() {
-      syncRealUserBalance();
-      renderAssetsList();
-      calculateSwap();
-      renderOrderBook();
-      renderP2PDealsHtml();
-      handleInitialRoute();
-    }
-    initApp();
-    if (document.readyState === 'loading') {
-      window.addEventListener('DOMContentLoaded', initApp);
-    }
+
     // Live orderbook subtle simulation
     setInterval(() => {
       const exTab = document.getElementById('tab-exchange');
@@ -5137,7 +5143,7 @@
     // ==========================================
     // INTERACTIVE EXCHANGE ORDER TYPES & DEALS
     // ==========================================
-    let currentOrderType = 'limit';
+    currentOrderType = 'limit';
     function openOrderTypeModal() {
       const current = currentOrderType || 'limit';
       openModal('Тип ордера', `
@@ -5321,9 +5327,9 @@
     // ==========================================
     // P2P INFINITE DEALS ENGINE
     // ==========================================
-    let p2pDealsData = [];
-    let isP2PLoadingMore = false;
-    let currentP2PFilter = { status: 'Все', type: 'Все', coin: 'USDT' };
+    p2pDealsData = p2pDealsData || [];
+    isP2PLoadingMore = false;
+    currentP2PFilter = { status: 'Все', type: 'Все', coin: 'USDT' };
 
     const P2P_MERCHANTS = [
       { name: 'SberPay_24', avatar: 'S', rate: 99.8, orders: 1840, banks: ['Сбербанк', 'СБП'] },
@@ -5535,30 +5541,58 @@
     });
 
     // ==========================================
-    // FLOATING PILL DOCK BAR SMOOTH SCROLL SHRINK
+    // FLOATING PILL DOCK BAR SMOOTH SCROLL SHRINK (TOUCH, WHEEL, SCROLL)
     // ==========================================
     let lastScrollY = window.scrollY || 0;
-    let scrollTicking = false;
-    const handleScrollEvent = (e) => {
-      if (!scrollTicking) {
-        window.requestAnimationFrame(() => {
-          const target = e.target;
-          const currentScrollY = (target && target.scrollTop !== undefined && target !== document && target !== window)
-            ? target.scrollTop
-            : (window.scrollY || document.documentElement.scrollTop || 0);
-          const dock = document.querySelector('.dock-pill-bar');
-          if (dock) {
-            if (currentScrollY > lastScrollY + 12 && currentScrollY > 30) {
-              dock.classList.add('dock-shrunk');
-            } else if (currentScrollY < lastScrollY - 8 || currentScrollY <= 15) {
-              dock.classList.remove('dock-shrunk');
-            }
-          }
-          lastScrollY = currentScrollY;
-          scrollTicking = false;
-        });
-        scrollTicking = true;
+    let touchStartY = 0;
+
+    function updateDockVisibility(isScrollingDown) {
+      const dock = document.querySelector('.dock-pill-bar');
+      if (!dock) return;
+      if (document.body.classList.contains('passcode-open') || 
+          document.body.classList.contains('modal-open') || 
+          document.body.classList.contains('modal-sheet-open')) {
+        return;
       }
+      if (isScrollingDown) {
+        dock.classList.add('dock-shrunk');
+      } else {
+        dock.classList.remove('dock-shrunk');
+      }
+    }
+
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0]) {
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!e.touches || !e.touches[0]) return;
+      const currentY = e.touches[0].clientY;
+      const delta = touchStartY - currentY;
+      if (Math.abs(delta) > 14) {
+        updateDockVisibility(delta > 0);
+      }
+    }, { passive: true });
+
+    window.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaY) > 8) {
+        updateDockVisibility(e.deltaY > 0);
+      }
+    }, { passive: true });
+
+    const handleScrollEvent = (e) => {
+      const target = e?.target;
+      const currentScrollY = (target && target.scrollTop !== undefined && target !== document && target !== window)
+        ? target.scrollTop
+        : (window.scrollY || document.documentElement.scrollTop || 0);
+      if (currentScrollY > lastScrollY + 8 && currentScrollY > 20) {
+        updateDockVisibility(true);
+      } else if (currentScrollY < lastScrollY - 6 || currentScrollY <= 15) {
+        updateDockVisibility(false);
+      }
+      lastScrollY = currentScrollY;
     };
     window.addEventListener('scroll', handleScrollEvent, { passive: true, capture: true });
     document.addEventListener('scroll', handleScrollEvent, { passive: true, capture: true });
@@ -5627,8 +5661,8 @@
     // INTERACTIVE CHART ENGINE (LINE & CANDLESTICK)
     // ==========================================
     let chartTimeframe = '1h';
-    let chartType = 'line';
-    let cachedCandles = [];
+    chartType = 'line';
+    cachedCandles = [];
 
     function generateCandlesData(count = 24) {
       const mid = currentExchangePair?.price || 0.9948;
@@ -5946,7 +5980,7 @@
     // ==========================================
     // NOTIFICATION CENTER WITH CRISP WHITE ICONS
     // ==========================================
-    let userNotifications = [];
+    userNotifications = userNotifications || [];
     try {
       const savedNotifs = localStorage.getItem('cb_notifications');
       if (savedNotifs) {
@@ -6189,6 +6223,21 @@
       } catch(e) {}
     }, 200);
 
+      // ==========================================
+    // SYNCHRONOUS IMMEDIATE APP INITIALIZATION
+    // ==========================================
+    function initApp() {
+      syncRealUserBalance();
+      renderAssetsList();
+      calculateSwap();
+      renderOrderBook();
+      renderP2PDealsHtml();
+      handleInitialRoute();
+    }
+    initApp();
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', initApp);
+    }
   </script>
 </body>
 </html>
