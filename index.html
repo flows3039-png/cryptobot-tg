@@ -4232,14 +4232,41 @@
       }
     }
 
+    // ==========================================
+    // TELEGRAM AUTH & SESSION PERSISTENCE (MODRIX)
+    // ==========================================
+    const AUTH_STORAGE_KEY = 'modrix_auth_session';
+    const AUTH_USER_KEY = 'modrix_auth_user';
+    const AUTH_REG_KEY = 'modrix_registered';
+    let currentSession = null;
+
+    function getApiBase() {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://127.0.0.1:8080';
+      }
+      return '';
+    }
+
     function handleInitialRoute() {
       const urlParams = new URLSearchParams(window.location.search);
+      const isReset = urlParams.get('reset') === '1';
+      if (isReset) {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem(AUTH_USER_KEY);
+        localStorage.removeItem(AUTH_REG_KEY);
+        currentSession = null;
+      }
+
       const isReg = urlParams.get('mode') === 'reg' || urlParams.get('auth') === '1';
-      if (isReg) {
+      const isAlreadyRegistered = localStorage.getItem(AUTH_REG_KEY) === '1';
+
+      // First time open or explicit registration mode
+      if (isReset || isReg || !isAlreadyRegistered) {
         switchTab('wallet');
         setTimeout(openTelegramAuthModal, 150);
         return;
       }
+
       const tabParam = urlParams.get('tab');
       if (tabParam && ['wallet', 'exchange', 'swap', 'p2p', 'more'].includes(tabParam)) {
         switchTab(tabParam);
@@ -4260,59 +4287,70 @@
         username: 'mechnik123',
         id: 7162454634
       };
-      const userName = u.first_name || 'Пользователь';
-      const handle = u.username ? '@' + u.username : ('ID ' + u.id);
-      const initials = userName.split(' ').map(w => w[0]).join('').toUpperCase() || 'M';
+      const userName = (u.first_name ? u.first_name + (u.last_name ? ' ' + u.last_name : '') : 'MODRIX');
+      const handle = u.username ? '@' + u.username : ('ID: ' + (u.id || '7162454634'));
+      const initials = userName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'M';
+      
+      const avatarHtml = u.photo_url 
+        ? `<img src="${u.photo_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin: 0 auto 14px; display: block; border: 2px solid #00c6ff; box-shadow: 0 0 25px rgba(0, 198, 255, 0.4);">`
+        : `<div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #00c6ff); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; color: #fff; margin: 0 auto 14px; box-shadow: 0 0 25px rgba(0, 198, 255, 0.4); border: 2px solid rgba(255,255,255,0.2);">${initials}</div>`;
 
-      openModal('Вход через Telegram', `
-        <div style="text-align: center; padding: 10px 0 20px;">
-          <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #2b8cff, #0056b3); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: #fff; margin: 0 auto 16px; box-shadow: 0 6px 20px rgba(43, 140, 255, 0.35);">
-            ${initials}
-          </div>
-          <div style="font-size: 22px; font-weight: 700; margin-bottom: 4px;">${userName}</div>
-          <div style="font-size: 14px; color: var(--accent-blue); font-weight: 600; margin-bottom: 16px;">${handle}</div>
-
-          <div style="background: var(--bg-card-secondary); border-radius: 14px; padding: 14px; text-align: left; margin-bottom: 20px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-              <span style="font-size: 14px; font-weight: 600;">Безопасный вход Telegram</span>
-            </div>
-            <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.45;">
-              Crypto Bot использует подтвержденные данные вашего аккаунта Telegram. Пароли не требуются, сессия сохраняется автоматически.
-            </div>
+      openModal('Регистрация через Telegram', `
+        <div style="text-align: center; padding: 10px 0 10px;">
+          ${avatarHtml}
+          <div style="font-size: 22px; font-weight: 700; margin-bottom: 4px; color: #fff;">${userName}</div>
+          <div style="font-size: 14px; color: var(--accent-blue); font-weight: 600; margin-bottom: 18px; display: inline-flex; align-items: center; gap: 5px;">
+            <span>${handle}</span>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="#00c6ff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
           </div>
 
-          <button onclick="confirmTelegramAuth()" style="width: 100%; padding: 15px; border: none; border-radius: 14px; background: #2b8cff; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(43, 140, 255, 0.4);">
-            Подтвердить вход
+          <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(0, 198, 255, 0.2); border-radius: 16px; padding: 16px; text-align: left; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              <span style="font-size: 14px; font-weight: 700; color: #fff;">Официальная авторизация Telegram</span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">
+              Вход и создание профиля выполняются автоматически через криптографическую подпись <b>initData</b>. Ввод номера телефона, SMS-кодов или паролей Telegram не требуется.
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--text-primary);">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #2ecc71; font-weight: bold;">✓</span> Привязка Telegram ID к кошельку Modrix
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #2ecc71; font-weight: bold;">✓</span> Генерация криптоадресов (BTC, ETH, TON, USDT)
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #2ecc71; font-weight: bold;">✓</span> Защищенная сессия без повторного ввода
+              </div>
+            </div>
+          </div>
+
+          <button id="btn-tg-reg-submit" onclick="submitTelegramRegistration()" style="width: 100%; padding: 16px; border: none; border-radius: 14px; background: linear-gradient(135deg, #0088cc, #00c6ff); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(0, 198, 255, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.15s ease;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <span>Завершить регистрацию</span>
           </button>
         </div>
       `);
     }
 
-    async function confirmTelegramAuth() {
+    async function submitTelegramRegistration() {
+      const btn = document.getElementById('btn-tg-reg-submit');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>Регистрация...</span>';
+      }
+
       await initTelegramAuth();
-      closeModal();
+
+      localStorage.setItem(AUTH_REG_KEY, '1');
+
       if (window.Telegram?.WebApp?.HapticFeedback) {
         window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
       }
-    }
 
-    // ==========================================
-    // SYNCHRONOUS IMMEDIATE APP INITIALIZATION
-    // ==========================================
-
-    // ==========================================
-    // TELEGRAM AUTH & SESSION PERSISTENCE (MODRIX)
-    // ==========================================
-    const AUTH_STORAGE_KEY = 'modrix_auth_session';
-    const AUTH_USER_KEY = 'modrix_auth_user';
-    let currentSession = null;
-
-    function getApiBase() {
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://127.0.0.1:8080';
-      }
-      return '';
+      closeModal();
+      showToast('Регистрация завершена', 'Добро пожаловать в Modrix!', true);
+      switchTab('wallet');
     }
 
     async function initTelegramAuth() {
@@ -4333,6 +4371,7 @@
           if (data.ok && data.authenticated) {
             currentSession = data.session;
             localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.session));
+            localStorage.setItem(AUTH_REG_KEY, '1');
             return;
           }
         } catch(e) {
@@ -4356,6 +4395,7 @@
             currentSession = data.user;
             localStorage.setItem(AUTH_STORAGE_KEY, data.session_token);
             localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user));
+            localStorage.setItem(AUTH_REG_KEY, '1');
             return;
           }
         } catch(e) {}
@@ -4370,7 +4410,10 @@
           first_name: u.first_name || '',
           auth_method: 'telegram'
         };
+        const localToken = 'tg_session_' + u.id;
+        localStorage.setItem(AUTH_STORAGE_KEY, localToken);
         localStorage.setItem(AUTH_USER_KEY, JSON.stringify(currentSession));
+        localStorage.setItem(AUTH_REG_KEY, '1');
       }
     }
 
@@ -4388,6 +4431,7 @@
       }
       localStorage.removeItem(AUTH_STORAGE_KEY);
       localStorage.removeItem(AUTH_USER_KEY);
+      localStorage.removeItem(AUTH_REG_KEY);
       currentSession = null;
       if (window.Telegram?.WebApp?.close) {
         window.Telegram.WebApp.close();
