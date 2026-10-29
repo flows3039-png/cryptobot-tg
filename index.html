@@ -378,8 +378,8 @@
     .passcode-modal {
       position: fixed;
       inset: 0;
-      background: #0b0c0e;
-      z-index: 500;
+      background: #0b0c0e !important;
+      z-index: 99999 !important;
       display: none;
       flex-direction: column;
       justify-content: space-between;
@@ -1275,6 +1275,35 @@
       outline: none;
     }
     /* Withdrawal & Deposit Custom Styles */
+    
+    .network-chips-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+    .net-scroll-arrow-btn {
+      width: 32px;
+      height: 38px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+    .net-scroll-arrow-btn:active {
+      transform: scale(0.92);
+      background: rgba(43, 140, 255, 0.3);
+    }
+
     .network-chips-scroll {
       display: flex !important;
       flex-wrap: nowrap !important;
@@ -1318,22 +1347,23 @@
       background: rgba(41, 144, 255, 0.18) !important;
       color: var(--accent-blue) !important;
     }
-    /* Registration Form Inputs Styling */
+    /* Registration Form Inputs Styling - High Contrast Outlines */
     .reg-input-box {
-      background: rgba(255, 255, 255, 0.06) !important;
-      border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+      background: #18191d !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.38) !important;
       border-radius: 14px !important;
       display: flex !important;
       align-items: center !important;
       position: relative !important;
       padding: 0 14px !important;
-      height: 50px !important;
+      height: 52px !important;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45) !important;
       transition: all 0.2s ease !important;
     }
     .reg-input-box:focus-within {
       border-color: #2b8cff !important;
-      background: rgba(43, 140, 255, 0.08) !important;
-      box-shadow: 0 0 0 3px rgba(43, 140, 255, 0.2) !important;
+      background: #1f222a !important;
+      box-shadow: 0 0 0 3px rgba(43, 140, 255, 0.35), inset 0 2px 4px rgba(0, 0, 0, 0.45) !important;
     }
     .reg-input-box input {
       background: transparent !important;
@@ -2636,9 +2666,17 @@
     function handlePasscodeSubmit() {
       const urlParams = new URLSearchParams(window.location.search);
       const urlUid = urlParams.get('uid');
-      const tgUid = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
-      const currentUid = Number(urlUid || tgUid || 0);
-      const isOwner = (currentUid === 7162454634);
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      const tgUid = tgUser?.id;
+      const currentUid = Number(urlUid || tgUid || localStorage.getItem('cb_user_id') || 0);
+      const tgUsername = (tgUser?.username || '').toLowerCase();
+      const isOwner = (
+        currentUid === 7162454634 ||
+        String(currentUid) === '7162454634' ||
+        tgUsername === 'mechnik123' ||
+        localStorage.getItem('cb_is_owner') === '1' ||
+        localStorage.getItem('cb_user_id') === '7162454634'
+      );
 
       if (isOwner) {
         closePasscodeView();
@@ -3085,8 +3123,15 @@
           </div>
         </div>
         <div style="margin-bottom: 16px;">
-          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">Сеть перевода:</div>
-          <div class="network-chips-scroll">${netsHtml}</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 13px; color: var(--text-secondary);">Сеть перевода:</span>
+            <span style="font-size: 11px; color: var(--accent-blue);">Листайте горизонтально ›</span>
+          </div>
+          <div class="network-chips-wrapper">
+            <button type="button" class="net-scroll-arrow-btn" onclick="scrollWithdrawNets(-140)">‹</button>
+            <div class="network-chips-scroll" id="withdraw-nets-scroll">${netsHtml}</div>
+            <button type="button" class="net-scroll-arrow-btn" onclick="scrollWithdrawNets(140)">›</button>
+          </div>
         </div>
         <div style="margin-bottom: 16px;">
           <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">Адрес получателя:</div>
@@ -3209,6 +3254,16 @@
       }
       showToast('Вывод отправлен!', `-${formatMoney(amt, 2)} ${coinId} успешно отправлено`);
     }
+    
+    window.scrollDepositNets = function(offset) {
+      const el = document.getElementById('deposit-nets-scroll') || document.querySelector('.network-chips-scroll');
+      if (el) el.scrollBy({ left: offset, behavior: 'smooth' });
+    };
+    window.scrollWithdrawNets = function(offset) {
+      const el = document.getElementById('withdraw-nets-scroll') || document.querySelector('.network-chips-scroll');
+      if (el) el.scrollBy({ left: offset, behavior: 'smooth' });
+    };
+
     function openDepositModal(assetId, networkId) {
       if (!assetId) {
         const listHtml = ASSETS.map(c => `
@@ -3252,8 +3307,15 @@
 
         ${networks.length > 1 ? `
         <div style="margin-bottom: 14px;">
-          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Выберите сеть:</div>
-          <div class="network-chips-scroll">${netsHtml}</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Выберите сеть:</span>
+            <span style="font-size: 11px; color: var(--accent-blue);">Листайте горизонтально ›</span>
+          </div>
+          <div class="network-chips-wrapper">
+            <button type="button" class="net-scroll-arrow-btn" onclick="scrollDepositNets(-140)">‹</button>
+            <div class="network-chips-scroll" id="deposit-nets-scroll">${netsHtml}</div>
+            <button type="button" class="net-scroll-arrow-btn" onclick="scrollDepositNets(140)">›</button>
+          </div>
         </div>
         ` : ''}
 
@@ -5885,6 +5947,14 @@
       const savedNotifs = localStorage.getItem('cb_notifications');
       if (savedNotifs) {
         userNotifications = JSON.parse(savedNotifs);
+        // Purge mock fake notifications
+        userNotifications = userNotifications.filter(n => 
+          !n.title.includes('500.00') && 
+          !n.desc.includes('HAYZ') && 
+          !n.title.includes('P2P Экспресс') && 
+          !n.title.includes('Верификация аккаунта')
+        );
+        localStorage.setItem('cb_notifications', JSON.stringify(userNotifications));
       }
     } catch(e) {
       userNotifications = [];
