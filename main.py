@@ -481,22 +481,22 @@ async def inline_query_handler(query: InlineQuery):
                     show_above_text=True
                 )
             )
-            # English standard (matches official Crypto Bot UI screenshot)
+            # Russian version first
+            results.append(InlineQueryResultArticle(
+                id=f'chk_ru_{cid}',
+                title=f'Создать чек · {amount_val:g} {asset}',
+                description=f'Чек на {amount_val:g} {asset} (${fiat_val:.2f}).\nВаш баланс: {cur_bal:,.2f} {asset} (${bal_fiat:,.2f})',
+                input_message_content=content_ru,
+                reply_markup=kb_ru,
+                thumbnail_url=icon_coin_url
+            ))
+            # English standard
             results.append(InlineQueryResultArticle(
                 id=f'chk_en_{cid}',
                 title=f'Create check · {amount_val:g} {asset}...',
                 description=f'Check for {amount_val:g} {asset} (${fiat_val:.2f}).\nYour balance: {cur_bal:,.2f} {asset} (${bal_fiat:,.2f})...',
                 input_message_content=content_en,
                 reply_markup=kb_en,
-                thumbnail_url=icon_coin_url
-            ))
-            # Russian version
-            results.append(InlineQueryResultArticle(
-                id=f'chk_ru_{cid}',
-                title=f'Создать чек · {amount_val:g} {asset}',
-                description=f'Чек на {amount_val:g} {asset} (~${fiat_val:.2f}).\nВаш баланс: {cur_bal:,.2f} {asset} (${bal_fiat:,.2f})',
-                input_message_content=content_ru,
-                reply_markup=kb_ru,
                 thumbnail_url=icon_coin_url
             ))
         else:

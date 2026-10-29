@@ -24,6 +24,8 @@ from keyboards import (
 
 router = Router()
 
+ADMIN_MEDIA_FILE_ID = None
+
 class AdminFSM(StatesGroup):
     waiting_balance = State()
     waiting_set_balance = State()
@@ -40,7 +42,7 @@ async def check_admin(user_id: int) -> bool:
 
 async def edit_admin_msg(cb: CallbackQuery, text: str, reply_markup=None):
     try:
-        if cb.message.photo or cb.message.video:
+        if cb.message.photo or cb.message.video or cb.message.animation:
             await cb.message.edit_caption(caption=text, reply_markup=reply_markup, parse_mode="HTML")
         else:
             await cb.message.edit_text(text=text, reply_markup=reply_markup, parse_mode="HTML")
@@ -57,6 +59,7 @@ async def cmd_admin(msg: Message):
     if not await check_admin(msg.from_user.id):
         return
     reg_enabled = await is_regional_restriction_enabled()
+    gif_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_video.gif")
     video_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_video.mp4")
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
@@ -64,16 +67,39 @@ async def cmd_admin(msg: Message):
         "Система управления балансами, чеками, аналитикой и правами администраторов.\n"
         "Выберите раздел для работы:"
     )
-    if os.path.exists(video_path):
-        from aiogram.types import FSInputFile
-        await msg.answer_video(
+    global ADMIN_MEDIA_FILE_ID
+    if ADMIN_MEDIA_FILE_ID:
+        try:
+            await msg.answer_animation(
+                animation=ADMIN_MEDIA_FILE_ID,
+                caption=text,
+                reply_markup=admin_menu_kb(reg_enabled),
+                parse_mode="HTML"
+            )
+            return
+        except Exception:
+            ADMIN_MEDIA_FILE_ID = None
+
+    from aiogram.types import FSInputFile
+    if os.path.exists(gif_path):
+        sent = await msg.answer_animation(
+            animation=FSInputFile(gif_path),
+            caption=text,
+            reply_markup=admin_menu_kb(reg_enabled),
+            parse_mode="HTML"
+        )
+        if sent and sent.animation:
+            ADMIN_MEDIA_FILE_ID = sent.animation.file_id
+    elif os.path.exists(video_path):
+        sent = await msg.answer_video(
             video=FSInputFile(video_path),
             caption=text,
             reply_markup=admin_menu_kb(reg_enabled),
             parse_mode="HTML"
         )
+        if sent and sent.video:
+            ADMIN_MEDIA_FILE_ID = sent.video.file_id
     elif os.path.exists(admin_banner_path):
-        from aiogram.types import FSInputFile
         await msg.answer_photo(
             photo=FSInputFile(admin_banner_path),
             caption=text,
@@ -640,6 +666,7 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
         return
     await state.clear()
     reg_enabled = await is_regional_restriction_enabled()
+    gif_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_video.gif")
     video_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_video.mp4")
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
@@ -647,7 +674,7 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
         "Система управления балансами, чеками, аналитикой и правами администраторов.\n"
         "Выберите раздел для работы:"
     )
-    if cb.message.photo or cb.message.video:
+    if cb.message.photo or cb.message.video or cb.message.animation:
         try:
             await cb.message.edit_caption(caption=text, reply_markup=admin_menu_kb(reg_enabled), parse_mode="HTML")
             await cb.answer()
@@ -655,20 +682,52 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
         except Exception:
             pass
 
-    if os.path.exists(video_path):
-        from aiogram.types import FSInputFile
-        await cb.message.answer_video(
+    global ADMIN_MEDIA_FILE_ID
+    if ADMIN_MEDIA_FILE_ID:
+        try:
+            await cb.message.answer_animation(
+                animation=ADMIN_MEDIA_FILE_ID,
+                caption=text,
+                reply_markup=admin_menu_kb(reg_enabled),
+                parse_mode="HTML"
+            )
+            try:
+                await cb.message.delete()
+            except Exception:
+                pass
+            await cb.answer()
+            return
+        except Exception:
+            ADMIN_MEDIA_FILE_ID = None
+
+    from aiogram.types import FSInputFile
+    if os.path.exists(gif_path):
+        sent = await cb.message.answer_animation(
+            animation=FSInputFile(gif_path),
+            caption=text,
+            reply_markup=admin_menu_kb(reg_enabled),
+            parse_mode="HTML"
+        )
+        if sent and sent.animation:
+            ADMIN_MEDIA_FILE_ID = sent.animation.file_id
+        try:
+            await cb.message.delete()
+        except Exception:
+            pass
+    elif os.path.exists(video_path):
+        sent = await cb.message.answer_video(
             video=FSInputFile(video_path),
             caption=text,
             reply_markup=admin_menu_kb(reg_enabled),
             parse_mode="HTML"
         )
+        if sent and sent.video:
+            ADMIN_MEDIA_FILE_ID = sent.video.file_id
         try:
             await cb.message.delete()
         except Exception:
             pass
     elif os.path.exists(admin_banner_path):
-        from aiogram.types import FSInputFile
         await cb.message.answer_photo(
             photo=FSInputFile(admin_banner_path),
             caption=text,
