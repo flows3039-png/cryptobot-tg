@@ -450,8 +450,21 @@ async def inline_query_handler(query: InlineQuery):
                 InlineKeyboardButton(text=f'Claim {amount_val:g} {asset}', url=deep_link)
             ]])
 
+            check_icon = '<tg-emoji emoji-id="5311998535032409760">🧾</tg-emoji>'
+            coin_emoji_id = config.CURRENCIES.get(asset, {}).get("emoji_id")
+            if asset == "USDT":
+                coin_icon = '<tg-emoji emoji-id="6035288280562404083">🪙</tg-emoji>'
+            elif coin_emoji_id:
+                coin_icon = f'<tg-emoji emoji-id="{coin_emoji_id}">🪙</tg-emoji>'
+            else:
+                coin_icon = ""
+
+            coin_part = f"{coin_icon} " if coin_icon else ""
+            check_text_ru = f"{check_icon} Чек на {coin_part}{amount_val:g} {asset} (${fiat_val:.2f})."
+            check_text_en = f"{check_icon} Check for {coin_part}{amount_val:g} {asset} (${fiat_val:.2f})."
+
             content_ru = InputTextMessageContent(
-                message_text=f'Чек на <b>{amount_val:g} {asset}</b> (~${fiat_val:.2f}).\n<i>Check for {amount_val:g} {asset}</i>',
+                message_text=check_text_ru,
                 parse_mode='HTML',
                 link_preview_options=LinkPreviewOptions(
                     url=img_url,
@@ -460,7 +473,7 @@ async def inline_query_handler(query: InlineQuery):
                 )
             )
             content_en = InputTextMessageContent(
-                message_text=f'Check for <b>{amount_val:g} {asset}</b> (~${fiat_val:.2f}).\n<i>Чек на {amount_val:g} {asset}</i>',
+                message_text=check_text_en,
                 parse_mode='HTML',
                 link_preview_options=LinkPreviewOptions(
                     url=img_url,
@@ -520,8 +533,17 @@ async def inline_query_handler(query: InlineQuery):
             kb = InlineKeyboardMarkup(inline_keyboard=[[
                 InlineKeyboardButton(text=f'Забрать {amt_display:g} {a}', url=deep_link)
             ]])
+            check_icon = '<tg-emoji emoji-id="5311998535032409760">🧾</tg-emoji>'
+            coin_emoji_id = config.CURRENCIES.get(a, {}).get("emoji_id")
+            if a == "USDT":
+                coin_icon = '<tg-emoji emoji-id="6035288280562404083">🪙</tg-emoji>'
+            elif coin_emoji_id:
+                coin_icon = f'<tg-emoji emoji-id="{coin_emoji_id}">🪙</tg-emoji>'
+            else:
+                coin_icon = ""
+            coin_part = f"{coin_icon} " if coin_icon else ""
             content = InputTextMessageContent(
-                message_text=f'Чек на <b>{amt_display:g} {a}</b> (${f_val:.2f}).',
+                message_text=f"{check_icon} Чек на {coin_part}{amt_display:g} {a} (${f_val:.2f}).",
                 parse_mode='HTML'
             )
             results.append(InlineQueryResultArticle(

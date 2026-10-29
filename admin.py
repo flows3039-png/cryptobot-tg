@@ -40,7 +40,7 @@ async def check_admin(user_id: int) -> bool:
 
 async def edit_admin_msg(cb: CallbackQuery, text: str, reply_markup=None):
     try:
-        if cb.message.photo:
+        if cb.message.photo or cb.message.video:
             await cb.message.edit_caption(caption=text, reply_markup=reply_markup, parse_mode="HTML")
         else:
             await cb.message.edit_text(text=text, reply_markup=reply_markup, parse_mode="HTML")
@@ -57,13 +57,22 @@ async def cmd_admin(msg: Message):
     if not await check_admin(msg.from_user.id):
         return
     reg_enabled = await is_regional_restriction_enabled()
+    video_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_video.mp4")
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
         f"{_e('premium_clean', '⚡')} <b>Панель управления CryptoBot</b>\n\n"
         "Система управления балансами, чеками, аналитикой и правами администраторов.\n"
         "Выберите раздел для работы:"
     )
-    if os.path.exists(admin_banner_path):
+    if os.path.exists(video_path):
+        from aiogram.types import FSInputFile
+        await msg.answer_video(
+            video=FSInputFile(video_path),
+            caption=text,
+            reply_markup=admin_menu_kb(reg_enabled),
+            parse_mode="HTML"
+        )
+    elif os.path.exists(admin_banner_path):
         from aiogram.types import FSInputFile
         await msg.answer_photo(
             photo=FSInputFile(admin_banner_path),
@@ -631,13 +640,14 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
         return
     await state.clear()
     reg_enabled = await is_regional_restriction_enabled()
+    video_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_video.mp4")
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
         f"{_e('premium_clean', '⚡')} <b>Панель управления CryptoBot</b>\n\n"
         "Система управления балансами, чеками, аналитикой и правами администраторов.\n"
         "Выберите раздел для работы:"
     )
-    if cb.message.photo:
+    if cb.message.photo or cb.message.video:
         try:
             await cb.message.edit_caption(caption=text, reply_markup=admin_menu_kb(reg_enabled), parse_mode="HTML")
             await cb.answer()
@@ -645,7 +655,19 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
         except Exception:
             pass
 
-    if os.path.exists(admin_banner_path):
+    if os.path.exists(video_path):
+        from aiogram.types import FSInputFile
+        await cb.message.answer_video(
+            video=FSInputFile(video_path),
+            caption=text,
+            reply_markup=admin_menu_kb(reg_enabled),
+            parse_mode="HTML"
+        )
+        try:
+            await cb.message.delete()
+        except Exception:
+            pass
+    elif os.path.exists(admin_banner_path):
         from aiogram.types import FSInputFile
         await cb.message.answer_photo(
             photo=FSInputFile(admin_banner_path),
