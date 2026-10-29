@@ -10,15 +10,15 @@ router = Router()
 async def cb_notif_menu(cb: CallbackQuery):
     text = "Выберите тип уведомлений, которые вы хотите настроить."
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📢 Общие рассылки", callback_data="notif:general")],
-        [InlineKeyboardButton(text="👥 Рефералы", callback_data="notif:ref")],
-        [InlineKeyboardButton(text="🍰 Crypto Pay", callback_data="notif:pay")],
-        [InlineKeyboardButton(text="💠 P2P Маркет", callback_data="notif:p2p")],
-        [InlineKeyboardButton(text="🎁 Розыгрыши", callback_data="notif:giveaway")],
-        [InlineKeyboardButton(text="🧡 Для владельцев каналов", callback_data="notif:owner")],
-        [InlineKeyboardButton(text="📡 Для подписчиков", callback_data="notif:sub")],
-        [InlineKeyboardButton(text="💠 Оплата по QR-коду", callback_data="notif:qr")],
-        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:settings")]
+        [InlineKeyboardButton(text="Общие рассылки", callback_data="notif:general", icon_custom_emoji_id="5312161417372142817")],
+        [InlineKeyboardButton(text="Рефералы", callback_data="notif:ref", icon_custom_emoji_id="5879770735999717115")],
+        [InlineKeyboardButton(text="Crypto Pay", callback_data="notif:pay", icon_custom_emoji_id="5361543877599724417")],
+        [InlineKeyboardButton(text="P2P Маркет", callback_data="notif:p2p", icon_custom_emoji_id="5312419154064607942")],
+        [InlineKeyboardButton(text="Розыгрыши", callback_data="notif:giveaway", icon_custom_emoji_id="6032937473162614352")],
+        [InlineKeyboardButton(text="Для владельцев каналов", callback_data="notif:owner", icon_custom_emoji_id="5875465628285931233")],
+        [InlineKeyboardButton(text="Для подписчиков", callback_data="notif:sub", icon_custom_emoji_id="5312161417372142817")],
+        [InlineKeyboardButton(text="Оплата по QR-коду", callback_data="notif:qr", icon_custom_emoji_id="5309771942381785364")],
+        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:settings", icon_custom_emoji_id="5312212278374861302")]
     ])
     await cb.message.edit_text(text, reply_markup=kb)
     await cb.answer()

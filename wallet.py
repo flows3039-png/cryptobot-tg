@@ -123,16 +123,37 @@ async def cb_dep_currency(cb: CallbackQuery):
         f"Внутренние переводы между пользователями Crypto Bot зачисляются моментально и без комиссии.</i>"
     )
     
+    COIN_NETWORKS_BOT = {
+        "USDT": ["TRC20", "TON", "BEP20", "ERC20", "SOL", "POLYGON"],
+        "USDC": ["TRC20", "ERC20", "SOL", "BEP20"],
+        "ETH": ["ERC20", "ARB", "OP", "BASE"],
+        "BTC": ["Bitcoin", "BEP20"],
+        "TON": ["TON"],
+        "GRAM": ["TON"],
+        "SOL": ["Solana"],
+        "TRX": ["TRC20"],
+        "LTC": ["Litecoin"],
+        "DOGE": ["Dogecoin"],
+        "BNB": ["BEP20"],
+        "XAUT": ["ERC20"]
+    }
     kb_rows = []
-    if ticker in ("USDT", "USDC"):
-        # Selectable networks
-        nets = ["TRC20", "TON", "BEP20", "ERC20", "SOL"]
-        row1 = [InlineKeyboardButton(text=f"{'✓ ' if n == net else ''}{n}", callback_data=f"wallet:dep:{ticker}:{n}") for n in nets[:3]]
-        row2 = [InlineKeyboardButton(text=f"{'✓ ' if n == net else ''}{n}", callback_data=f"wallet:dep:{ticker}:{n}") for n in nets[3:]]
-        kb_rows.append(row1)
-        kb_rows.append(row2)
+    nets = COIN_NETWORKS_BOT.get(ticker, [net])
+    if len(nets) > 1:
+        row = []
+        for n in nets:
+            row.append(InlineKeyboardButton(
+                text=n,
+                callback_data=f"wallet:dep:{ticker}:{n}",
+                icon_custom_emoji_id="5825794181183836432" if n == net else None
+            ))
+            if len(row) == 2:
+                kb_rows.append(row)
+                row = []
+        if row:
+            kb_rows.append(row)
         
-    kb_rows.append([InlineKeyboardButton(text="‹ Назад к выбору", callback_data="wallet:dep")])
+    kb_rows.append([InlineKeyboardButton(text="‹ Назад к выбору", callback_data="wallet:dep", icon_custom_emoji_id="5312212278374861302")])
     kb = InlineKeyboardMarkup(inline_keyboard=kb_rows)
     
     await cb.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
@@ -193,7 +214,7 @@ async def proc_wdr_amount(msg: Message, state: FSMContext):
     await state.set_state(WalletFSM.waiting_address)
     
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Отмена", callback_data="wallet:menu")]
+        [InlineKeyboardButton(text="Отмена", callback_data="wallet:menu", icon_custom_emoji_id="5778527486270770928")]
     ])
     
     await msg.answer(f"Введите адрес кошелька <b>{ticker}</b>, куда вывести средства:", reply_markup=kb, parse_mode="HTML")

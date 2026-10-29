@@ -35,8 +35,8 @@ async def cb_subs(cb: CallbackQuery):
         "<a href=\"https://youtu.be/ваша_ссылка\">Смотреть видеоинструкцию ›</a>"
     )
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🍑 Подключить...", callback_data="subs:connect")],
-        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:main")]
+        [InlineKeyboardButton(text="Подключить...", callback_data="subs:connect", icon_custom_emoji_id="5884343982816759327")],
+        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:main", icon_custom_emoji_id="5312212278374861302")]
     ])
     try: await cb.message.delete()
     except: pass
@@ -197,8 +197,8 @@ async def show_invoice_card(msg: Message, state: FSMContext):
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"✅ Оплатить {inv['amount']:g} {inv['asset']}", callback_data=f"pay_inv:{inv_id}")],
-        [InlineKeyboardButton(text="❌ Отмена", callback_data="menu:main")]
+        [InlineKeyboardButton(text=f"Оплатить {inv['amount']:g} {inv['asset']}", callback_data=f"pay_inv:{inv_id}", icon_custom_emoji_id="5825794181183836432")],
+        [InlineKeyboardButton(text="Отмена", callback_data="menu:main", icon_custom_emoji_id="5778527486270770928")]
     ])
 
     await msg.answer(text, reply_markup=kb, parse_mode="HTML")

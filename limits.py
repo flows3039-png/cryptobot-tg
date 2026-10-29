@@ -9,11 +9,11 @@ router = Router()
 async def cb_limits_menu(cb: CallbackQuery):
     text = "Выберите раздел, чтобы посмотреть комиссии и лимиты."
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="👜 Кошелёк", callback_data="limit:wallet")],
-        [InlineKeyboardButton(text="🐬 Биржа", callback_data="limit:exchange")],
-        [InlineKeyboardButton(text="🍰 Crypto Pay", callback_data="limit:pay")],
-        [InlineKeyboardButton(text="💠 P2P", callback_data="limit:p2p")],
-        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:settings")]
+        [InlineKeyboardButton(text="Кошелёк", callback_data="limit:wallet", icon_custom_emoji_id="5310191758255099001")],
+        [InlineKeyboardButton(text="Биржа", callback_data="limit:exchange", icon_custom_emoji_id="5877410604225924969")],
+        [InlineKeyboardButton(text="Crypto Pay", callback_data="limit:pay", icon_custom_emoji_id="5361543877599724417")],
+        [InlineKeyboardButton(text="P2P", callback_data="limit:p2p", icon_custom_emoji_id="5312419154064607942")],
+        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:settings", icon_custom_emoji_id="5312212278374861302")]
     ])
     await cb.message.edit_text(text, reply_markup=kb)
     await cb.answer()

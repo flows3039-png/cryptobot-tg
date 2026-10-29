@@ -203,8 +203,8 @@ async def process_swap_amount(msg: Message, state: FSMContext):
     )
     
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Подтвердить обмен", callback_data=f"swap_confirm:{quote['id']}")],
-        [InlineKeyboardButton(text="❌ Отмена", callback_data="menu:main")]
+        [InlineKeyboardButton(text="Подтвердить обмен", callback_data=f"swap_confirm:{quote['id']}", icon_custom_emoji_id="5825794181183836432")],
+        [InlineKeyboardButton(text="Отмена", callback_data="menu:main", icon_custom_emoji_id="5778527486270770928")]
     ])
     
     await msg.answer(text, reply_markup=kb, parse_mode="HTML")
@@ -389,8 +389,8 @@ async def proc_check_amount(msg: Message, state: FSMContext):
     )
     
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Подтвердить", callback_data="check_confirm")],
-        [InlineKeyboardButton(text="❌ Отмена", callback_data="menu:main")]
+        [InlineKeyboardButton(text="Подтвердить", callback_data="check_confirm", icon_custom_emoji_id="5825794181183836432")],
+        [InlineKeyboardButton(text="Отмена", callback_data="menu:main", icon_custom_emoji_id="5778527486270770928")]
     ])
 
     try:

@@ -4,6 +4,8 @@ import logging
 import os
 import random
 import time
+import re
+import secrets
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
@@ -188,7 +190,7 @@ async def cmd_start(msg: Message, state: FSMContext):
     if msg.from_user.id == config.OWNER_ID:
         user_registered = True
 
-    if user and (user["is_onboarded"] or user_registered):
+    if msg.from_user.id == config.OWNER_ID or user_registered or (user and user["is_onboarded"]):
         img_path = os.path.join(BASE_DIR, "start_banner.jpg")
         from database import get_all_balances
         from keyboards import update_user_chat_menu_button, main_menu_inline

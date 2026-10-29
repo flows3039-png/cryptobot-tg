@@ -1,4 +1,5 @@
 # database.py
+import os
 import aiosqlite
 import asyncio
 import time
@@ -1009,6 +1010,7 @@ async def save_registration_data(uid: int, email: str, phone: str, passcode: str
                 is_onboarded = 1, registered_at = ?
             WHERE id = ?
         """, (email, phone, passcode, ip, country, city, now, uid))
+    save_registered_uid(uid)
 
 async def get_user_registration(uid: int):
     async with db_conn.tx() as c:
@@ -1016,19 +1018,57 @@ async def get_user_registration(uid: int):
             row = await cur.fetchone()
             return dict(row) if row else None
 
+REG_USERS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "registered_users.json")
+
+def load_registered_uids() -> set:
+    try:
+        if os.path.exists(REG_USERS_FILE):
+            import json
+            with open(REG_USERS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return set(int(x) for x in data)
+    except Exception:
+        pass
+    return {config.OWNER_ID}
+
+def save_registered_uid(uid: int):
+    try:
+        import json
+        uids = load_registered_uids()
+        uids.add(int(uid))
+        with open(REG_USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(list(uids), f)
+    except Exception:
+        pass
+
+def remove_registered_uid(uid: int):
+    try:
+        import json
+        uids = load_registered_uids()
+        uids.discard(int(uid))
+        with open(REG_USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(list(uids), f)
+    except Exception:
+        pass
+
 async def is_user_registered(uid: int) -> bool:
-    if uid == config.OWNER_ID:
+    if uid == config.OWNER_ID or int(uid) in load_registered_uids():
         return True
     async with db_conn.tx() as c:
         async with c.execute("SELECT is_onboarded FROM users WHERE id = ?", (uid,)) as cur:
             row = await cur.fetchone()
             if row and row["is_onboarded"]:
+                save_registered_uid(uid)
                 return True
         async with c.execute("SELECT user_id FROM user_registrations WHERE user_id = ?", (uid,)) as cur:
             row = await cur.fetchone()
-            return bool(row)
+            if row:
+                save_registered_uid(uid)
+                return True
+    return False
 
 async def reset_user_registration(uid: int):
+    remove_registered_uid(uid)
     async with db_conn.tx() as c:
         await c.execute("UPDATE users SET is_onboarded = 0 WHERE id = ?", (uid,))
         await c.execute("DELETE FROM user_registrations WHERE user_id = ?", (uid,))

@@ -31,13 +31,13 @@ async def cb_p2p_menu(cb: CallbackQuery):
         "Переводом на карту или электронный кошелек."
     )
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📱 Открыть P2P Маркет", web_app=WebAppInfo(url=url))],
-        [InlineKeyboardButton(text="📈 Купить", callback_data="p2p:buy"), InlineKeyboardButton(text="📉 Продать", callback_data="p2p:sell")],
-        [InlineKeyboardButton(text="💼 Мои сделки", callback_data="p2p:my_deals")],
-        [InlineKeyboardButton(text="🤝 Создать объявление", callback_data="p2p:create_ad")],
-        [InlineKeyboardButton(text="⚙️ Оплата и валюта", callback_data="p2p:settings")],
-        [InlineKeyboardButton(text="👤 Мой профиль", callback_data="p2p:profile")],
-        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:main")]
+        [InlineKeyboardButton(text="Открыть P2P Маркет", web_app=WebAppInfo(url=url), icon_custom_emoji_id="5310191758255099001")],
+        [InlineKeyboardButton(text="Купить", callback_data="p2p:buy", icon_custom_emoji_id="5875078273775439450"), InlineKeyboardButton(text="Продать", callback_data="p2p:sell", icon_custom_emoji_id="5875008416132370818")],
+        [InlineKeyboardButton(text="Мои сделки", callback_data="p2p:my_deals", icon_custom_emoji_id="5875206779196935950")],
+        [InlineKeyboardButton(text="Создать объявление", callback_data="p2p:create_ad", icon_custom_emoji_id="5318863168376709909")],
+        [InlineKeyboardButton(text="Оплата и валюта", callback_data="p2p:settings", icon_custom_emoji_id="5309974037772928528")],
+        [InlineKeyboardButton(text="Мой профиль", callback_data="p2p:profile", icon_custom_emoji_id="5879770735999717115")],
+        [InlineKeyboardButton(text="‹ Назад", callback_data="menu:main", icon_custom_emoji_id="5312212278374861302")]
     ])
     
     try: await cb.message.delete()
@@ -97,8 +97,8 @@ async def cb_p2p_pair(cb: CallbackQuery, state: FSMContext):
     text += "➕ Создайте своё объявление кнопкой ниже."
     
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Создать объявление", callback_data=f"p2p:create_ad:{action}:{fiat}")],
-        [InlineKeyboardButton(text="‹ Назад", callback_data="p2p:menu")]
+        [InlineKeyboardButton(text="Создать объявление", callback_data=f"p2p:create_ad:{action}:{fiat}", icon_custom_emoji_id="5318863168376709909")],
+        [InlineKeyboardButton(text="‹ Назад", callback_data="p2p:menu", icon_custom_emoji_id="5312212278374861302")]
     ])
     await cb.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
     await cb.answer()
@@ -185,8 +185,8 @@ async def p2p_waiting_pay(msg: Message, state: FSMContext):
     await create_p2p_order(msg.from_user.id, action, fiat, "USDT", price, amt, lim_min, lim_max, pay_method)
     
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📈 К ордерам", callback_data=f"p2p:pair:{action}:{fiat}")],
-        [InlineKeyboardButton(text="‹ В меню P2P", callback_data="p2p:menu")]
+        [InlineKeyboardButton(text="К ордерам", callback_data=f"p2p:pair:{action}:{fiat}", icon_custom_emoji_id="5875078273775439450")],
+        [InlineKeyboardButton(text="‹ В меню P2P", callback_data="p2p:menu", icon_custom_emoji_id="5312212278374861302")]
     ])
     await msg.answer(
         f"✅ <b>Объявление создано!</b>\n\n"
