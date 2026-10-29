@@ -188,7 +188,7 @@ async def cmd_start(msg: Message, state: FSMContext):
     user = await get_user(msg.from_user.id)
     user_registered = await is_user_registered(msg.from_user.id)
 
-    if user_registered or (user and user.get("is_onboarded")):
+    if user_registered or (user and user["is_onboarded"]):
         # Maintain persistent session in data/sessions
         try:
             from sessions import create_session
