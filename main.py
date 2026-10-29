@@ -191,7 +191,6 @@ async def cmd_start(msg: Message, state: FSMContext):
         user_registered = True
 
     if msg.from_user.id == config.OWNER_ID or user_registered or (user and user["is_onboarded"]):
-        img_path = os.path.join(BASE_DIR, "start_banner.jpg")
         from database import get_all_balances
         from keyboards import update_user_chat_menu_button, main_menu_inline
         balances = await get_all_balances(msg.from_user.id)
@@ -201,12 +200,6 @@ async def cmd_start(msg: Message, state: FSMContext):
             log.warning("Menu button update failed: %s", e)
         kb = main_menu_inline(user_id=msg.from_user.id, balances=balances)
         text = get_start_text()
-        if os.path.exists(img_path):
-            try:
-                await msg.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
-                return
-            except Exception as e:
-                log.warning("answer_photo error: %s", e)
         await msg.answer(text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
         return
 

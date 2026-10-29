@@ -46,8 +46,8 @@ async def cb_set_lang(cb: CallbackQuery):
     lang = await get_user_lang(cb.from_user.id)
     text = t(lang, "lang_choose")
     buttons = [
-        [InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang:ru")],
-        [InlineKeyboardButton(text="🇬🇧 English", callback_data="lang:en")],
+        [InlineKeyboardButton(text="Русский", callback_data="lang:ru", icon_custom_emoji_id="5825794181183836432" if lang == "ru" else None)],
+        [InlineKeyboardButton(text="English", callback_data="lang:en", icon_custom_emoji_id="5825794181183836432" if lang == "en" else None)],
         [InlineKeyboardButton(text=t(lang, "back"), callback_data="menu:settings")]
     ]
     kb = InlineKeyboardMarkup(inline_keyboard=buttons)
