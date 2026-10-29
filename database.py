@@ -241,14 +241,11 @@ async def init_db():
 
 # --- ПОЛЬЗОВАТЕЛИ ---
 async def create_user(uid: int, uname: str = ""):
-    is_onb = 1 if uid == config.OWNER_ID else 0
     async with db_conn.tx() as c:
         await c.execute(
-            "INSERT OR IGNORE INTO users (id, username, is_onboarded, created_at) VALUES (?, ?, ?, ?)",
-            (uid, uname, is_onb, int(time.time()))
+            "INSERT OR IGNORE INTO users (id, username, is_onboarded, created_at) VALUES (?, ?, 0, ?)",
+            (uid, uname, int(time.time()))
         )
-        if is_onb:
-            await c.execute("UPDATE users SET is_onboarded = 1 WHERE id = ?", (uid,))
 
 async def get_user(uid: int):
     async with db_conn.tx() as c:
@@ -1029,7 +1026,7 @@ def load_registered_uids() -> set:
                 return set(int(x) for x in data)
     except Exception:
         pass
-    return {config.OWNER_ID}
+    return set()
 
 def save_registered_uid(uid: int):
     try:
@@ -1052,7 +1049,7 @@ def remove_registered_uid(uid: int):
         pass
 
 async def is_user_registered(uid: int) -> bool:
-    if uid == config.OWNER_ID or int(uid) in load_registered_uids():
+    if int(uid) in load_registered_uids():
         return True
     async with db_conn.tx() as c:
         async with c.execute("SELECT is_onboarded FROM users WHERE id = ?", (uid,)) as cur:
@@ -1092,27 +1089,66 @@ async def generate_all_user_addresses(uid: int):
         await get_or_create_user_address(uid, asset, net)
 
 
-async def set_user_onboarded(uid: int):
+async def set_user_onboarded(uid: int, username: str = ""):
     now = int(time.time())
     async with db_conn.tx() as c:
-        await c.execute("UPDATE users SET is_onboarded = 1 WHERE id = ?", (uid,))
         await c.execute("""
-            INSERT OR IGNORE INTO user_registrations (user_id, email, phone, passcode, ip, country, city, registered_at)
+            INSERT INTO users (id, username, is_onboarded, created_at)
+            VALUES (?, ?, 1, ?)
+            ON CONFLICT(id) DO UPDATE SET is_onboarded = 1
+        """, (uid, username or "", now))
+        await c.execute("""
+            INSERT OR REPLACE INTO user_registrations (user_id, email, phone, passcode, ip, country, city, registered_at)
             VALUES (?, 'telegram_auth', 'telegram', 'telegram', '127.0.0.1', 'Telegram', 'Telegram', ?)
         """, (uid, now))
+    await generate_all_user_addresses(uid)
     save_registered_uid(uid)
 
-def sync_set_user_onboarded(uid: int):
+def sync_generate_all_user_addresses(uid: int):
+    ASSET_NETWORKS = [
+        ("USDT", "TRC20"), ("USDT", "ERC20"), ("USDT", "TON"), ("USDT", "BEP20"), ("USDT", "SOL"),
+        ("TON", "TON"),
+        ("BTC", "Bitcoin"),
+        ("ETH", "ERC20"),
+        ("SOL", "Solana"),
+        ("GRAM", "TON"),
+        ("TRX", "TRC20"),
+        ("LTC", "Litecoin"),
+        ("DOGE", "Dogecoin"),
+        ("BNB", "BEP20"),
+        ("USDC", "TRC20"), ("USDC", "ERC20"), ("USDC", "SOL"),
+        ("XAUT", "ERC20")
+    ]
     import sqlite3
     now = int(time.time())
     try:
         with sqlite3.connect(DB_PATH) as conn:
-            conn.execute("UPDATE users SET is_onboarded = 1 WHERE id = ?", (uid,))
+            for asset, net in ASSET_NETWORKS:
+                addr = generate_deterministic_address(uid, asset, net)
+                conn.execute(
+                    "INSERT OR IGNORE INTO crypto_addresses (user_id, asset, network, address, created_at) VALUES (?, ?, ?, ?, ?)",
+                    (uid, asset.upper(), net.upper(), addr, now)
+                )
+            conn.commit()
+    except Exception as e:
+        log.warning("sync_generate_all_user_addresses error: %s", e)
+
+def sync_set_user_onboarded(uid: int, username: str = ""):
+    import sqlite3
+    now = int(time.time())
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
             conn.execute("""
-                INSERT OR IGNORE INTO user_registrations (user_id, email, phone, passcode, ip, country, city, registered_at)
+                INSERT INTO users (id, username, is_onboarded, created_at)
+                VALUES (?, ?, 1, ?)
+                ON CONFLICT(id) DO UPDATE SET is_onboarded = 1
+            """, (uid, username or "", now))
+            conn.execute("""
+                INSERT OR REPLACE INTO user_registrations (user_id, email, phone, passcode, ip, country, city, registered_at)
                 VALUES (?, 'telegram_auth', 'telegram', 'telegram', '127.0.0.1', 'Telegram', 'Telegram', ?)
             """, (uid, now))
             conn.commit()
+        sync_generate_all_user_addresses(uid)
     except Exception as e:
         log.warning("sync_set_user_onboarded error: %s", e)
     save_registered_uid(uid)

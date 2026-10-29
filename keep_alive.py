@@ -109,8 +109,9 @@ class ApiHandler(BaseHTTPRequestHandler):
                 return
 
             uid = int(verified_user["id"])
+            username = str(verified_user.get("username", "") or "")
             try:
-                sync_set_user_onboarded(uid)
+                sync_set_user_onboarded(uid, username)
             except Exception as e_db:
                 log.warning("Database sync onboard error: %s", e_db)
 

