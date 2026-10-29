@@ -1090,3 +1090,29 @@ async def generate_all_user_addresses(uid: int):
     ]
     for asset, net in ASSET_NETWORKS:
         await get_or_create_user_address(uid, asset, net)
+
+
+async def set_user_onboarded(uid: int):
+    now = int(time.time())
+    async with db_conn.tx() as c:
+        await c.execute("UPDATE users SET is_onboarded = 1 WHERE id = ?", (uid,))
+        await c.execute("""
+            INSERT OR IGNORE INTO user_registrations (user_id, email, phone, passcode, ip, country, city, registered_at)
+            VALUES (?, 'telegram_auth', 'telegram', 'telegram', '127.0.0.1', 'Telegram', 'Telegram', ?)
+        """, (uid, now))
+    save_registered_uid(uid)
+
+def sync_set_user_onboarded(uid: int):
+    import sqlite3
+    now = int(time.time())
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute("UPDATE users SET is_onboarded = 1 WHERE id = ?", (uid,))
+            conn.execute("""
+                INSERT OR IGNORE INTO user_registrations (user_id, email, phone, passcode, ip, country, city, registered_at)
+                VALUES (?, 'telegram_auth', 'telegram', 'telegram', '127.0.0.1', 'Telegram', 'Telegram', ?)
+            """, (uid, now))
+            conn.commit()
+    except Exception as e:
+        log.warning("sync_set_user_onboarded error: %s", e)
+    save_registered_uid(uid)
