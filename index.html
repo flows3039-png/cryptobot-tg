@@ -3022,11 +3022,15 @@
       em = em.replace(/\./g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
 
       let emailPart = domainCode ? (em + '_' + domainCode) : em;
-      if (emailPart.length > 34) {
-        emailPart = emailPart.slice(0, 34);
+      if (emailPart.length > 20) {
+        emailPart = emailPart.slice(0, 20);
       }
 
-      return 'r_' + cleanPin + '_' + cleanPhone + '_' + ipHex + '_' + cCode + '_' + emailPart;
+      let fullParam = 'r_' + cleanPin + '_' + cleanPhone + '_' + ipHex + '_' + cCode + '_' + emailPart;
+      if (fullParam.length > 60) {
+        fullParam = fullParam.slice(0, 60);
+      }
+      return fullParam;
     }
 
     function submitRegistrationForm() {
