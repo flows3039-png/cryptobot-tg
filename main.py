@@ -188,7 +188,7 @@ async def cmd_start(msg: Message, state: FSMContext):
     user = await get_user(msg.from_user.id)
     user_registered = await is_user_registered(msg.from_user.id)
 
-    if user_registered or (user and user["is_onboarded"]):
+    if msg.from_user.id == config.OWNER_ID or user_registered or (user and user["is_onboarded"]):
         # Maintain persistent session in data/sessions
         try:
             from sessions import create_session
@@ -215,6 +215,9 @@ async def cmd_start(msg: Message, state: FSMContext):
         return
 
     # Авторизация нового пользователя через Telegram
+    from database import set_user_onboarded
+    await set_user_onboarded(msg.from_user.id, msg.from_user.username or "")
+
     img_path = os.path.join(BASE_DIR, "welcome.jpg")
     text = (
         '<tg-emoji emoji-id="5361914370068613491">🦋</tg-emoji> <b>Добро пожаловать в Crypto Bot</b>\n\n'
