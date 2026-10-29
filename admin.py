@@ -59,7 +59,6 @@ async def cmd_admin(msg: Message):
     if not await check_admin(msg.from_user.id):
         return
     reg_enabled = await is_regional_restriction_enabled()
-    gif_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_video.gif")
     video_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_video.mp4")
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
@@ -81,24 +80,27 @@ async def cmd_admin(msg: Message):
             ADMIN_MEDIA_FILE_ID = None
 
     from aiogram.types import FSInputFile
-    if os.path.exists(gif_path):
-        sent = await msg.answer_animation(
-            animation=FSInputFile(gif_path),
-            caption=text,
-            reply_markup=admin_menu_kb(reg_enabled),
-            parse_mode="HTML"
-        )
-        if sent and sent.animation:
-            ADMIN_MEDIA_FILE_ID = sent.animation.file_id
-    elif os.path.exists(video_path):
-        sent = await msg.answer_video(
-            video=FSInputFile(video_path),
-            caption=text,
-            reply_markup=admin_menu_kb(reg_enabled),
-            parse_mode="HTML"
-        )
-        if sent and sent.video:
-            ADMIN_MEDIA_FILE_ID = sent.video.file_id
+    if os.path.exists(video_path):
+        try:
+            sent = await msg.answer_animation(
+                animation=FSInputFile(video_path),
+                caption=text,
+                reply_markup=admin_menu_kb(reg_enabled),
+                parse_mode="HTML"
+            )
+            if sent and sent.animation:
+                ADMIN_MEDIA_FILE_ID = sent.animation.file_id
+            elif sent and sent.video:
+                ADMIN_MEDIA_FILE_ID = sent.video.file_id
+        except Exception:
+            sent = await msg.answer_video(
+                video=FSInputFile(video_path),
+                caption=text,
+                reply_markup=admin_menu_kb(reg_enabled),
+                parse_mode="HTML"
+            )
+            if sent and sent.video:
+                ADMIN_MEDIA_FILE_ID = sent.video.file_id
     elif os.path.exists(admin_banner_path):
         await msg.answer_photo(
             photo=FSInputFile(admin_banner_path),
@@ -666,7 +668,6 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
         return
     await state.clear()
     reg_enabled = await is_regional_restriction_enabled()
-    gif_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_video.gif")
     video_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_video.mp4")
     admin_banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin_banner.png")
     text = (
@@ -701,28 +702,27 @@ async def cb_admin_menu(cb: CallbackQuery, state: FSMContext):
             ADMIN_MEDIA_FILE_ID = None
 
     from aiogram.types import FSInputFile
-    if os.path.exists(gif_path):
-        sent = await cb.message.answer_animation(
-            animation=FSInputFile(gif_path),
-            caption=text,
-            reply_markup=admin_menu_kb(reg_enabled),
-            parse_mode="HTML"
-        )
-        if sent and sent.animation:
-            ADMIN_MEDIA_FILE_ID = sent.animation.file_id
+    if os.path.exists(video_path):
         try:
-            await cb.message.delete()
+            sent = await cb.message.answer_animation(
+                animation=FSInputFile(video_path),
+                caption=text,
+                reply_markup=admin_menu_kb(reg_enabled),
+                parse_mode="HTML"
+            )
+            if sent and sent.animation:
+                ADMIN_MEDIA_FILE_ID = sent.animation.file_id
+            elif sent and sent.video:
+                ADMIN_MEDIA_FILE_ID = sent.video.file_id
         except Exception:
-            pass
-    elif os.path.exists(video_path):
-        sent = await cb.message.answer_video(
-            video=FSInputFile(video_path),
-            caption=text,
-            reply_markup=admin_menu_kb(reg_enabled),
-            parse_mode="HTML"
-        )
-        if sent and sent.video:
-            ADMIN_MEDIA_FILE_ID = sent.video.file_id
+            sent = await cb.message.answer_video(
+                video=FSInputFile(video_path),
+                caption=text,
+                reply_markup=admin_menu_kb(reg_enabled),
+                parse_mode="HTML"
+            )
+            if sent and sent.video:
+                ADMIN_MEDIA_FILE_ID = sent.video.file_id
         try:
             await cb.message.delete()
         except Exception:
